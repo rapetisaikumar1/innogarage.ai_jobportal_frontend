@@ -69,17 +69,19 @@ const DashboardLayout = () => {
 
   const navItems = getNavItems();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-  const roleLabel = isSuperAdmin ? 'Super Admin' : user?.role === 'ADMIN' ? 'Mentor' : 'Student';
+  const isAdmin = user?.role === 'ADMIN';
+  const useHorizontalNav = isSuperAdmin || isAdmin;
+  const roleLabel = isSuperAdmin ? 'Super Admin' : isAdmin ? 'Mentor' : 'Student';
 
   return (
-    <div className={`h-screen bg-[#f8f9fb] ${isSuperAdmin ? 'flex flex-col' : 'flex'} overflow-hidden`}>
-      {/* Mobile Overlay — non-super-admin only */}
-      {!isSuperAdmin && sidebarOpen && (
+    <div className={`h-screen bg-[#f8f9fb] ${useHorizontalNav ? 'flex flex-col' : 'flex'} overflow-hidden`}>
+      {/* Mobile Overlay — sidebar roles only */}
+      {!useHorizontalNav && sidebarOpen && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar — hidden for Super Admin */}
-      {!isSuperAdmin && (
+      {/* Sidebar — hidden for Super Admin and Admin */}
+      {!useHorizontalNav && (
       <aside className={`fixed inset-y-0 left-0 z-50 w-56 bg-white border-r border-gray-100 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} flex flex-col`}>
         {/* Logo */}
         <div className="h-14 flex items-center justify-between px-4 border-b border-gray-50">
@@ -157,16 +159,16 @@ const DashboardLayout = () => {
       )}
 
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col min-w-0 min-h-0 ${isSuperAdmin ? '' : 'lg:ml-56'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 min-h-0 ${useHorizontalNav ? '' : 'lg:ml-56'}`}>
         {/* Top Header */}
         <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 lg:px-6 shrink-0 z-30">
-          {!isSuperAdmin && (
+          {!useHorizontalNav && (
             <button className="lg:hidden text-gray-500" onClick={() => setSidebarOpen(true)}>
               <Menu size={20} />
             </button>
           )}
 
-          {isSuperAdmin && (
+          {useHorizontalNav && (
             <div className="flex items-center">
               <Logo size="sm" />
             </div>
@@ -261,8 +263,8 @@ const DashboardLayout = () => {
           </div>
         </header>
 
-        {/* Super Admin Horizontal Nav */}
-        {isSuperAdmin && (
+        {/* Horizontal Nav — Super Admin & Admin */}
+        {useHorizontalNav && (
           <div className="px-4 lg:px-6 shrink-0">
             <div className="flex items-center justify-center gap-6 overflow-x-auto scrollbar-hide py-3">
               {navItems.map(({ to, icon: Icon, label, end, disabled }) => (
@@ -297,11 +299,11 @@ const DashboardLayout = () => {
         )}
 
         {/* Page Content */}
-        <main className={`flex-1 overflow-y-auto ${isSuperAdmin ? 'p-4 lg:p-5' : 'p-5 lg:p-7'}`}>
+        <main className={`flex-1 overflow-y-auto ${useHorizontalNav ? 'p-4 lg:p-5' : 'p-5 lg:p-7'}`}>
           <Outlet />
 
-          {/* Footer — Super Admin */}
-          {isSuperAdmin && (
+          {/* Footer — Super Admin & Admin */}
+          {useHorizontalNav && (
             <footer className="mt-12 text-gray-600 py-12 border-t border-gray-200 -mx-4 lg:-mx-5 px-8 lg:px-12 bg-white">
               <div className="max-w-6xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
