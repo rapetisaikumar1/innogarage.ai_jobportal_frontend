@@ -40,6 +40,7 @@ import ManageStudents from './pages/superadmin/ManageStudents';
 import ManageTraining from './pages/superadmin/ManageTraining';
 import Analytics from './pages/superadmin/Analytics';
 import AssignMentor from './pages/superadmin/AssignMentor';
+import SuperAdminProfile from './pages/superadmin/SuperAdminProfile';
 
 // Loading spinner
 const LoadingScreen = () => (
@@ -116,7 +117,7 @@ function App() {
         <Route path="training" element={<ManageTraining />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="assign-mentor" element={<AssignMentor />} />
-        <Route path="profile" element={<ProfilePage />} />
+        <Route path="profile" element={<SuperAdminProfile />} />
       </Route>
 
       {/* Landing & Default */}

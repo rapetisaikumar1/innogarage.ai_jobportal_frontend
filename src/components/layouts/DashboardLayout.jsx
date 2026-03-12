@@ -58,9 +58,9 @@ const DashboardLayout = () => {
           { to: '/superadmin', icon: LayoutDashboard, label: 'Dashboard', end: true },
           { to: '/superadmin/admins', icon: UserCog, label: 'Manage Mentors' },
           { to: '/superadmin/students', icon: Users, label: 'Manage Students' },
-          { to: '/superadmin/assign-mentor', icon: UserPlus, label: 'Assign Mentor' },
+          { to: '/superadmin/assign-mentor', icon: UserPlus, label: 'Assign Mentor', disabled: true },
           { to: '/superadmin/training', icon: GraduationCap, label: 'Training Materials' },
-          { to: '/superadmin/analytics', icon: BarChart3, label: 'Analytics' },
+          { to: '/superadmin/analytics', icon: BarChart3, label: 'Analytics', disabled: true },
           { to: '/superadmin/profile', icon: Settings, label: 'Profile' },
         ];
       default:
@@ -92,7 +92,16 @@ const DashboardLayout = () => {
         <nav className="flex-1 px-3 pt-5 pb-2 overflow-y-auto">
           <p className="px-3 mb-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-300">Navigation</p>
           <div className="space-y-0.5">
-            {navItems.filter(item => item.label !== 'Profile').map(({ to, icon: Icon, label, end }) => (
+            {navItems.filter(item => item.label !== 'Profile').map(({ to, icon: Icon, label, end, disabled }) => (
+              disabled ? (
+                <div
+                  key={to}
+                  className="sidebar-link opacity-40 cursor-not-allowed pointer-events-none"
+                >
+                  <Icon size={17} strokeWidth={1.8} />
+                  <span>{label}</span>
+                </div>
+              ) : (
               <NavLink
                 key={to}
                 to={to}
@@ -103,6 +112,7 @@ const DashboardLayout = () => {
                 <Icon size={17} strokeWidth={1.8} />
                 <span>{label}</span>
               </NavLink>
+              )
             ))}
 
             {/* Upgrade — opens subscribe dialog */}
