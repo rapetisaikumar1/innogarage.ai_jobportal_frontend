@@ -53,59 +53,53 @@ const SuperAdminDashboard = () => {
   const quickActions = [
     { to: '/superadmin/admins', icon: UserCog, label: 'Manage Mentors', iconBg: 'bg-violet-500' },
     { to: '/superadmin/students', icon: Users, label: 'Manage Students', iconBg: 'bg-blue-500' },
-    { to: '/superadmin/assign-mentor', icon: UserPlus, label: 'Assign Mentor', iconBg: 'bg-amber-500' },
     { to: '/superadmin/training', icon: GraduationCap, label: 'Training Materials', iconBg: 'bg-emerald-500' },
     { to: '/superadmin/analytics', icon: BarChart3, label: 'Analytics', iconBg: 'bg-rose-500' },
   ];
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-4">
       {/* Hero Welcome Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/40 border border-gray-100 px-7 py-6">
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/40 border border-gray-100 px-5 py-4">
         <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 85% 30%, rgba(199,210,254,0.5) 0%, transparent 50%), radial-gradient(circle at 15% 70%, rgba(219,234,254,0.5) 0%, transparent 50%)' }} />
         <div className="relative flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
+            <h1 className="text-lg font-bold text-gray-800 tracking-tight">
               {greeting}, <span className="text-indigo-600">{user?.fullName || 'Super Admin'}</span>
             </h1>
-            <p className="text-gray-500 text-sm mt-1.5">Here's your platform overview. Manage and monitor everything from here.</p>
-          </div>
-          <div className="hidden md:flex items-center gap-3">
-            <button
-              onClick={() => navigate('/superadmin/analytics')}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-[13px] font-bold hover:bg-indigo-700 transition-colors shadow-sm"
-            >
-              <BarChart3 size={15} />
-              View Analytics
-            </button>
+            <p className="text-gray-500 text-xs mt-1">Here's your platform overview. Manage and monitor everything from here.</p>
           </div>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {statCards.map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
-            <div className={`w-10 h-10 ${color} rounded-lg flex items-center justify-center mb-4`}>
-              <Icon size={18} className="text-white" strokeWidth={2} />
+          <div key={label} className="bg-white rounded-xl border border-gray-100 p-3.5 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                <Icon size={15} className="text-white" strokeWidth={2} />
+              </div>
+              <div>
+                <p className="text-lg font-extrabold text-gray-900 leading-none">{value}</p>
+                <p className="text-[11px] text-gray-400 mt-0.5 font-medium">{label}</p>
+              </div>
             </div>
-            <p className="text-[28px] font-extrabold text-gray-900 leading-none">{value}</p>
-            <p className="text-[12px] text-gray-400 mt-1.5 font-medium tracking-wide">{label}</p>
           </div>
         ))}
       </div>
 
       {/* Application Status Breakdown */}
       {analytics?.applicationsByStatus && Object.keys(analytics.applicationsByStatus).length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-50">
-            <h2 className="text-[15px] font-bold text-gray-800">Application Status Breakdown</h2>
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-gray-50">
+            <h2 className="text-[13px] font-bold text-gray-800">Application Status Breakdown</h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 p-6">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 p-3">
             {Object.entries(analytics.applicationsByStatus).map(([status, count]) => (
-              <div key={status} className="bg-gray-50 p-4 rounded-xl text-center">
-                <p className="text-xl font-extrabold text-gray-900">{count}</p>
-                <p className="text-[11px] text-gray-400 capitalize mt-1 font-medium">{status.replace(/_/g, ' ').toLowerCase()}</p>
+              <div key={status} className="bg-gray-50 p-2.5 rounded-lg text-center">
+                <p className="text-base font-extrabold text-gray-900">{count}</p>
+                <p className="text-[10px] text-gray-400 capitalize mt-0.5 font-medium">{status.replace(/_/g, ' ').toLowerCase()}</p>
               </div>
             ))}
           </div>
@@ -114,18 +108,18 @@ const SuperAdminDashboard = () => {
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-[14px] font-bold text-gray-800 mb-4 tracking-wide">Quick Actions</h2>
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-5">
+        <h2 className="text-[12px] font-bold text-gray-800 mb-2.5 tracking-wide">Quick Actions</h2>
+        <div className="flex items-center gap-3">
           {quickActions.map(({ to, icon: Icon, label, iconBg }) => (
             <Link
               key={to}
               to={to}
-              className="flex flex-col items-center text-center group"
+              className="flex items-center gap-2 px-3.5 py-2 bg-white border border-gray-100 rounded-lg hover:shadow-sm hover:border-gray-200 transition-all group"
             >
-              <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center mb-2 group-hover:scale-105 group-hover:shadow-md transition-all duration-200`}>
-                <Icon size={20} className="text-white" strokeWidth={1.8} />
+              <div className={`w-7 h-7 ${iconBg} rounded-md flex items-center justify-center group-hover:scale-105 transition-transform`}>
+                <Icon size={14} className="text-white" strokeWidth={2} />
               </div>
-              <span className="text-[11px] font-semibold text-gray-600 group-hover:text-gray-900 transition-colors leading-tight">{label}</span>
+              <span className="text-xs font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">{label}</span>
             </Link>
           ))}
         </div>

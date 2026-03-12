@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { UserPlus, Shield, ShieldOff, Search } from 'lucide-react';
+import { UserPlus, Search, Info, Mail, Phone, Users, Calendar, Shield, ShieldOff, X } from 'lucide-react';
 
 const ManageAdmins = () => {
   const [admins, setAdmins] = useState([]);
@@ -10,6 +10,7 @@ const ManageAdmins = () => {
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({ fullName: '', email: '', password: '', phone: '' });
+  const [selectedAdmin, setSelectedAdmin] = useState(null);
 
   useEffect(() => { fetchAdmins(); }, []);
 
@@ -17,6 +18,9 @@ const ManageAdmins = () => {
     try {
       const res = await api.get('/admin/admins');
       setAdmins(res.data);
+      if (!selectedAdmin && res.data.length > 0) {
+        setSelectedAdmin(res.data[0]);
+      }
     } catch (error) {
       toast.error('Failed to load admins');
     } finally {
@@ -48,6 +52,9 @@ const ManageAdmins = () => {
       const res = await api.patch(`/admin/admins/${adminId}/toggle-status`);
       toast.success(res.data.message);
       fetchAdmins();
+      if (selectedAdmin?.id === adminId) {
+        setSelectedAdmin(prev => prev ? { ...prev, isActive: !prev.isActive } : null);
+      }
     } catch (error) {
       toast.error('Failed to update admin status');
     }
@@ -63,94 +70,224 @@ const ManageAdmins = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Manage Admins</h1>
-          <p className="text-gray-500 mt-1">Create and manage mentor accounts</p>
+          <h1 className="text-lg font-bold text-gray-800">Manage Admins</h1>
+          <p className="text-gray-500 text-xs mt-0.5">Create and manage mentor accounts</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-2">
-          <UserPlus size={16} /> New Admin
-        </button>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-500 font-medium">{filtered.length} total</span>
+          <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-2 text-sm">
+            <UserPlus size={14} /> New Admin
+          </button>
+        </div>
       </div>
 
+      {/* Create Form */}
       {showForm && (
-        <form onSubmit={handleCreate} className="card space-y-4">
-          <h3 className="font-semibold text-gray-800">Create Admin / Mentor</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <form onSubmit={handleCreate} className="card space-y-3">
+          <h3 className="font-semibold text-gray-800 text-sm">Create Admin / Mentor</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-              <input type="text" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} className="input-field" required />
+              <label className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
+              <input type="text" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} className="input-field text-sm" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input-field" required />
+              <label className="block text-xs font-medium text-gray-700 mb-1">Email *</label>
+              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input-field text-sm" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-              <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input-field" required />
+              <label className="block text-xs font-medium text-gray-700 mb-1">Password *</label>
+              <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input-field text-sm" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              <input type="text" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input-field" />
+              <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+              <input type="text" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input-field text-sm" />
             </div>
           </div>
           <div className="flex gap-2">
-            <button type="submit" disabled={creating} className="btn-primary">{creating ? 'Creating...' : 'Create Admin'}</button>
-            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" disabled={creating} className="btn-primary text-sm">{creating ? 'Creating...' : 'Create Admin'}</button>
+            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary text-sm">Cancel</button>
           </div>
         </form>
       )}
 
-      <div className="relative max-w-md">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input type="text" placeholder="Search admins..." value={search} onChange={(e) => setSearch(e.target.value)} className="input-field pl-10" />
-      </div>
+      {/* Split Screen */}
+      <div className="flex gap-4" style={{ minHeight: '420px' }}>
+        {/* Left Panel — Admin List */}
+        <div className={`${selectedAdmin ? 'w-1/2' : 'w-full'} transition-all duration-300 flex flex-col`}>
+          {/* Search */}
+          <div className="relative mb-3">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input type="text" placeholder="Search admins..." value={search} onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-colors" />
+          </div>
 
-      {filtered.length === 0 ? (
-        <div className="card text-center py-12"><p className="text-gray-500">No admins found</p></div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full bg-white rounded-xl border">
-            <thead>
-              <tr className="bg-gray-50 text-left">
-                <th className="p-4 text-sm font-semibold text-gray-600">Name</th>
-                <th className="p-4 text-sm font-semibold text-gray-600">Email</th>
-                <th className="p-4 text-sm font-semibold text-gray-600">Phone</th>
-                <th className="p-4 text-sm font-semibold text-gray-600">Students</th>
-                <th className="p-4 text-sm font-semibold text-gray-600">Status</th>
-                <th className="p-4 text-sm font-semibold text-gray-600">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filtered.map((admin) => (
-                <tr key={admin.id} className="hover:bg-gray-50">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-700 font-bold text-sm">
-                        {admin.fullName?.charAt(0)}
-                      </div>
-                      <span className="font-medium text-gray-800">{admin.fullName}</span>
-                    </div>
-                  </td>
-                  <td className="p-4 text-sm text-gray-600">{admin.email}</td>
-                  <td className="p-4 text-sm text-gray-600">{admin.phone || '—'}</td>
-                  <td className="p-4"><span className="badge-blue">{admin._count?.assignedStudents || 0}</span></td>
-                  <td className="p-4">
-                    <span className={`badge-${admin.isActive ? 'green' : 'red'}`}>{admin.isActive ? 'Active' : 'Inactive'}</span>
-                  </td>
-                  <td className="p-4">
-                    <button onClick={() => toggleStatus(admin.id)}
-                      className={`flex items-center gap-1 text-sm font-medium ${admin.isActive ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'}`}>
-                      {admin.isActive ? <><ShieldOff size={14} /> Deactivate</> : <><Shield size={14} /> Activate</>}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {/* Table */}
+          {filtered.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center bg-white rounded-xl border border-gray-100">
+              <p className="text-gray-400 text-sm">No admins found</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden flex-1">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50/80">
+                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Students</th>
+                    <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filtered.map((admin) => (
+                    <tr key={admin.id} className={`hover:bg-gray-50/60 transition-colors cursor-pointer ${selectedAdmin?.id === admin.id ? 'bg-primary-50/40' : ''}`}
+                      onClick={() => setSelectedAdmin(admin)}>
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-xs shadow-sm">
+                            {admin.fullName?.charAt(0)?.toUpperCase()}
+                          </div>
+                          <span className="font-medium text-gray-800 text-[13px]">{admin.fullName}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-center">
+                        <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold">
+                          {admin._count?.assignedStudents || 0}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-center">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleStatus(admin.id); }}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all duration-200 ${
+                            admin.isActive
+                              ? 'bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-600'
+                              : 'bg-red-50 text-red-600 hover:bg-emerald-50 hover:text-emerald-700'
+                          }`}
+                          title={admin.isActive ? 'Click to deactivate' : 'Click to activate'}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${admin.isActive ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                          {admin.isActive ? 'Active' : 'Inactive'}
+                        </button>
+                      </td>
+                      <td className="px-4 py-2.5 text-center">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedAdmin(admin); }}
+                          className={`p-1.5 rounded-lg transition-colors ${selectedAdmin?.id === admin.id ? 'bg-primary-100 text-primary-700' : 'text-gray-400 hover:text-primary-600 hover:bg-primary-50'}`}
+                          title="View details"
+                        >
+                          <Info size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Right Panel — Admin Details */}
+        {selectedAdmin && (
+          <div className="w-1/2 bg-white rounded-xl border border-gray-100 overflow-hidden flex flex-col animate-in slide-in-from-right">
+            {/* Detail Header */}
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                  {selectedAdmin.fullName?.charAt(0)?.toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-800">{selectedAdmin.fullName}</h3>
+                  <span className="text-[11px] text-gray-400">Admin / Mentor</span>
+                </div>
+              </div>
+              <button onClick={() => setSelectedAdmin(null)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Detail Body */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+              {/* Status */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Account Status</span>
+                <button
+                  onClick={() => toggleStatus(selectedAdmin.id)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    selectedAdmin.isActive
+                      ? 'bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-600'
+                      : 'bg-red-50 text-red-600 hover:bg-emerald-50 hover:text-emerald-700'
+                  }`}
+                  title={selectedAdmin.isActive ? 'Click to deactivate' : 'Click to activate'}
+                >
+                  {selectedAdmin.isActive ? <Shield size={12} /> : <ShieldOff size={12} />}
+                  {selectedAdmin.isActive ? 'Active' : 'Inactive'}
+                </button>
+              </div>
+
+              {/* Info Cards */}
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-3 p-3 bg-gray-50/80 rounded-lg">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Mail size={14} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Email</p>
+                    <p className="text-[13px] text-gray-800 font-medium">{selectedAdmin.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-gray-50/80 rounded-lg">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Phone size={14} className="text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Phone</p>
+                    <p className="text-[13px] text-gray-800 font-medium">{selectedAdmin.phone || 'Not provided'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-gray-50/80 rounded-lg">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Users size={14} className="text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Assigned Students</p>
+                    <p className="text-[13px] text-gray-800 font-medium">{selectedAdmin._count?.assignedStudents || 0}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-gray-50/80 rounded-lg">
+                  <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                    <Calendar size={14} className="text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Joined</p>
+                    <p className="text-[13px] text-gray-800 font-medium">{selectedAdmin.createdAt ? new Date(selectedAdmin.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium mb-2.5">Quick Actions</p>
+                <button
+                  onClick={() => toggleStatus(selectedAdmin.id)}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                    selectedAdmin.isActive
+                      ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                      : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                  }`}
+                >
+                  {selectedAdmin.isActive ? <><ShieldOff size={13} /> Deactivate Admin</> : <><Shield size={13} /> Activate Admin</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

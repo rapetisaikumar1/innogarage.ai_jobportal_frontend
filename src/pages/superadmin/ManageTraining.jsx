@@ -90,33 +90,33 @@ const ManageTraining = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Training Materials</h1>
-          <p className="text-sm text-gray-500 mt-1">Upload and manage training resources</p>
+          <h1 className="text-lg font-bold text-gray-900">Training Materials</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Upload and manage training resources</p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
-          <Plus size={16} /> Add Material
+        <button onClick={() => { resetForm(); setShowForm(true); }} className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+          <Plus size={14} /> Add Material
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-5">
-          <h3 className="text-base font-bold text-gray-900">{editId ? 'Edit Material' : 'Add New Material'}</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-3">
+          <h3 className="text-sm font-bold text-gray-900">{editId ? 'Edit Material' : 'Add New Material'}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Title *</label>
-              <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" required />
+              <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+              <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
-              <input type="text" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="e.g. Interview Prep, Resume Writing" />
+              <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
+              <input type="text" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="e.g. Interview Prep" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Type *</label>
-              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Type *</label>
+              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white">
                 <option value="PDF">PDF</option>
                 <option value="VIDEO">Video</option>
                 <option value="LINK">Link</option>
@@ -124,32 +124,32 @@ const ManageTraining = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">URL (for Video/Link)</label>
-              <input type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="https://..." />
+              <label className="block text-xs font-medium text-gray-700 mb-1">URL (for Video/Link)</label>
+              <input type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="https://..." />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all resize-none" rows="2" />
+            <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all resize-none" rows="2" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Upload File</label>
-            <input type="file" onChange={(e) => setFile(e.target.files[0])} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer" accept=".pdf,.doc,.docx,.ppt,.pptx" />
+            <label className="block text-xs font-medium text-gray-700 mb-1">Upload File</label>
+            <input type="file" onChange={(e) => setFile(e.target.files[0])} className="w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer" accept=".pdf,.doc,.docx,.ppt,.pptx" />
           </div>
-          <div className="flex gap-3 pt-1">
-            <button type="submit" disabled={submitting} className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">{submitting ? 'Saving...' : (editId ? 'Update' : 'Create')}</button>
-            <button type="button" onClick={resetForm} className="px-5 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">Cancel</button>
+          <div className="flex gap-2">
+            <button type="submit" disabled={submitting} className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">{submitting ? 'Saving...' : (editId ? 'Update' : 'Create')}</button>
+            <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">Cancel</button>
           </div>
         </form>
       )}
 
       {materials.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 text-center py-16 shadow-sm">
-          <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
-            <FolderOpen size={28} className="text-gray-300" />
+        <div className="bg-white rounded-xl border border-gray-200 text-center py-10 shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
+            <FolderOpen size={22} className="text-gray-300" />
           </div>
-          <p className="text-gray-500 font-medium">No training materials yet</p>
-          <p className="text-sm text-gray-400 mt-1">Click "Add Material" to get started</p>
+          <p className="text-gray-500 text-sm font-medium">No training materials yet</p>
+          <p className="text-xs text-gray-400 mt-0.5">Click "Add Material" to get started</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -157,18 +157,18 @@ const ManageTraining = () => {
             const tc = typeConfig(mat.type);
             const TypeIcon = tc.icon;
             return (
-              <div key={mat.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group overflow-hidden">
+              <div key={mat.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-gray-200 transition-all duration-300 group overflow-hidden">
                 {/* Card Header - Type Banner */}
                 <div className={`px-5 py-3 ${tc.bg} border-b ${tc.border} flex items-center justify-between`}>
                   <div className="flex items-center gap-2">
                     <TypeIcon size={15} className={tc.color} />
-                    <span className={`text-xs font-bold uppercase tracking-wider ${tc.color}`}>{tc.label}</span>
+                    <span className={`text-[11px] font-bold uppercase tracking-wider ${tc.color}`}>{tc.label}</span>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleEdit(mat)} className="p-1.5 rounded-lg hover:bg-white/60 text-gray-500 hover:text-blue-600 transition-colors" title="Edit">
+                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleEdit(mat)} className="p-1.5 rounded-lg hover:bg-white/70 text-gray-500 hover:text-blue-600 transition-colors" title="Edit">
                       <Edit size={14} />
                     </button>
-                    <button onClick={() => handleDelete(mat.id)} className="p-1.5 rounded-lg hover:bg-white/60 text-gray-500 hover:text-red-500 transition-colors" title="Delete">
+                    <button onClick={() => handleDelete(mat.id)} className="p-1.5 rounded-lg hover:bg-white/70 text-gray-500 hover:text-red-500 transition-colors" title="Delete">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -176,34 +176,34 @@ const ManageTraining = () => {
 
                 {/* Card Body */}
                 <div className="p-5">
-                  <h3 className="text-base font-bold text-gray-900 mb-1.5 line-clamp-1">{mat.title}</h3>
-                  {mat.description && <p className="text-sm text-gray-500 mb-4 line-clamp-2 leading-relaxed">{mat.description}</p>}
+                  <h3 className="text-[15px] font-bold text-gray-900 mb-1.5 line-clamp-1">{mat.title}</h3>
+                  {mat.description && <p className="text-[13px] text-gray-500 mb-4 line-clamp-2 leading-relaxed">{mat.description}</p>}
                   {!mat.description && <div className="mb-4" />}
 
                   {/* Actions Row */}
                   <div className="flex items-center gap-2 flex-wrap mb-4">
                     {mat.url && (
-                      <a href={mat.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors">
-                        <ExternalLink size={12} /> Open Link
+                      <a href={mat.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold hover:bg-blue-100 transition-colors">
+                        <ExternalLink size={13} /> Open Link
                       </a>
                     )}
                     {mat.filePath && (
                       <a href={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/${mat.filePath}`} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors">
-                        <Download size={12} /> Download
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition-colors">
+                        <Download size={13} /> Download
                       </a>
                     )}
                   </div>
 
                   {/* Footer */}
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                     {mat.category ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-medium">
-                        <Tag size={11} /> {mat.category}
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-semibold">
+                        <Tag size={12} /> {mat.category}
                       </span>
                     ) : <span />}
-                    <span className="inline-flex items-center gap-1.5 text-xs text-gray-400">
-                      <Calendar size={11} />
+                    <span className="inline-flex items-center gap-1.5 text-[13px] text-gray-400">
+                      <Calendar size={13} />
                       {new Date(mat.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </span>
                   </div>

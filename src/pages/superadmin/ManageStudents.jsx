@@ -213,13 +213,7 @@ const ManageStudents = () => {
               {detail.isActive ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
               {detail.isActive ? 'Deactivate' : 'Activate'}
             </button>
-            <button
-              onClick={() => deleteStudent(detail.id)}
-              className="inline-flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
-            >
-              <Trash2 size={14} />
-              Delete
-            </button>
+
           </div>
         </div>
 
@@ -577,33 +571,33 @@ const ManageStudents = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Manage Students</h1>
-          <p className="text-sm text-gray-500 mt-0.5">View and manage all student accounts</p>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Manage Students</h1>
+          <p className="text-[13px] text-gray-500 mt-1">View and manage all student accounts</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">{students.length} total</span>
-          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
-            <Plus size={14} /> Add Student
+          <span className="text-[13px] font-semibold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">{students.length} total</span>
+          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-[13px] font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+            <Plus size={15} /> Add Student
           </button>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div className="relative flex-1 min-w-[220px] max-w-md">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Search by name, email, or reg no..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white"
+            className="w-full pl-10 pr-4 py-2.5 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white"
+          className="px-3.5 py-2.5 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white"
         >
           <option value="all">All Status</option>
           <option value="active">Active</option>
@@ -612,7 +606,7 @@ const ManageStudents = () => {
         <select
           value={mentorFilter}
           onChange={(e) => setMentorFilter(e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white"
+          className="px-3.5 py-2.5 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white"
         >
           <option value="all">All Mentors</option>
           <option value="unassigned">Unassigned</option>
@@ -624,90 +618,85 @@ const ManageStudents = () => {
 
       {/* Table */}
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 text-center py-16">
-          <Users size={36} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-sm text-gray-500">No students found</p>
+        <div className="bg-white rounded-xl border border-gray-200 text-center py-14">
+          <Users size={32} className="mx-auto text-gray-300 mb-3" />
+          <p className="text-[13px] text-gray-500">No students found</p>
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto bg-white rounded-xl border border-gray-200">
+          <div className="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-sm">
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50/60 border-b border-gray-200">
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reg No.</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mentor</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Joined</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                <tr className="bg-gray-50/80 border-b border-gray-200">
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Reg No.</th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Mentor</th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Joined</th>
+                  <th className="px-5 py-3.5 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {paginated.map((student) => (
-                  <tr key={student.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-2.5">
-                      <span className="text-sm font-mono font-semibold text-slate-700">{student.registrationNumber || '—'}</span>
+                  <tr key={student.id} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="px-5 py-3.5">
+                      <span className="text-[13px] font-mono font-semibold text-slate-700">{student.registrationNumber || '—'}</span>
                     </td>
-                    <td className="px-4 py-2.5">
-                      <span className="text-sm font-medium text-gray-900">{student.fullName}</span>
+                    <td className="px-5 py-3.5">
+                      <span className="text-[13px] font-semibold text-gray-900">{student.fullName}</span>
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3.5">
                       <button
                         onClick={() => toggleStatus(student.id)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer transition-colors ${student.isActive ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold cursor-pointer transition-colors ${student.isActive ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}
                       >
                         <span className={`w-1.5 h-1.5 rounded-full ${student.isActive ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
                         {student.isActive ? 'Active' : 'Inactive'}
                       </button>
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3.5">
                       <div className="relative" ref={openMentorDropdown === student.id ? dropdownRef : null}>
                         <button
                           onClick={() => setOpenMentorDropdown(openMentorDropdown === student.id ? null : student.id)}
-                          className="inline-flex items-center justify-between gap-2 text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white hover:border-gray-300 hover:bg-gray-50 transition-colors w-[170px] text-left"
+                          className="inline-flex items-center justify-between gap-2 text-[13px] border border-gray-200 rounded-lg px-3 py-1.5 bg-white hover:border-gray-300 hover:bg-gray-50 transition-colors w-[160px] text-left"
                         >
                           <span className={student.assignedMentorId ? 'text-gray-800 font-medium' : 'text-gray-400'}>
                             {student.assignedMentorId ? mentors.find(m => m.id === student.assignedMentorId)?.fullName || 'Unassigned' : 'Unassigned'}
                           </span>
-                          <ChevronDown size={14} className={`text-gray-400 transition-transform ${openMentorDropdown === student.id ? 'rotate-180' : ''}`} />
+                          <ChevronDown size={13} className={`text-gray-400 transition-transform ${openMentorDropdown === student.id ? 'rotate-180' : ''}`} />
                         </button>
                         {openMentorDropdown === student.id && (
-                          <div className="absolute z-50 mt-1 w-[200px] bg-white rounded-xl border border-gray-200 shadow-lg py-1 max-h-[200px] overflow-y-auto">
+                          <div className="absolute z-50 mt-1.5 w-[190px] bg-white rounded-xl border border-gray-200 shadow-lg py-1.5 max-h-[200px] overflow-y-auto">
                             <button
                               onClick={() => { changeMentor(student.id, ''); setOpenMentorDropdown(null); }}
-                              className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                                !student.assignedMentorId ? 'text-blue-600 font-medium bg-blue-50/50' : 'text-gray-600'
+                              className={`w-full flex items-center justify-between px-3.5 py-2 text-[13px] hover:bg-gray-50 transition-colors ${
+                                !student.assignedMentorId ? 'text-blue-600 font-semibold bg-blue-50/50' : 'text-gray-600'
                               }`}
                             >
                               Unassigned
-                              {!student.assignedMentorId && <Check size={14} className="text-blue-500" />}
+                              {!student.assignedMentorId && <Check size={13} className="text-blue-500" />}
                             </button>
                             {mentors.map(m => (
                               <button
                                 key={m.id}
                                 onClick={() => { changeMentor(student.id, m.id); setOpenMentorDropdown(null); }}
-                                className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                                  student.assignedMentorId === m.id ? 'text-blue-600 font-medium bg-blue-50/50' : 'text-gray-700'
+                                className={`w-full flex items-center justify-between px-3.5 py-2 text-[13px] hover:bg-gray-50 transition-colors ${
+                                  student.assignedMentorId === m.id ? 'text-blue-600 font-semibold bg-blue-50/50' : 'text-gray-700'
                                 }`}
                               >
                                 {m.fullName}
-                                {student.assignedMentorId === m.id && <Check size={14} className="text-blue-500" />}
+                                {student.assignedMentorId === m.id && <Check size={13} className="text-blue-500" />}
                               </button>
                             ))}
                           </div>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-2.5 text-sm text-gray-500">{new Date(student.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => viewStudent(student.id)} className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="View details">
-                          <Info size={16} />
-                        </button>
-                        <button onClick={() => deleteStudent(student.id)} className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete student">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                    <td className="px-5 py-3.5 text-[13px] text-gray-500">{new Date(student.createdAt).toLocaleDateString()}</td>
+                    <td className="px-5 py-3.5 text-center">
+                      <button onClick={() => viewStudent(student.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="View details">
+                        <Info size={16} />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -717,17 +706,17 @@ const ManageStudents = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-1">
-              <p className="text-xs text-gray-500">
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-[13px] text-gray-500">
                 Showing {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}
               </p>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="p-1.5 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronLeft size={14} />
+                  <ChevronLeft size={15} />
                 </button>
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum;
@@ -744,7 +733,7 @@ const ManageStudents = () => {
                     <button
                       key={pageNum}
                       onClick={() => setPage(pageNum)}
-                      className={`w-7 h-7 rounded-md text-xs font-medium transition-colors ${page === pageNum ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                      className={`w-8 h-8 rounded-lg text-[13px] font-semibold transition-colors ${page === pageNum ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
                     >
                       {pageNum}
                     </button>
@@ -753,9 +742,9 @@ const ManageStudents = () => {
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="p-1.5 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronRight size={14} />
+                  <ChevronRight size={15} />
                 </button>
               </div>
             </div>
@@ -765,69 +754,69 @@ const ManageStudents = () => {
 
       {/* Add Student Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowAddModal(false)}>
-          <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAddModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-md p-7 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-gray-900">Add New Student</h2>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100 transition-colors">
+              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                 <X size={18} />
               </button>
             </div>
             <form onSubmit={addStudent} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Full Name *</label>
+                <label className="block text-[13px] font-medium text-gray-700 mb-1.5">Full Name *</label>
                 <input
                   type="text"
                   required
                   value={addForm.fullName}
                   onChange={(e) => setAddForm(f => ({ ...f, fullName: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                  className="w-full px-3.5 py-2.5 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
                   placeholder="Enter full name"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Email *</label>
+                <label className="block text-[13px] font-medium text-gray-700 mb-1.5">Email *</label>
                 <input
                   type="email"
                   required
                   value={addForm.email}
                   onChange={(e) => setAddForm(f => ({ ...f, email: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                  className="w-full px-3.5 py-2.5 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
                   placeholder="Enter email address"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                <label className="block text-[13px] font-medium text-gray-700 mb-1.5">Phone</label>
                 <input
                   type="text"
                   value={addForm.phone}
                   onChange={(e) => setAddForm(f => ({ ...f, phone: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                  className="w-full px-3.5 py-2.5 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
                   placeholder="Enter phone number"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Education</label>
+                <label className="block text-[13px] font-medium text-gray-700 mb-1.5">Education</label>
                 <input
                   type="text"
                   value={addForm.education}
                   onChange={(e) => setAddForm(f => ({ ...f, education: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                  className="w-full px-3.5 py-2.5 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
                   placeholder="Enter education background"
                 />
               </div>
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-3">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg text-[13px] font-semibold hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={addLoading}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-[13px] font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
                 >
                   {addLoading ? 'Registering...' : 'Register Student'}
                 </button>

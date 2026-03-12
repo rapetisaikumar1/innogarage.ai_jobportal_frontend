@@ -6,7 +6,7 @@ import SubscribeDialog from '../SubscribeDialog';
 import {
   LayoutDashboard, Briefcase, FileText, GraduationCap, Users, MessageSquare,
   UserCog, BarChart3, BookOpen, Calendar, LogOut, Menu, X, Bell, ChevronDown,
-  Settings, StickyNote, UserPlus, Contact, Hash, Trophy, Crown, Megaphone, HelpCircle
+  Settings, StickyNote, UserPlus, Contact, Hash, Trophy, Crown, Megaphone, HelpCircle, Zap
 } from 'lucide-react';
 
 const DashboardLayout = () => {
@@ -58,7 +58,6 @@ const DashboardLayout = () => {
           { to: '/superadmin', icon: LayoutDashboard, label: 'Dashboard', end: true },
           { to: '/superadmin/admins', icon: UserCog, label: 'Manage Mentors' },
           { to: '/superadmin/students', icon: Users, label: 'Manage Students' },
-          { to: '/superadmin/assign-mentor', icon: UserPlus, label: 'Assign Mentor', disabled: true },
           { to: '/superadmin/training', icon: GraduationCap, label: 'Training Materials' },
           { to: '/superadmin/analytics', icon: BarChart3, label: 'Analytics', disabled: true },
           { to: '/superadmin/profile', icon: Settings, label: 'Profile' },
@@ -69,16 +68,18 @@ const DashboardLayout = () => {
   };
 
   const navItems = getNavItems();
-  const roleLabel = user?.role === 'SUPER_ADMIN' ? 'Super Admin' : user?.role === 'ADMIN' ? 'Mentor' : 'Student';
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const roleLabel = isSuperAdmin ? 'Super Admin' : user?.role === 'ADMIN' ? 'Mentor' : 'Student';
 
   return (
-    <div className="h-screen bg-[#f8f9fb] flex overflow-hidden">
-      {/* Mobile Overlay */}
-      {sidebarOpen && (
+    <div className={`h-screen bg-[#f8f9fb] ${isSuperAdmin ? 'flex flex-col' : 'flex'} overflow-hidden`}>
+      {/* Mobile Overlay — non-super-admin only */}
+      {!isSuperAdmin && sidebarOpen && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar — hidden for Super Admin */}
+      {!isSuperAdmin && (
       <aside className={`fixed inset-y-0 left-0 z-50 w-56 bg-white border-r border-gray-100 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} flex flex-col`}>
         {/* Logo */}
         <div className="h-14 flex items-center justify-between px-4 border-b border-gray-50">
@@ -153,14 +154,23 @@ const DashboardLayout = () => {
           </button>
         </div>
       </aside>
+      )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-56">
+      <div className={`flex-1 flex flex-col min-w-0 min-h-0 ${isSuperAdmin ? '' : 'lg:ml-56'}`}>
         {/* Top Header */}
         <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 lg:px-6 shrink-0 z-30">
-          <button className="lg:hidden text-gray-500" onClick={() => setSidebarOpen(true)}>
-            <Menu size={20} />
-          </button>
+          {!isSuperAdmin && (
+            <button className="lg:hidden text-gray-500" onClick={() => setSidebarOpen(true)}>
+              <Menu size={20} />
+            </button>
+          )}
+
+          {isSuperAdmin && (
+            <div className="flex items-center">
+              <Logo size="sm" />
+            </div>
+          )}
 
           <div className="flex-1 hidden sm:flex items-center pl-4">
           </div>
@@ -251,9 +261,97 @@ const DashboardLayout = () => {
           </div>
         </header>
 
+        {/* Super Admin Horizontal Nav */}
+        {isSuperAdmin && (
+          <div className="px-4 lg:px-6 shrink-0">
+            <div className="flex items-center justify-center gap-6 overflow-x-auto scrollbar-hide py-3">
+              {navItems.map(({ to, icon: Icon, label, end, disabled }) => (
+                disabled ? (
+                  <div
+                    key={to}
+                    className="flex items-center gap-2 text-[13px] font-medium text-gray-300 cursor-not-allowed whitespace-nowrap select-none"
+                  >
+                    <Icon size={15} strokeWidth={1.8} />
+                    <span>{label}</span>
+                  </div>
+                ) : (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={end}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 ${
+                        isActive
+                          ? 'text-gray-900 font-semibold'
+                          : 'text-gray-500 hover:text-gray-900'
+                      }`
+                    }
+                  >
+                    <Icon size={13} strokeWidth={1.8} />
+                    <span>{label}</span>
+                  </NavLink>
+                )
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Page Content */}
-        <main className="flex-1 p-5 lg:p-7 overflow-y-auto">
+        <main className={`flex-1 overflow-y-auto ${isSuperAdmin ? 'p-4 lg:p-5' : 'p-5 lg:p-7'}`}>
           <Outlet />
+
+          {/* Footer — Super Admin */}
+          {isSuperAdmin && (
+            <footer className="mt-12 text-gray-600 py-12 border-t border-gray-200 -mx-4 lg:-mx-5 px-8 lg:px-12 bg-white">
+              <div className="max-w-6xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+                  <div className="md:col-span-1">
+                    <Logo size="md" />
+                    <p className="mt-4 text-[13px] leading-relaxed text-gray-500">
+                      Your AI-powered career copilot. Build resumes, apply to jobs, connect with mentors — all in one platform.
+                    </p>
+                    <div className="flex items-center gap-3 mt-5">
+                      <span className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full">✉ support@gethired.app</span>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-gray-900 font-semibold mb-4 text-[13px] uppercase tracking-wider">Platform</h4>
+                    <ul className="space-y-3 text-[13px]">
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Job Discovery</span></li>
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Resume Builder</span></li>
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Mentorship</span></li>
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Training Hub</span></li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="text-gray-900 font-semibold mb-4 text-[13px] uppercase tracking-wider">Product</h4>
+                    <ul className="space-y-3 text-[13px]">
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Smart Matching</span></li>
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Quick Apply</span></li>
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Skill Insights</span></li>
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Tailored Resumes</span></li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="text-gray-900 font-semibold mb-4 text-[13px] uppercase tracking-wider">Company</h4>
+                    <ul className="space-y-3 text-[13px]">
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">About</span></li>
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Privacy Policy</span></li>
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Terms of Service</span></li>
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Contact</span></li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="border-t border-gray-200 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <p className="text-[13px] text-gray-500">&copy; {new Date().getFullYear()} get.hired &mdash; All rights reserved.</p>
+                  <div className="flex items-center gap-2 text-[13px] text-gray-500">
+                    <Zap size={14} className="text-amber-400" />
+                    <span>Built with passion for job seekers everywhere.</span>
+                  </div>
+                </div>
+              </div>
+            </footer>
+          )}
         </main>
       </div>
 
