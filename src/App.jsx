@@ -32,6 +32,7 @@ import AdminStudents from './pages/admin/AdminStudents';
 import AdminSlots from './pages/admin/AdminSlots';
 import AdminBookings from './pages/admin/AdminBookings';
 import AdminChat from './pages/admin/AdminChat';
+import AdminProfile from './pages/admin/AdminProfile';
 
 // Super Admin Pages
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
@@ -105,7 +106,7 @@ function App() {
         <Route path="slots" element={<AdminSlots />} />
         <Route path="bookings" element={<AdminBookings />} />
         <Route path="chat" element={<AdminChat />} />
-        <Route path="profile" element={<ProfilePage />} />
+        <Route path="profile" element={<AdminProfile />} />
       </Route>
 
       {/* Super Admin Routes */}
