@@ -40,7 +40,7 @@ const DashboardLayout = () => {
           { to: '/dashboard/training', icon: GraduationCap, label: 'Training' },
           { to: '/dashboard/notes', icon: StickyNote, label: 'My Notes' },
           { to: '/dashboard/mentoring', icon: Calendar, label: 'Mentoring' },
-          { to: '/dashboard/chat', icon: HelpCircle, label: 'Support & Help' },
+          { to: '/dashboard/chat', icon: MessageSquare, label: 'Chat' },
           { to: '/dashboard/shoutboard', icon: Megaphone, label: 'Shoutboard' },
           { to: '/dashboard/profile', icon: Settings, label: 'Profile' },
         ];
@@ -102,7 +102,7 @@ const DashboardLayout = () => {
               ? navItems.filter(i => ['Training', 'My Notes', 'Mentoring'].includes(i.label))
               : [];
             const communityItems = isStudent
-              ? navItems.filter(i => ['Support & Help', 'Shoutboard'].includes(i.label))
+              ? navItems.filter(i => ['Chat', 'Shoutboard'].includes(i.label))
               : [];
             const profileItem = navItems.find(i => i.label === 'Profile');
 

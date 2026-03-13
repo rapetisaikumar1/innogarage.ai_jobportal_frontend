@@ -147,3 +147,12 @@ body {
 .sidebar-nav-scroll::-webkit-scrollbar {
   display: none;
 }
+
+/* Hide scrollbar utility */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
