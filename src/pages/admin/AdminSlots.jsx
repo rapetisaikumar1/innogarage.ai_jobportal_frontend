@@ -3,7 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
   Calendar, Plus, Trash2, Clock, ChevronDown, ChevronUp,
-  Users, Video, CheckCircle2, XCircle, AlertCircle, X
+  Users, CheckCircle2, XCircle, AlertCircle, X
 } from 'lucide-react';
 import { format, isToday, isTomorrow } from 'date-fns';
 
@@ -14,7 +14,7 @@ const AdminSlots = () => {
   const [form, setForm] = useState({ date: '', startTime: '09:00', endTime: '18:00' });
   const [creating, setCreating] = useState(false);
   const [expandedDates, setExpandedDates] = useState({});
-  const [filter, setFilter] = useState('upcoming'); // upcoming | all | booked | expired
+  const [filter, setFilter] = useState('all'); // all | booked | expired
 
   useEffect(() => { fetchSlots(); }, []);
 
@@ -113,8 +113,9 @@ const AdminSlots = () => {
       const start = new Date(s.startTime);
       const expired = start <= now && !s.isBooked;
       const booked = s.isBooked;
+      const pastBooked = booked && start <= now;
       const available = !expired && !booked && start > now;
-      return { ...s, expired, booked, available };
+      return { ...s, expired, booked, pastBooked, available };
     });
   }, [slots]);
 
@@ -122,7 +123,6 @@ const AdminSlots = () => {
     switch (filter) {
       case 'booked': return categorized.filter(s => s.booked);
       case 'expired': return categorized.filter(s => s.expired);
-      case 'upcoming': return categorized.filter(s => !s.expired);
       default: return categorized;
     }
   }, [categorized, filter]);
@@ -302,7 +302,6 @@ const AdminSlots = () => {
       {/* Filter Tabs */}
       <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
         {[
-          { key: 'upcoming', label: 'Upcoming' },
           { key: 'booked', label: 'Booked' },
           { key: 'expired', label: 'Expired' },
           { key: 'all', label: 'All' },
@@ -387,7 +386,7 @@ const AdminSlots = () => {
                         // Booked
                         if (slot.booked) {
                           return (
-                            <div key={slot.id} className="relative rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 ring-1 ring-emerald-100">
+                            <div key={slot.id} className={`relative rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 ring-1 ring-emerald-100 transition-opacity ${slot.pastBooked ? 'opacity-40' : ''}`}>
                               <p className="text-[12px] font-semibold text-emerald-800">{startF}</p>
                               <p className="text-[10px] text-emerald-600">to {endF}</p>
                               <div className="mt-2">
@@ -398,17 +397,6 @@ const AdminSlots = () => {
                                   <p className="text-[10px] text-emerald-600 mt-0.5 truncate" title={slot.booking.student.fullName}>
                                     {slot.booking.student.fullName}
                                   </p>
-                                )}
-                                {slot.booking?.meetLink && (
-                                  <a
-                                    href={slot.booking.meetLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-700 font-medium mt-1"
-                                  >
-                                    <Video size={9} /> Meet
-                                  </a>
                                 )}
                               </div>
                             </div>

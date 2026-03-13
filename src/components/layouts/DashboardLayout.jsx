@@ -92,57 +92,85 @@ const DashboardLayout = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 pt-5 pb-2 overflow-y-auto">
-          <p className="px-3 mb-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-300">Navigation</p>
-          <div className="space-y-0.5">
-            {navItems.filter(item => item.label !== 'Profile').map(({ to, icon: Icon, label, end, disabled }) => (
+        <nav className="flex-1 px-3 pt-4 pb-2 overflow-y-auto sidebar-nav-scroll">
+          {(() => {
+            const isStudent = user?.role === 'STUDENT';
+            const mainItems = isStudent
+              ? navItems.filter(i => ['Dashboard', 'Job Listings', 'My Applications'].includes(i.label))
+              : navItems.filter(i => i.label !== 'Profile');
+            const learnItems = isStudent
+              ? navItems.filter(i => ['Training', 'My Notes', 'Mentoring'].includes(i.label))
+              : [];
+            const communityItems = isStudent
+              ? navItems.filter(i => ['Support & Help', 'Shoutboard'].includes(i.label))
+              : [];
+            const profileItem = navItems.find(i => i.label === 'Profile');
+
+            const renderItem = ({ to, icon: Icon, label, end, disabled }) => (
               disabled ? (
-                <div
-                  key={to}
-                  className="sidebar-link opacity-40 cursor-not-allowed pointer-events-none"
-                >
+                <div key={to} className="sidebar-link opacity-40 cursor-not-allowed pointer-events-none">
                   <Icon size={17} strokeWidth={1.8} />
                   <span>{label}</span>
                 </div>
               ) : (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                className={({ isActive }) => isActive ? 'sidebar-link-active' : 'sidebar-link'}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <Icon size={17} strokeWidth={1.8} />
-                <span>{label}</span>
-              </NavLink>
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  className={({ isActive }) => isActive ? 'sidebar-link-active' : 'sidebar-link'}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <Icon size={17} strokeWidth={1.8} />
+                  <span>{label}</span>
+                </NavLink>
               )
-            ))}
+            );
 
-            {/* Upgrade — opens subscribe dialog */}
-            {user?.role === 'STUDENT' && (
-              <button
-                onClick={() => { setShowSubscribe(true); setSidebarOpen(false); }}
-                className="sidebar-link w-full text-amber-700 hover:bg-amber-50"
-              >
-                <Crown size={17} strokeWidth={1.8} className="text-amber-500" />
-                <span>Upgrade</span>
-              </button>
-            )}
+            const SectionLabel = ({ children }) => (
+              <p className="px-3 mb-2 mt-5 first:mt-0 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-300">{children}</p>
+            );
 
-            {/* Profile — always last */}
-            {navItems.filter(item => item.label === 'Profile').map(({ to, icon: Icon, label, end }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                className={({ isActive }) => isActive ? 'sidebar-link-active' : 'sidebar-link'}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <Icon size={17} strokeWidth={1.8} />
-                <span>{label}</span>
-              </NavLink>
-            ))}
-          </div>
+            return (
+              <>
+                <SectionLabel>Main</SectionLabel>
+                <div className="space-y-0.5">{mainItems.map(renderItem)}</div>
+
+                {learnItems.length > 0 && (
+                  <>
+                    <SectionLabel>Learning</SectionLabel>
+                    <div className="space-y-0.5">{learnItems.map(renderItem)}</div>
+                  </>
+                )}
+
+                {communityItems.length > 0 && (
+                  <>
+                    <SectionLabel>Community</SectionLabel>
+                    <div className="space-y-0.5">{communityItems.map(renderItem)}</div>
+                  </>
+                )}
+
+                {/* Upgrade — student only */}
+                {isStudent && (
+                  <div className="mt-5">
+                    <button
+                      onClick={() => { setShowSubscribe(true); setSidebarOpen(false); }}
+                      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-md shadow-violet-200 transition-all duration-200"
+                    >
+                      <Crown size={17} strokeWidth={1.8} className="text-violet-200" />
+                      <span>Upgrade Plan</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Profile — always last */}
+                {profileItem && (
+                  <div className="mt-4 pt-3 border-t border-gray-100">
+                    {renderItem(profileItem)}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </nav>
 
         {/* Bottom — Logout */}
@@ -180,10 +208,10 @@ const DashboardLayout = () => {
           <div className="flex items-center gap-5">
             {/* Achievers */}
             <button
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 transition-all text-amber-700 hover:text-amber-800 text-[13px] font-semibold tracking-wide group"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white hover:bg-gray-50 transition-all text-gray-600 hover:text-gray-800 text-[13px] font-medium border border-gray-200 shadow-sm group"
               onClick={() => navigate('/dashboard/achievers')}
             >
-              <Trophy size={18} strokeWidth={2} className="text-amber-500 group-hover:scale-110 transition-transform" />
+              <Trophy size={15} strokeWidth={2} className="text-amber-500" />
               Achievers
             </button>
 
@@ -192,9 +220,6 @@ const DashboardLayout = () => {
               <Bell size={20} strokeWidth={1.8} />
               <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">3</span>
             </button>
-
-            {/* Divider */}
-            <div className="h-7 w-px bg-gray-200" />
 
             {/* Profile dropdown */}
             <div className="relative">
