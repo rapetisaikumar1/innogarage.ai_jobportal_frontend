@@ -105,7 +105,7 @@ const MentoringPage = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -114,15 +114,15 @@ const MentoringPage = () => {
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="text-lg font-bold text-gray-900">Mentoring</h1>
-          <p className="text-[12px] text-gray-400 mt-0.5">Connect with your mentor and book sessions</p>
+          <h1 className="text-[16px] font-bold text-gray-900">Mentoring</h1>
+          <p className="text-[11px] text-gray-400 mt-0.5">Connect with your mentor and book sessions</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm text-center py-16">
-          <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
-            <User size={28} className="text-gray-300" />
+        <div className="bg-white rounded-lg border border-gray-200 text-center py-16">
+          <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
+            <User size={20} className="text-gray-300" />
           </div>
-          <p className="text-[15px] font-semibold text-gray-700">No mentor assigned yet</p>
-          <p className="text-[12px] text-gray-400 mt-1 max-w-xs mx-auto">A mentor will be assigned to you shortly. Please check back later.</p>
+          <p className="text-[13px] font-semibold text-gray-600">No mentor assigned yet</p>
+          <p className="text-[11px] text-gray-400 mt-1 max-w-xs mx-auto">A mentor will be assigned to you shortly. Please check back later.</p>
         </div>
       </div>
     );
@@ -132,63 +132,52 @@ const MentoringPage = () => {
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-lg font-bold text-gray-900">Mentoring</h1>
-        <p className="text-[12px] text-gray-400 mt-0.5">Connect with your mentor and book sessions</p>
+        <h1 className="text-[16px] font-bold text-gray-900">Mentoring</h1>
+        <p className="text-[11px] text-gray-400 mt-0.5">Connect with your mentor and book sessions</p>
       </div>
 
       {/* Mentor Card */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg font-bold shadow-md shadow-blue-200 flex-shrink-0">
-            {mentor.fullName?.charAt(0)?.toUpperCase()}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="px-5 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <h2 className="text-[13px] font-bold text-gray-900">{mentor.fullName}</h2>
+            <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-600 border border-blue-200">Mentor</span>
+            {mentor.mentorBio && (
+              <span className="hidden md:inline text-[11px] text-gray-400 truncate max-w-xs">— {mentor.mentorBio}</span>
+            )}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h2 className="text-[14px] font-bold text-gray-900">{mentor.fullName}</h2>
-              <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100">Your Mentor</span>
-            </div>
-            <p className="text-[12px] text-gray-400 mt-0.5">{mentor.email}</p>
-            {mentor.mentorBio && <p className="text-[12px] text-gray-500 mt-1.5 line-clamp-2">{mentor.mentorBio}</p>}
-          </div>
-          <div className="hidden sm:flex items-center gap-6 flex-shrink-0">
-            <div className="text-center">
-              <p className="text-xl font-black text-gray-900">{slots.length}</p>
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Open Slots</p>
-            </div>
-            <div className="h-8 w-px bg-gray-100"></div>
-            <div className="text-center">
-              <p className="text-xl font-black text-gray-900">{confirmedBookings.length}</p>
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Booked</p>
-            </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[16px] font-bold text-gray-900">{slots.length}</span>
+            <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Open Slots</span>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 bg-gray-100/80 p-0.5 rounded-lg w-fit">
         <button
           onClick={() => setTab('slots')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-[13px] font-semibold transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
             tab === 'slots' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Calendar size={14} /> Available Slots
+          <Calendar size={12} /> Available Slots
         </button>
         <button
           onClick={() => setTab('upcoming')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-[13px] font-semibold transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
             tab === 'upcoming' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          <CalendarCheck size={14} /> Upcoming ({confirmedBookings.length})
+          <CalendarCheck size={12} /> Upcoming ({confirmedBookings.length})
         </button>
         <button
           onClick={() => setTab('history')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-[13px] font-semibold transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
             tab === 'history' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          <CalendarX size={14} /> History ({pastBookings.length})
+          <CalendarX size={12} /> History ({pastBookings.length})
         </button>
       </div>
 
@@ -196,12 +185,12 @@ const MentoringPage = () => {
       {tab === 'slots' && (
         <div>
           {slots.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm text-center py-14">
-              <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
-                <Calendar size={24} className="text-gray-300" />
+            <div className="bg-white rounded-lg border border-gray-200 text-center py-14">
+              <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
+                <Calendar size={20} className="text-gray-300" />
               </div>
-              <p className="text-[14px] font-semibold text-gray-600">No available slots</p>
-              <p className="text-[12px] text-gray-400 mt-1">Your mentor hasn't posted any open slots yet</p>
+              <p className="text-[13px] font-semibold text-gray-600">No available slots</p>
+              <p className="text-[11px] text-gray-400 mt-1">Your mentor hasn't posted any open slots yet</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -209,32 +198,30 @@ const MentoringPage = () => {
                 const dateObj = new Date(dateSlots[0].startTime);
                 const isBookedDay = bookedDates.has(dateObj.toDateString());
                 return (
-                  <div key={date} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                    <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-                      <h3 className="text-[13px] font-bold text-gray-800 flex items-center gap-2">
-                        <Calendar size={14} className="text-gray-400" />
+                  <div key={date} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
+                      <h3 className="text-[12px] font-bold text-gray-800 flex items-center gap-2">
+                        <Calendar size={12} className="text-gray-400" />
                         {date}
                       </h3>
                       {isBookedDay && (
                         <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md ring-1 ring-inset ring-amber-100">Already booked this day</span>
                       )}
                     </div>
-                    <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                       {dateSlots.map((slot) => (
                         <div
                           key={slot.id}
-                          className={`flex items-center justify-between px-4 py-3 rounded-lg border transition-colors ${
+                          className={`flex items-center justify-between px-3.5 py-2.5 rounded-md border transition-colors ${
                             isBookedDay
                               ? 'border-gray-100 bg-gray-50/50 opacity-50'
                               : 'border-gray-200 hover:border-blue-200 hover:bg-blue-50/30'
                           }`}
                         >
-                          <div className="flex items-center gap-2.5">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isBookedDay ? 'bg-gray-100' : 'bg-blue-50'}`}>
-                              <Clock size={14} className={isBookedDay ? 'text-gray-400' : 'text-blue-500'} />
-                            </div>
+                          <div className="flex items-center gap-2">
+                            <Clock size={13} className={isBookedDay ? 'text-gray-400' : 'text-blue-500'} />
                             <div>
-                              <p className="text-[13px] font-semibold text-gray-800">
+                              <p className="text-[12px] font-semibold text-gray-800">
                                 {new Date(slot.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 {' — '}
                                 {new Date(slot.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -267,12 +254,12 @@ const MentoringPage = () => {
       {tab === 'upcoming' && (
         <div>
           {confirmedBookings.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm text-center py-14">
-              <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
-                <CalendarCheck size={24} className="text-gray-300" />
+            <div className="bg-white rounded-lg border border-gray-200 text-center py-14">
+              <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
+                <CalendarCheck size={20} className="text-gray-300" />
               </div>
-              <p className="text-[14px] font-semibold text-gray-600">No upcoming sessions</p>
-              <p className="text-[12px] text-gray-400 mt-1">Book a slot to schedule your next mentoring session</p>
+              <p className="text-[13px] font-semibold text-gray-600">No upcoming sessions</p>
+              <p className="text-[11px] text-gray-400 mt-1">Book a slot to schedule your next mentoring session</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -282,13 +269,11 @@ const MentoringPage = () => {
                 return (
                   <div
                     key={booking.id}
-                    className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden ${isPast ? 'opacity-50' : ''}`}
+                    className={`bg-white rounded-lg border border-gray-200 overflow-hidden ${isPast ? 'opacity-50' : ''}`}
                   >
-                    <div className="flex items-center justify-between px-5 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                          <CalendarCheck size={18} className="text-emerald-500" />
-                        </div>
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <CalendarCheck size={15} className="text-emerald-500 shrink-0" />
                         <div>
                           <p className="text-[13px] font-bold text-gray-800">
                             {slotDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
@@ -339,15 +324,15 @@ const MentoringPage = () => {
       {tab === 'history' && (
         <div>
           {pastBookings.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm text-center py-14">
-              <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
-                <CalendarX size={24} className="text-gray-300" />
+            <div className="bg-white rounded-lg border border-gray-200 text-center py-14">
+              <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
+                <CalendarX size={20} className="text-gray-300" />
               </div>
-              <p className="text-[14px] font-semibold text-gray-600">No past sessions</p>
-              <p className="text-[12px] text-gray-400 mt-1">Your completed and cancelled sessions will appear here</p>
+              <p className="text-[13px] font-semibold text-gray-600">No past sessions</p>
+              <p className="text-[11px] text-gray-400 mt-1">Your completed and cancelled sessions will appear here</p>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
               <table className="w-full">
                 <thead>
                   <tr className="text-left text-[10px] text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-gray-50/50">

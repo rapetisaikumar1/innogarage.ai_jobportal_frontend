@@ -355,6 +355,21 @@ const PostCard = ({ post, currentUserId, onDelete, onUpdate }) => {
 };
 
 // ─── Main Shoutboard Page ───────────────────────────────────────────
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest First' },
+  { value: 'oldest', label: 'Oldest First' },
+  { value: 'most_liked', label: 'Most Liked' },
+  { value: 'most_commented', label: 'Most Discussed' },
+];
+
+const SIDEBAR_FILTERS = [
+  { key: 'all', label: 'All Posts', color: 'text-blue-600' },
+  { key: 'my_posts', label: 'Your Posts', color: 'text-emerald-600' },
+  { key: 'liked', label: 'Posts You Liked', color: 'text-rose-500' },
+  { key: 'with_comments', label: 'With Comments', color: 'text-violet-600' },
+  { key: 'no_comments', label: 'Unanswered', color: 'text-amber-600' },
+];
+
 const ShoutboardPage = () => {
   const { user } = useAuth();
   const [posts, setPosts] = useState([]);
@@ -363,6 +378,9 @@ const ShoutboardPage = () => {
   const [selectedTag, setSelectedTag] = useState('');
   const [posting, setPosting] = useState(false);
   const [filterTag, setFilterTag] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
+  const [sidebarFilter, setSidebarFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const textareaRef = useRef(null);
 
   useEffect(() => { fetchPosts(); }, []);
@@ -408,9 +426,36 @@ const ShoutboardPage = () => {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
   };
 
-  const filteredPosts = filterTag
-    ? posts.filter((p) => p.tag === filterTag)
-    : posts;
+  const filteredPosts = (() => {
+    let result = [...posts];
+
+    // Sidebar filter
+    if (sidebarFilter === 'my_posts') result = result.filter((p) => p.user?.id === user?.id);
+    else if (sidebarFilter === 'liked') result = result.filter((p) => p.isLiked);
+    else if (sidebarFilter === 'with_comments') result = result.filter((p) => p.commentsCount > 0);
+    else if (sidebarFilter === 'no_comments') result = result.filter((p) => p.commentsCount === 0);
+
+    // Tag filter
+    if (filterTag) result = result.filter((p) => p.tag === filterTag);
+
+    // Search
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter((p) =>
+        p.content?.toLowerCase().includes(q) ||
+        p.user?.fullName?.toLowerCase().includes(q) ||
+        p.tag?.toLowerCase().includes(q)
+      );
+    }
+
+    // Sort
+    if (sortBy === 'newest') result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    else if (sortBy === 'oldest') result.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    else if (sortBy === 'most_liked') result.sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0));
+    else if (sortBy === 'most_commented') result.sort((a, b) => (b.commentsCount || 0) - (a.commentsCount || 0));
+
+    return result;
+  })();
 
   const autoResize = (e) => {
     e.target.style.height = 'auto';
@@ -418,125 +463,183 @@ const ShoutboardPage = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Page Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-            <MessageSquare size={16} className="text-blue-600" />
+    <div className="flex gap-5 items-start">
+      {/* ─── Left Column: Main Content ─── */}
+      <div className="flex-1 min-w-0">
+        {/* Page Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <MessageSquare size={16} className="text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-[16px] font-bold text-gray-900">Discussion Forum</h1>
+              <p className="text-[11px] text-gray-400">Share thoughts, tips & celebrate wins</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-[16px] font-bold text-gray-900">Discussion Forum</h1>
-            <p className="text-[11px] text-gray-400">Share thoughts, tips & celebrate wins</p>
-          </div>
+          <span className="text-[11px] text-gray-400 bg-gray-50 px-2.5 py-1 rounded-md">{filteredPosts.length} {filteredPosts.length === 1 ? 'post' : 'posts'}</span>
         </div>
-        <span className="text-[11px] text-gray-400 bg-gray-50 px-2.5 py-1 rounded-md">{posts.length} {posts.length === 1 ? 'post' : 'posts'}</span>
-      </div>
 
-      {/* Compose Box */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-4">
-        <div className="p-4 pb-3">
-          <textarea
-            ref={textareaRef}
-            value={newPost}
-            onChange={(e) => { setNewPost(e.target.value); autoResize(e); }}
-            placeholder="Start a discussion... Share interview tips, career wins, or ask questions"
-            className="w-full text-[13px] text-gray-800 placeholder-gray-400 bg-transparent border-none outline-none resize-none min-h-[48px] leading-relaxed"
-            rows={2}
+        {/* Search Bar */}
+        <div className="relative mb-4">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search discussions by content, author, or topic..."
+            className="w-full pl-9 pr-3 py-2.5 text-[12px] bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 placeholder-gray-400 text-gray-700 transition-all"
           />
         </div>
-        <div className="px-4 py-2 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-            {TAG_OPTIONS.map((tag) => {
-              const cfg = TAG_CONFIG[tag] || TAG_CONFIG['General'];
-              const TagIcon = cfg.icon;
-              const isSelected = selectedTag === tag;
-              return (
-                <button
-                  key={tag}
-                  onClick={() => setSelectedTag(isSelected ? '' : tag)}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium whitespace-nowrap transition-all border ${
-                    isSelected
-                      ? `${cfg.bg} ${cfg.color} ${cfg.border}`
-                      : 'border-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <TagIcon size={10} />
-                  {tag}
-                </button>
-              );
-            })}
-          </div>
-          <button
-            onClick={handlePost}
-            disabled={posting || !newPost.trim()}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold disabled:opacity-30 transition-colors shrink-0 ml-3"
-          >
-            <Send size={11} />
-            Post
-          </button>
-        </div>
-      </div>
 
-      {/* Filter Tags */}
-      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar mb-4 pb-0.5">
-        <button
-          onClick={() => setFilterTag('')}
-          className={`px-3 py-1.5 rounded text-[11px] font-medium whitespace-nowrap transition-all ${
-            !filterTag
-              ? 'bg-blue-600 text-white'
-              : 'text-gray-500 hover:bg-gray-100'
-          }`}
-        >
-          All
-        </button>
-        {TAG_OPTIONS.map((tag) => {
-          const cfg = TAG_CONFIG[tag] || TAG_CONFIG['General'];
-          const TagIcon = cfg.icon;
-          const isActive = filterTag === tag;
-          return (
-            <button
-              key={tag}
-              onClick={() => setFilterTag(isActive ? '' : tag)}
-              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded text-[11px] font-medium whitespace-nowrap transition-all ${
-                isActive
-                  ? `${cfg.bg} ${cfg.color} border ${cfg.border}`
-                  : 'text-gray-500 hover:bg-gray-100'
-              }`}
-            >
-              <TagIcon size={11} />
-              {tag}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Posts Feed */}
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : filteredPosts.length === 0 ? (
-        <div className="text-center py-14 bg-white rounded-lg border border-gray-200">
-          <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center mx-auto mb-3">
-            <MessageSquare size={18} className="text-gray-300" />
-          </div>
-          <p className="text-[13px] font-semibold text-gray-600">{filterTag ? `No ${filterTag} discussions yet` : 'No discussions yet'}</p>
-          <p className="text-[11px] text-gray-400 mt-1">Start a conversation above to get things going!</p>
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {filteredPosts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              currentUserId={user?.id}
-              onDelete={handleDelete}
-              onUpdate={handleUpdate}
+        {/* Compose Box */}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-4">
+          <div className="p-4 pb-3">
+            <textarea
+              ref={textareaRef}
+              value={newPost}
+              onChange={(e) => { setNewPost(e.target.value); autoResize(e); }}
+              placeholder="Start a discussion... Share interview tips, career wins, or ask questions"
+              className="w-full text-[13px] text-gray-800 placeholder-gray-400 bg-transparent border-none outline-none resize-none min-h-[48px] leading-relaxed"
+              rows={2}
             />
-          ))}
+          </div>
+          <div className="px-4 py-2 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+              {TAG_OPTIONS.map((tag) => {
+                const cfg = TAG_CONFIG[tag] || TAG_CONFIG['General'];
+                const TagIcon = cfg.icon;
+                const isSelected = selectedTag === tag;
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => setSelectedTag(isSelected ? '' : tag)}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium whitespace-nowrap transition-all border ${
+                      isSelected
+                        ? `${cfg.bg} ${cfg.color} ${cfg.border}`
+                        : 'border-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <TagIcon size={10} />
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={handlePost}
+              disabled={posting || !newPost.trim()}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold disabled:opacity-30 transition-colors shrink-0 ml-3"
+            >
+              <Send size={11} />
+              Post
+            </button>
+          </div>
         </div>
-      )}
+
+        {/* Posts Feed */}
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : filteredPosts.length === 0 ? (
+          <div className="text-center py-14 bg-white rounded-lg border border-gray-200">
+            <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center mx-auto mb-3">
+              <MessageSquare size={18} className="text-gray-300" />
+            </div>
+            <p className="text-[13px] font-semibold text-gray-600">
+              {filterTag ? `No ${filterTag} discussions yet` : searchQuery ? 'No matching discussions' : 'No discussions yet'}
+            </p>
+            <p className="text-[11px] text-gray-400 mt-1">
+              {searchQuery ? 'Try a different search term' : 'Start a conversation above to get things going!'}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {filteredPosts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                currentUserId={user?.id}
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ─── Right Sidebar ─── */}
+      <div className="w-[220px] shrink-0 sticky top-4 space-y-4">
+        {/* Sort By */}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-3.5 py-2.5 border-b border-gray-100">
+            <p className="text-[12px] font-bold text-gray-700">Sort By</p>
+          </div>
+          <div className="p-3">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full text-[11px] text-gray-700 bg-white border border-gray-200 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 cursor-pointer"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Filter Links */}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-3.5 py-2.5 border-b border-gray-100">
+            <p className="text-[12px] font-bold text-gray-700">Filter</p>
+          </div>
+          <div className="py-1">
+            {SIDEBAR_FILTERS.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setSidebarFilter(f.key)}
+                className={`w-full text-left px-3.5 py-2 text-[11px] font-medium transition-colors ${
+                  sidebarFilter === f.key
+                    ? `${f.color} bg-gray-50 font-semibold`
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50/60'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Filter by Topics */}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-3.5 py-2.5 border-b border-gray-100">
+            <p className="text-[12px] font-bold text-gray-700">Filter by topics</p>
+          </div>
+          <div className="p-3">
+            <select
+              value={filterTag}
+              onChange={(e) => setFilterTag(e.target.value)}
+              className="w-full text-[11px] text-gray-700 bg-white border border-gray-200 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 cursor-pointer"
+            >
+              <option value="">All Topics</option>
+              {TAG_OPTIONS.map((tag) => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Active Filters Summary */}
+        {(filterTag || sidebarFilter !== 'all' || searchQuery) && (
+          <button
+            onClick={() => { setFilterTag(''); setSidebarFilter('all'); setSearchQuery(''); setSortBy('newest'); }}
+            className="w-full text-[11px] text-gray-400 hover:text-red-500 font-medium py-2 transition-colors text-center"
+          >
+            Reset all filters
+          </button>
+        )}
+      </div>
     </div>
   );
 };

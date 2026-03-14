@@ -268,51 +268,51 @@ const JobListings = () => {
 
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-2 shrink-0">
+      <div className="flex items-center justify-between mb-3 shrink-0">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Job Listings</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
-            Showing <span className="font-semibold text-gray-600">{filteredJobs.length}</span> of {jobs.length} job{jobs.length !== 1 ? 's' : ''}
+          <h1 className="text-[16px] font-bold text-gray-900">Job Listings</h1>
+          <p className="text-[11px] text-gray-400 mt-0.5">
+            {filteredJobs.length} of {jobs.length} jobs
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowDaysPopup(true)}
             disabled={triggeringN8n}
-            className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:opacity-60"
+            className="flex items-center gap-1.5 text-[12px] font-medium px-3.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-60"
           >
-            <Sparkles size={15} className={triggeringN8n ? 'animate-pulse' : ''} />
+            <Sparkles size={13} className={triggeringN8n ? 'animate-pulse text-violet-500' : 'text-violet-500'} />
             {triggeringN8n ? 'Searching...' : 'My Jobs'}
           </button>
           <button
             onClick={handleRefresh}
             disabled={loading || refreshing}
-            className="btn-primary flex items-center gap-2 !text-sm !px-4 !py-2"
+            className="flex items-center gap-1.5 text-[12px] font-medium px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-60"
           >
-            <RefreshCw size={15} className={(loading || refreshing) ? 'animate-spin' : ''} />
-            {(loading || refreshing) ? 'Refreshing...' : 'Refresh'}
+            <RefreshCw size={13} className={(loading || refreshing) ? 'animate-spin' : ''} />
+            Refresh
           </button>
         </div>
       </div>
 
       {/* Split Panels */}
-      <div className="flex gap-3 flex-1 min-h-0">
+      <div className="flex gap-4 flex-1 min-h-0">
 
       {/* Left Panel — Compact Job List */}
-      <div className="w-[40%] shrink-0 flex flex-col min-h-0">
+      <div className="w-[340px] shrink-0 flex flex-col min-h-0">
         {/* Search */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-3 py-2 flex items-center gap-2 mb-2 shrink-0">
-          <Search size={16} className="text-gray-300 shrink-0" />
+        <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 flex items-center gap-2 mb-2 shrink-0">
+          <Search size={14} className="text-gray-400 shrink-0" />
           <input
             type="text"
-            className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-800"
+            className="flex-1 text-[12px] bg-transparent outline-none placeholder-gray-400 text-gray-800"
             placeholder="Search company, skills..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           {search && (
             <button onClick={() => setSearch('')} className="text-gray-300 hover:text-gray-500">
-              <X size={14} />
+              <X size={12} />
             </button>
           )}
         </div>
@@ -320,59 +320,75 @@ const JobListings = () => {
         {/* Job List */}
         {loading ? (
           <div className="flex items-center justify-center flex-1">
-            <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filteredJobs.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm text-center py-16 flex-1">
-            <Briefcase className="mx-auto text-gray-200 mb-4" size={40} />
-            <h3 className="text-sm font-semibold text-gray-600">No jobs found</h3>
-            <p className="text-xs text-gray-400 mt-1">Try adjusting your search or refresh</p>
+          <div className="bg-white rounded-lg border border-gray-200 text-center py-14 flex-1">
+            <Briefcase className="mx-auto text-gray-300 mb-3" size={28} />
+            <h3 className="text-[13px] font-semibold text-gray-600">No jobs found</h3>
+            <p className="text-[11px] text-gray-400 mt-1">Try adjusting your search</p>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+          <div className="flex-1 overflow-y-auto space-y-1.5 pr-0.5">
             {filteredJobs.map((job) => {
               const dateLabel = formatDate(job.timestamp);
               const isSelected = selectedJob?.id === job.id;
+              const role = extractRole(job);
+              const score = parseInt(job.match_score) || 0;
 
               return (
                 <div
                   key={job.id}
                   onClick={() => setSelectedJob(job)}
-                  className={`px-4 py-3 cursor-pointer rounded-xl border transition-all ${
+                  className={`px-3.5 py-3 cursor-pointer rounded-lg border transition-all ${
                     isSelected
-                      ? 'bg-blue-50/60 border-blue-400 shadow-sm'
-                      : 'bg-white border-gray-100 hover:border-blue-200 hover:bg-gray-50/60'
+                      ? 'bg-blue-50/70 border-blue-300'
+                      : 'bg-white border-gray-100 hover:border-gray-200 hover:bg-gray-50/50'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-lg ${avatarBg(job.employer_name)} text-white flex items-center justify-center font-bold text-xs shrink-0`}>
+                  <div className="flex items-start gap-2.5">
+                    <div className={`w-8 h-8 rounded-md ${avatarBg(job.employer_name)} text-white flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5`}>
                       {job.employer_name?.charAt(0)?.toUpperCase() || '?'}
                     </div>
-                    <h3 className="flex-1 min-w-0 font-semibold text-[13px] text-gray-800 leading-snug truncate">
-                      {job.employer_name}
-                    </h3>
-                    {dateLabel && (
-                      <span className="text-[10px] text-gray-400 whitespace-nowrap shrink-0">
-                        {dateLabel}
-                      </span>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSavedJobs(prev => {
-                          const next = new Set(prev);
-                          if (next.has(job.id)) next.delete(job.id);
-                          else next.add(job.id);
-                          return next;
-                        });
-                      }}
-                      className="p-1 shrink-0 transition-colors"
-                    >
-                      <Bookmark
-                        size={18}
-                        className={savedJobs.has(job.id) ? 'fill-red-500 text-red-500' : 'text-gray-300 hover:text-gray-400'}
-                      />
-                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-semibold text-[12px] text-gray-800 truncate">
+                          {job.employer_name}
+                        </h3>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSavedJobs(prev => {
+                              const next = new Set(prev);
+                              if (next.has(job.id)) next.delete(job.id);
+                              else next.add(job.id);
+                              return next;
+                            });
+                          }}
+                          className="p-0.5 shrink-0 transition-colors"
+                        >
+                          <Bookmark
+                            size={14}
+                            className={savedJobs.has(job.id) ? 'fill-amber-500 text-amber-500' : 'text-gray-300 hover:text-gray-400'}
+                          />
+                        </button>
+                      </div>
+                      {role && role !== job.employer_name && (
+                        <p className="text-[11px] text-gray-500 truncate mt-0.5 leading-tight">{role}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1.5">
+                        {dateLabel && (
+                          <span className="text-[10px] text-gray-400">
+                            {dateLabel}
+                          </span>
+                        )}
+                        {score > 0 && (
+                          <span className={`text-[10px] font-semibold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-blue-600' : score >= 40 ? 'text-amber-600' : 'text-gray-400'}`}>
+                            {score}% match
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
@@ -383,7 +399,7 @@ const JobListings = () => {
 
       </div>
 
-      {/* Right Panel — Job Details (expanded) */}
+      {/* Right Panel — Job Details */}
       <div className="hidden lg:flex lg:flex-col flex-1 min-w-0">
         {selectedJob ? (() => {
           const job = selectedJob;
@@ -399,29 +415,37 @@ const JobListings = () => {
           const jdSkills = extractSkillsFromJD(job.jd);
 
           return (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col flex-1 overflow-hidden">
+            <div className="bg-white rounded-lg border border-gray-200 flex flex-col flex-1 overflow-hidden">
               {/* Job Header */}
               <div className="px-5 py-4 border-b border-gray-100 shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className={`w-11 h-11 rounded-xl ${avatarBg(job.employer_name)} text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm`}>
-                    {job.employer_name?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-base font-bold text-gray-900 leading-snug truncate">{job.employer_name}</h2>
+                    <h2 className="text-[15px] font-bold text-gray-900 leading-snug">{role}</h2>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[12px] text-gray-500 font-medium">{job.employer_name}</span>
+                      {jobLocation && (
+                        <>
+                          <span className="text-gray-300">·</span>
+                          <span className="flex items-center gap-1 text-[11px] text-gray-400">
+                            <MapPin size={10} />
+                            {jobLocation}
+                          </span>
+                        </>
+                      )}
+                      {dateLabel && (
+                        <>
+                          <span className="text-gray-300">·</span>
+                          <span className="text-[11px] text-gray-400">{dateLabel}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    {dateLabel && (
-                      <span className="flex items-center gap-1 text-[11px] text-gray-400">
-                        <Clock size={10} /> {dateLabel}
-                      </span>
-                    )}
-                    <button
-                      onClick={() => setSelectedJob(null)}
-                      className="text-gray-300 hover:text-gray-500 transition-colors"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setSelectedJob(null)}
+                    className="p-1 rounded-md text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors shrink-0"
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
 
                 {/* Action Buttons */}
@@ -431,14 +455,14 @@ const JobListings = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => { if (!job.job_apply_link) e.preventDefault(); }}
-                    className={`inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors text-sm ${!job.job_apply_link ? 'opacity-50 pointer-events-none' : ''}`}
+                    className={`inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-[12px] ${!job.job_apply_link ? 'opacity-40 pointer-events-none' : ''}`}
                   >
-                    <ExternalLink size={14} /> Apply Now
+                    <ExternalLink size={13} /> Apply Now
                   </a>
                   <button
-                    className="inline-flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium px-5 py-2 rounded-lg transition-colors text-sm"
+                    className="inline-flex items-center gap-1.5 bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium px-4 py-2 rounded-lg transition-colors text-[12px]"
                   >
-                    <FileText size={14} className="text-violet-500" /> Resume
+                    <FileText size={13} className="text-blue-500" /> Resume
                   </button>
                 </div>
               </div>
@@ -449,10 +473,10 @@ const JobListings = () => {
                 {/* Technologies & Skills */}
                 {jdSkills.length > 0 && (
                   <div className="mb-4">
-                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Technologies & Skills</h3>
+                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Technologies & Skills</h3>
                     <div className="flex flex-wrap gap-1.5">
                       {jdSkills.map((skill, i) => (
-                        <span key={i} className="px-2.5 py-1 bg-blue-50 text-blue-700 text-[11px] font-medium rounded-md border border-blue-100">
+                        <span key={i} className="px-2 py-0.5 bg-gray-50 text-gray-600 text-[11px] font-medium rounded border border-gray-200">
                           {skill}
                         </span>
                       ))}
@@ -464,12 +488,12 @@ const JobListings = () => {
                 {score > 0 && (
                   <div className="border-t border-gray-100 pt-4 mb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Match Score</h3>
-                      <span className={`text-sm font-bold ${sl.color}`}>{score}% · {sl.text}</span>
+                      <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Match Score</h3>
+                      <span className={`text-[12px] font-bold ${sl.color}`}>{score}% · {sl.text}</span>
                     </div>
-                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${score >= 80 ? 'bg-emerald-500' : score >= 60 ? 'bg-blue-500' : score >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                        className={`h-full rounded-full transition-all duration-500 ${score >= 80 ? 'bg-emerald-500' : score >= 60 ? 'bg-blue-500' : score >= 40 ? 'bg-amber-500' : 'bg-red-400'}`}
                         style={{ width: `${Math.min(score, 100)}%` }}
                       />
                     </div>
@@ -479,17 +503,16 @@ const JobListings = () => {
                 {/* Full Job Description — structured sections */}
                 {jdSections.length > 0 && (
                   <div className="border-t border-gray-100 pt-4">
-                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Job Description</h3>
-                    <div className="space-y-4">
+                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Job Description</h3>
+                    <div className="space-y-3">
                       {jdSections.map((section, si) => (
                         <div key={si}>
                           {si > 0 && (
-                            <h4 className="text-[13px] font-bold text-gray-800 mb-1.5 flex items-center gap-1.5">
-                              <span className="w-1 h-4 bg-blue-500 rounded-full shrink-0" />
+                            <h4 className="text-[12px] font-bold text-gray-700 mb-1.5">
                               {section.heading}
                             </h4>
                           )}
-                          <div className="text-[13px] text-gray-700 leading-[1.75]">
+                          <div className="text-[12px] text-gray-600 leading-[1.7]">
                             {section.lines.map((line, li) => {
                               const trimmed = line.trim();
                               if (!trimmed) return <div key={li} className="h-1.5" />;
@@ -499,8 +522,8 @@ const JobListings = () => {
                               if (isBullet) {
                                 const text = trimmed.replace(/^[-•*○◦▪]\s*/, '').replace(/^(\d+[\.\)])\s*/, '');
                                 return (
-                                  <div key={li} className="flex gap-2 pl-3 py-0.5">
-                                    <span className="text-blue-400 shrink-0 mt-[3px] text-[10px]">●</span>
+                                  <div key={li} className="flex gap-2 pl-2 py-0.5">
+                                    <span className="text-gray-300 shrink-0 mt-[3px] text-[8px]">●</span>
                                     <span>{text}</span>
                                   </div>
                                 );
@@ -528,8 +551,8 @@ const JobListings = () => {
                 {/* Fallback if no JD sections parsed but raw JD exists */}
                 {jdSections.length === 0 && job.jd && (
                   <div className="border-t border-gray-100 pt-4">
-                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Job Description</h3>
-                    <p className="text-[13px] text-gray-700 leading-[1.75] whitespace-pre-line">{job.jd}</p>
+                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Job Description</h3>
+                    <p className="text-[12px] text-gray-600 leading-[1.7] whitespace-pre-line">{job.jd}</p>
                   </div>
                 )}
               </div>
@@ -537,13 +560,13 @@ const JobListings = () => {
           );
         })() : (
           /* Default — Select a job */
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col items-center justify-center flex-1 text-center p-10">
-            <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-blue-100 rounded-2xl flex items-center justify-center mb-4">
-              <Briefcase size={28} className="text-primary-500" />
+          <div className="bg-white rounded-lg border border-gray-200 flex flex-col items-center justify-center flex-1 text-center p-10">
+            <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-3">
+              <Briefcase size={22} className="text-gray-300" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-700">Select a job to view details</h3>
-            <p className="text-sm text-gray-400 mt-1.5 max-w-sm">
-              Click on any job listing from the left panel to see match score, skills analysis, and apply options
+            <h3 className="text-[14px] font-semibold text-gray-600">Select a job to view details</h3>
+            <p className="text-[11px] text-gray-400 mt-1 max-w-xs">
+              Click on any listing from the left panel to see details
             </p>
           </div>
         )}

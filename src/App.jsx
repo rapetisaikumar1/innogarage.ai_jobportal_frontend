@@ -25,6 +25,7 @@ import ChatPage from './pages/student/ChatPage';
 import NotesPage from './pages/student/NotesPage';
 import AchieversPage from './pages/student/AchieversPage';
 import ShoutboardPage from './pages/student/ShoutboardPage';
+import HelpSupportPage from './pages/student/HelpSupportPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -97,6 +98,7 @@ function App() {
         <Route path="chat" element={<ChatPage />} />
         <Route path="achievers" element={<AchieversPage />} />
         <Route path="shoutboard" element={<ShoutboardPage />} />
+        <Route path="help-support" element={<HelpSupportPage />} />
       </Route>
 
       {/* Admin/Mentor Routes */}

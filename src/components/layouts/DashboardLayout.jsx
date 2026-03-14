@@ -42,6 +42,7 @@ const DashboardLayout = () => {
           { to: '/dashboard/mentoring', icon: Calendar, label: 'Mentoring' },
           { to: '/dashboard/chat', icon: MessageSquare, label: 'Chat' },
           { to: '/dashboard/shoutboard', icon: Megaphone, label: 'Shoutboard' },
+          { to: '/dashboard/help-support', icon: HelpCircle, label: 'Help & Support' },
           { to: '/dashboard/profile', icon: Settings, label: 'Profile' },
         ];
       case 'ADMIN':
@@ -102,7 +103,7 @@ const DashboardLayout = () => {
               ? navItems.filter(i => ['Training', 'My Notes', 'Mentoring'].includes(i.label))
               : [];
             const communityItems = isStudent
-              ? navItems.filter(i => ['Chat', 'Shoutboard'].includes(i.label))
+              ? navItems.filter(i => ['Chat', 'Shoutboard', 'Help & Support'].includes(i.label))
               : [];
             const profileItem = navItems.find(i => i.label === 'Profile');
 
@@ -327,10 +328,9 @@ const DashboardLayout = () => {
         <main className={`flex-1 overflow-y-auto ${useHorizontalNav ? 'p-4 lg:p-5' : 'p-5 lg:p-7'}`}>
           <Outlet />
 
-          {/* Footer — Super Admin & Admin */}
-          {useHorizontalNav && (
-            <footer className="mt-12 text-gray-600 py-12 border-t border-gray-200 -mx-4 lg:-mx-5 px-8 lg:px-12 bg-white">
-              <div className="max-w-6xl mx-auto">
+          {/* Footer */}
+          <footer className="mt-12 text-gray-600 py-10 border-t border-gray-200">
+            <div className="max-w-5xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
                   <div className="md:col-span-1">
                     <Logo size="md" />
@@ -376,9 +376,8 @@ const DashboardLayout = () => {
                     <span>Built with passion for job seekers everywhere.</span>
                   </div>
                 </div>
-              </div>
-            </footer>
-          )}
+            </div>
+          </footer>
         </main>
       </div>
 
