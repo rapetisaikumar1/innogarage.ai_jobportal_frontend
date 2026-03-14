@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Logo from '../Logo';
 import SubscribeDialog from '../SubscribeDialog';
+import api from '../../services/api';
 import {
   LayoutDashboard, Briefcase, FileText, GraduationCap, Users, MessageSquare,
   UserCog, BarChart3, BookOpen, Calendar, LogOut, Menu, X, Bell, ChevronDown,
@@ -16,6 +17,31 @@ const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileDropdown, setProfileDropdown] = useState(false);
   const [showSubscribe, setShowSubscribe] = useState(false);
+  const [queryNotifCount, setQueryNotifCount] = useState(0);
+  const [notifDropdown, setNotifDropdown] = useState(false);
+
+  const fetchQueryCount = useCallback(async () => {
+    if (user?.role === 'SUPER_ADMIN') {
+      try {
+        const { data } = await api.get('/queries/count');
+        const currentCount = data.count;
+        const lastSeen = parseInt(localStorage.getItem('lastSeenQueryCount') || '0', 10);
+        setQueryNotifCount(currentCount > lastSeen ? currentCount - lastSeen : 0);
+      } catch {}
+    } else if (user?.role === 'STUDENT') {
+      try {
+        const lastSeen = localStorage.getItem('studentQueryLastSeen') || new Date(0).toISOString();
+        const { data } = await api.get(`/queries/student-notifications?since=${encodeURIComponent(lastSeen)}`);
+        setQueryNotifCount(data.count);
+      } catch {}
+    }
+  }, [user?.role]);
+
+  useEffect(() => {
+    fetchQueryCount();
+    const interval = setInterval(fetchQueryCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchQueryCount]);
 
   useEffect(() => {
     if (location.state?.showSubscribe) {
@@ -61,6 +87,7 @@ const DashboardLayout = () => {
           { to: '/superadmin/students', icon: Users, label: 'Manage Students' },
           { to: '/superadmin/training', icon: GraduationCap, label: 'Training Materials' },
           { to: '/superadmin/analytics', icon: BarChart3, label: 'Analytics', disabled: true },
+          { to: '/superadmin/queries', icon: HelpCircle, label: 'Queries' },
           { to: '/superadmin/profile', icon: Settings, label: 'Profile' },
         ];
       default:
@@ -217,16 +244,81 @@ const DashboardLayout = () => {
             </button>
 
             {/* Notifications */}
-            <button className="relative text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-xl hover:bg-gray-100">
-              <Bell size={20} strokeWidth={1.8} />
-              <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">3</span>
-            </button>
+            <div className="relative">
+              <button
+                className="relative text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-xl hover:bg-gray-100"
+                onClick={() => {
+                  if (user?.role === 'SUPER_ADMIN' || user?.role === 'STUDENT') {
+                    setNotifDropdown(!notifDropdown);
+                    setProfileDropdown(false);
+                  }
+                }}
+              >
+                <Bell size={20} strokeWidth={1.8} />
+                {queryNotifCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">{queryNotifCount}</span>
+                )}
+              </button>
+
+              {notifDropdown && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setNotifDropdown(false)} />
+                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-[0_8px_30px_-8px_rgba(0,0,0,0.18)] border border-gray-200/80 z-50 overflow-hidden">
+                    <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
+                      <p className="text-[13px] font-bold text-gray-800">Notifications</p>
+                      {queryNotifCount > 0 && (
+                        <span className="text-[10px] font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">{queryNotifCount} new</span>
+                      )}
+                    </div>
+                    {queryNotifCount > 0 ? (
+                      <button
+                        className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-blue-50/50 transition-colors text-left"
+                        onClick={() => {
+                          if (user?.role === 'SUPER_ADMIN') {
+                            const lastSeen = parseInt(localStorage.getItem('lastSeenQueryCount') || '0', 10);
+                            localStorage.setItem('lastSeenQueryCount', String(lastSeen + queryNotifCount));
+                            setQueryNotifCount(0);
+                            setNotifDropdown(false);
+                            navigate('/superadmin/queries');
+                          } else if (user?.role === 'STUDENT') {
+                            localStorage.setItem('studentQueryLastSeen', new Date().toISOString());
+                            setQueryNotifCount(0);
+                            setNotifDropdown(false);
+                            navigate('/dashboard/help-support');
+                          }
+                        }}
+                      >
+                        <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center shrink-0">
+                          <HelpCircle size={15} className="text-violet-600" />
+                        </div>
+                        <div>
+                          <p className="text-[12px] font-semibold text-gray-800">
+                            {user?.role === 'SUPER_ADMIN'
+                              ? `You have ${queryNotifCount} new ${queryNotifCount === 1 ? 'query' : 'queries'}`
+                              : `You have ${queryNotifCount} ${queryNotifCount === 1 ? 'update' : 'updates'} on your queries`
+                            }
+                          </p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">
+                            {user?.role === 'SUPER_ADMIN' ? 'Click to view and respond' : 'Click to view in Help & Support'}
+                          </p>
+                        </div>
+                      </button>
+                    ) : (
+                      <div className="px-4 py-8 text-center">
+                        <Bell size={24} className="text-gray-200 mx-auto mb-2" />
+                        <p className="text-[12px] text-gray-400">No new notifications</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Profile dropdown */}
             <div className="relative">
               <button
                 className="flex items-center gap-2.5 py-1 px-1 rounded-xl hover:bg-gray-50 transition-colors"
-                onClick={() => setProfileDropdown(!profileDropdown)}
+                onClick={() => { setProfileDropdown(!profileDropdown); setNotifDropdown(false); }}
               >
                 <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-primary-700 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-sm">
                   {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
