@@ -137,9 +137,9 @@ const AdminStudents = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-xl font-bold text-white tracking-tight">{detail.fullName}</h2>
-                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${detail.isActive ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/30' : 'bg-red-500/20 text-red-300 ring-1 ring-red-400/30'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${detail.isActive ? 'bg-emerald-400' : 'bg-red-400'}`}></span>
-                  {detail.isActive ? 'Active' : 'Inactive'}
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${detail.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/30' : 'bg-red-500/20 text-red-300 ring-1 ring-red-400/30'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${detail.status === 'ACTIVE' ? 'bg-emerald-400' : 'bg-red-400'}`}></span>
+                  {detail.status === 'ACTIVE' ? 'Active' : 'Inactive'}
                 </span>
               </div>
               <div className="flex items-center gap-4 mt-2.5 flex-wrap">
@@ -473,9 +473,9 @@ const AdminStudents = () => {
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-center">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${student.isActive ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-red-50 text-red-600 ring-1 ring-red-200'}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${student.isActive ? 'bg-emerald-500' : 'bg-red-400'}`}></span>
-                      {student.isActive ? 'Active' : 'Inactive'}
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${student.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-red-50 text-red-600 ring-1 ring-red-200'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${student.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-red-400'}`}></span>
+                      {student.status === 'ACTIVE' ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-right">

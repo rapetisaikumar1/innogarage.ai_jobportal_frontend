@@ -117,7 +117,7 @@ const StudentDashboard = () => {
       </div>
 
       {/* Summary Cards Row with Donut Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Applications Overview */}
         <div className="bg-white rounded-xl border border-gray-200/60 p-5 hover:shadow-lg transition-shadow duration-300">
           <h3 className="text-[13px] font-bold text-gray-800 mb-4">Applications Overview</h3>
@@ -177,19 +177,24 @@ const StudentDashboard = () => {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Stat Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {statCards.map(({ label, value, icon: Icon, light, text }) => (
-          <div key={label} className="bg-white rounded-xl border border-gray-200/60 p-4 hover:shadow-lg transition-all duration-300 group">
-            <div className={`w-10 h-10 ${light} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
-              <Icon size={18} className={text} strokeWidth={2} />
-            </div>
-            <p className="text-[22px] font-extrabold text-gray-900 leading-none">{value}</p>
-            <p className="text-[11px] text-gray-400 mt-1 font-medium">{label}</p>
+        {/* Summary */}
+        <div className="bg-white rounded-xl border border-gray-200/60 p-5 hover:shadow-lg transition-shadow duration-300">
+          <h3 className="text-[13px] font-bold text-gray-800 mb-4">Summary</h3>
+          <div className="space-y-3">
+            {statCards.map(({ label, value, icon: Icon, light, text }) => (
+              <div key={label} className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-7 h-7 ${light} rounded-lg flex items-center justify-center`}>
+                    <Icon size={14} className={text} strokeWidth={2} />
+                  </div>
+                  <span className="text-[12px] text-gray-600">{label}</span>
+                </div>
+                <span className="text-[14px] font-bold text-gray-900">{value}</span>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
       {/* Recent Applications */}

@@ -82,135 +82,143 @@ const SuperAdminDashboard = () => {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-blue-50/60 to-indigo-50/40 border border-gray-200/60 px-6 py-5">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-blue-50/60 to-indigo-50/40 border border-gray-200/60 px-7 py-6">
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-100/40 to-transparent rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-indigo-100/30 to-transparent rounded-full translate-y-1/2 -translate-x-1/4" />
         <div className="relative">
           <h1 className="text-xl font-bold text-gray-800 tracking-tight">
             {greeting}, <span className="bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">{user?.fullName || 'Super Admin'}</span>
           </h1>
-          <p className="text-gray-500 text-[13px] mt-1">Here's your platform overview. Manage and monitor everything from here.</p>
+          <p className="text-gray-500 text-sm mt-1.5">Here's your platform overview. Manage and monitor everything from here.</p>
         </div>
       </div>
 
-      {/* Summary Cards Row with Donut Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Users Summary */}
-        <div className="bg-white rounded-xl border border-gray-200/60 p-5 hover:shadow-lg transition-shadow duration-300">
-          <h3 className="text-[13px] font-bold text-gray-800 mb-4">Users Overview</h3>
-          <div className="flex items-center gap-5">
-            <div className="relative">
-              <DonutChart value={totalStudents} max={summaryTotal || 1} color="#0e7490" trackColor="#be185d" size={90} strokeWidth={10} />
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[18px] font-extrabold text-gray-900 leading-none">{summaryTotal}</span>
-                <span className="text-[9px] text-gray-400 font-medium mt-0.5">Total</span>
+      {/* Summary Cards Row */}
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Donut Chart Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:flex-[3]">
+          {/* Users Overview */}
+          <div className="bg-white rounded-xl border border-gray-200/60 px-5 py-4 hover:shadow-md transition-shadow duration-300">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Users Overview</h3>
+            <div className="flex items-center gap-4">
+              <div className="relative flex-shrink-0">
+                <DonutChart value={totalStudents} max={summaryTotal || 1} color="#0e7490" trackColor="#be185d" size={90} strokeWidth={9} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-lg font-extrabold text-gray-900 leading-none">{summaryTotal}</span>
+                  <span className="text-[10px] text-gray-400 font-medium">Total</span>
+                </div>
+              </div>
+              <div className="space-y-2.5 flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-cyan-700" />
+                    <span className="text-xs text-gray-600">Students</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-900">{totalStudents}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-pink-700" />
+                    <span className="text-xs text-gray-600">Mentors</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-900">{totalMentors}</span>
+                </div>
               </div>
             </div>
-            <div className="space-y-3 flex-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-700" />
-                  <span className="text-[12px] text-gray-600">Students</span>
+          </div>
+
+          {/* Applications */}
+          <div className="bg-white rounded-xl border border-gray-200/60 px-5 py-4 hover:shadow-md transition-shadow duration-300">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Applications</h3>
+            <div className="flex items-center gap-4">
+              <div className="relative flex-shrink-0">
+                <DonutChart value={offersReceived} max={placementTotal} color="#15803d" trackColor="#9333ea" size={90} strokeWidth={9} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-lg font-extrabold text-gray-900 leading-none">{totalApplications}</span>
+                  <span className="text-[10px] text-gray-400 font-medium">Total</span>
                 </div>
-                <span className="text-[13px] font-bold text-gray-900">{totalStudents}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-pink-700" />
-                  <span className="text-[12px] text-gray-600">Mentors</span>
+              <div className="space-y-2.5 flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-green-700" />
+                    <span className="text-xs text-gray-600">Placed</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-900">{offersReceived}</span>
                 </div>
-                <span className="text-[13px] font-bold text-gray-900">{totalMentors}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-600" />
+                    <span className="text-xs text-gray-600">Applied</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-900">{totalApplications}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Activity */}
+          <div className="bg-white rounded-xl border border-gray-200/60 px-5 py-4 hover:shadow-md transition-shadow duration-300">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Activity</h3>
+            <div className="flex items-center gap-4">
+              <div className="relative flex-shrink-0">
+                <DonutChart value={completedBookings} max={totalBookings || 1} color="#c2410c" trackColor="#1e40af" size={90} strokeWidth={9} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-lg font-extrabold text-gray-900 leading-none">{totalBookings}</span>
+                  <span className="text-[10px] text-gray-400 font-medium">Total</span>
+                </div>
+              </div>
+              <div className="space-y-2.5 flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-orange-700" />
+                    <span className="text-xs text-gray-600">Sessions</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-900">{completedBookings}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-800" />
+                    <span className="text-xs text-gray-600">Issues</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-900">{totalBookings}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Applications Summary */}
-        <div className="bg-white rounded-xl border border-gray-200/60 p-5 hover:shadow-lg transition-shadow duration-300">
-          <h3 className="text-[13px] font-bold text-gray-800 mb-4">Applications</h3>
-          <div className="flex items-center gap-5">
-            <div className="relative">
-              <DonutChart value={offersReceived} max={placementTotal} color="#15803d" trackColor="#9333ea" size={90} strokeWidth={10} />
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[18px] font-extrabold text-gray-900 leading-none">{totalApplications}</span>
-                <span className="text-[9px] text-gray-400 font-medium mt-0.5">Total</span>
-              </div>
-            </div>
-            <div className="space-y-3 flex-1">
-              <div className="flex items-center justify-between">
+        {/* Summary Card - wider, different size */}
+        <div className="bg-white rounded-xl border border-gray-200/60 px-5 py-4 hover:shadow-md transition-shadow duration-300 lg:flex-[1.5]">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Summary</h3>
+          <div className="grid grid-cols-2 gap-x-5 gap-y-2.5">
+            {statCards.map(({ label, value, icon: Icon, light, text }) => (
+              <div key={label} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-green-700" />
-                  <span className="text-[12px] text-gray-600">Placed</span>
+                  <div className={`w-7 h-7 ${light} rounded-lg flex items-center justify-center`}>
+                    <Icon size={14} className={text} strokeWidth={2} />
+                  </div>
+                  <span className="text-xs text-gray-600">{label}</span>
                 </div>
-                <span className="text-[13px] font-bold text-gray-900">{offersReceived}</span>
+                <span className="text-sm font-bold text-gray-900">{value}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
-                  <span className="text-[12px] text-gray-600">Applied</span>
-                </div>
-                <span className="text-[13px] font-bold text-gray-900">{totalApplications}</span>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
-
-        {/* Sessions Summary */}
-        <div className="bg-white rounded-xl border border-gray-200/60 p-5 hover:shadow-lg transition-shadow duration-300">
-          <h3 className="text-[13px] font-bold text-gray-800 mb-4">Activity</h3>
-          <div className="flex items-center gap-5">
-            <div className="relative">
-              <DonutChart value={completedBookings} max={totalBookings || 1} color="#c2410c" trackColor="#1e40af" size={90} strokeWidth={10} />
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[18px] font-extrabold text-gray-900 leading-none">{totalBookings}</span>
-                <span className="text-[9px] text-gray-400 font-medium mt-0.5">Total</span>
-              </div>
-            </div>
-            <div className="space-y-3 flex-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-orange-700" />
-                  <span className="text-[12px] text-gray-600">Sessions</span>
-                </div>
-                <span className="text-[13px] font-bold text-gray-900">{completedBookings}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-800" />
-                  <span className="text-[12px] text-gray-600">Issues</span>
-                </div>
-                <span className="text-[13px] font-bold text-gray-900">{totalBookings}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Stat Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {statCards.map(({ label, value, icon: Icon, gradient, light, text }) => (
-          <div key={label} className="bg-white rounded-xl border border-gray-200/60 p-4 hover:shadow-lg transition-all duration-300 group">
-            <div className={`w-10 h-10 ${light} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
-              <Icon size={18} className={text} strokeWidth={2} />
-            </div>
-            <p className="text-[22px] font-extrabold text-gray-900 leading-none">{value}</p>
-            <p className="text-[11px] text-gray-400 mt-1 font-medium">{label}</p>
-          </div>
-        ))}
       </div>
 
       {/* Application Status Breakdown */}
       {analytics?.applicationsByStatus && Object.keys(analytics.applicationsByStatus).length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200/60 overflow-hidden hover:shadow-lg transition-shadow duration-300">
-          <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-[13px] font-bold text-gray-800">Application Status Breakdown</h2>
-            <span className="text-[11px] text-gray-400 font-medium">{totalApplications} total</span>
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-800">Application Status Breakdown</h2>
+            <span className="text-xs text-gray-400 font-medium">{totalApplications} total</span>
           </div>
-          <div className="p-4">
+          <div className="px-6 py-5">
             {/* Progress bar */}
-            <div className="flex h-2.5 rounded-full overflow-hidden bg-gray-100 mb-4">
+            <div className="flex h-2.5 rounded-full overflow-hidden bg-gray-100 mb-5">
               {Object.entries(analytics.applicationsByStatus).map(([status, count], i) => {
                 const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500', 'bg-rose-500', 'bg-cyan-500', 'bg-teal-500', 'bg-orange-500'];
                 const pct = totalApplications > 0 ? (count / totalApplications) * 100 : 0;
@@ -221,12 +229,12 @@ const SuperAdminDashboard = () => {
               {Object.entries(analytics.applicationsByStatus).map(([status, count], i) => {
                 const dotColors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500', 'bg-rose-500', 'bg-cyan-500', 'bg-teal-500', 'bg-orange-500'];
                 return (
-                  <div key={status} className="bg-gray-50/80 p-3 rounded-lg text-center hover:bg-gray-100/80 transition-colors">
-                    <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <div key={status} className="bg-gray-50/80 px-3 py-3.5 rounded-lg text-center hover:bg-gray-100/80 transition-colors">
+                    <div className="flex items-center justify-center gap-1.5 mb-1.5">
                       <span className={`w-2 h-2 rounded-full ${dotColors[i % dotColors.length]}`} />
-                      <p className="text-[17px] font-extrabold text-gray-900">{count}</p>
+                      <p className="text-lg font-extrabold text-gray-900">{count}</p>
                     </div>
-                    <p className="text-[10px] text-gray-400 capitalize font-medium">{status.replace(/_/g, ' ').toLowerCase()}</p>
+                    <p className="text-[11px] text-gray-400 capitalize font-medium">{status.replace(/_/g, ' ').toLowerCase()}</p>
                   </div>
                 );
               })}
@@ -237,18 +245,18 @@ const SuperAdminDashboard = () => {
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-[13px] font-bold text-gray-800 mb-3">Quick Actions</h2>
+        <h2 className="text-sm font-bold text-gray-800 mb-3.5">Quick Actions</h2>
         <div className="flex flex-wrap items-center gap-3">
           {quickActions.map(({ to, icon: Icon, label, iconBg }) => (
             <Link
               key={to}
               to={to}
-              className="flex items-center gap-2.5 px-4 py-2.5 bg-white border border-gray-200/60 rounded-xl hover:shadow-md hover:border-gray-300 transition-all duration-300 group"
+              className="flex items-center gap-3 px-5 py-3 bg-white border border-gray-200/60 rounded-xl hover:shadow-md hover:border-gray-300 transition-all duration-300 group"
             >
-              <div className={`w-8 h-8 ${iconBg} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
-                <Icon size={15} className="text-white" strokeWidth={2} />
+              <div className={`w-9 h-9 ${iconBg} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
+                <Icon size={16} className="text-white" strokeWidth={2} />
               </div>
-              <span className="text-[12px] font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">{label}</span>
+              <span className="text-[13px] font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">{label}</span>
             </Link>
           ))}
         </div>

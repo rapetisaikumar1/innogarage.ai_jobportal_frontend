@@ -92,7 +92,7 @@ const ManageStudents = () => {
   const toggleStatus = async (id) => {
     try {
       const res = await api.patch(`/admin/students/${id}/toggle-status`);
-      toast.success(`Student ${res.data.isActive ? 'activated' : 'deactivated'}`);
+      toast.success(`Student ${res.data.status === 'ACTIVE' ? 'activated' : 'deactivated'}`);
       fetchStudents();
     } catch (error) {
       toast.error('Failed to toggle status');
@@ -135,8 +135,8 @@ const ManageStudents = () => {
         s.email?.toLowerCase().includes(search.toLowerCase()) ||
         s.registrationNumber?.toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === 'all' ||
-        (statusFilter === 'active' && s.isActive) ||
-        (statusFilter === 'inactive' && !s.isActive);
+        (statusFilter === 'active' && s.status === 'ACTIVE') ||
+        (statusFilter === 'inactive' && s.status === 'INACTIVE');
       const matchesMentor = mentorFilter === 'all' ||
         (mentorFilter === 'unassigned' && !s.assignedMentorId) ||
         s.assignedMentorId === mentorFilter;
@@ -208,10 +208,10 @@ const ManageStudents = () => {
             )}
             <button
               onClick={() => toggleStatus(detail.id)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border shadow-sm ${detail.isActive ? 'border-amber-200 text-amber-700 hover:bg-amber-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'}`}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border shadow-sm ${detail.status === 'ACTIVE' ? 'border-amber-200 text-amber-700 hover:bg-amber-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'}`}
             >
-              {detail.isActive ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
-              {detail.isActive ? 'Deactivate' : 'Activate'}
+              {detail.status === 'ACTIVE' ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
+              {detail.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
             </button>
 
           </div>
@@ -223,9 +223,9 @@ const ManageStudents = () => {
             <div>
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-bold capitalize text-white tracking-tight">{detail.fullName}</h1>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${detail.isActive ? 'bg-emerald-400 text-emerald-950' : 'bg-red-400 text-red-950'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${detail.isActive ? 'bg-emerald-700' : 'bg-red-700'}`}></span>
-                  {detail.isActive ? 'Active' : 'Inactive'}
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${detail.status === 'ACTIVE' ? 'bg-emerald-400 text-emerald-950' : 'bg-red-400 text-red-950'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${detail.status === 'ACTIVE' ? 'bg-emerald-700' : 'bg-red-700'}`}></span>
+                  {detail.status === 'ACTIVE' ? 'Active' : 'Inactive'}
                 </span>
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${detail.isEmailVerified ? 'bg-sky-400 text-sky-950' : 'bg-slate-400 text-slate-900'}`}>
                   <Shield size={11} />
@@ -648,10 +648,10 @@ const ManageStudents = () => {
                     <td className="px-5 py-3.5">
                       <button
                         onClick={() => toggleStatus(student.id)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold cursor-pointer transition-colors ${student.isActive ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold cursor-pointer transition-colors ${student.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full ${student.isActive ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
-                        {student.isActive ? 'Active' : 'Inactive'}
+                        <span className={`w-1.5 h-1.5 rounded-full ${student.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                        {student.status === 'ACTIVE' ? 'Active' : 'Inactive'}
                       </button>
                     </td>
                     <td className="px-5 py-3.5">
