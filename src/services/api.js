@@ -16,7 +16,7 @@ export const getUserForRole = (role) => {
 };
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -53,7 +53,7 @@ api.interceptors.response.use(
 
       if (refreshToken) {
         try {
-          const { data } = await axios.post('/api/auth/refresh-token', { refreshToken });
+          const { data } = await axios.post(`${import.meta.env.VITE_API_URL || '/api'}/auth/refresh-token`, { refreshToken });
           localStorage.setItem(`${role}_accessToken`, data.accessToken);
           localStorage.setItem(`${role}_refreshToken`, data.refreshToken);
           originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
