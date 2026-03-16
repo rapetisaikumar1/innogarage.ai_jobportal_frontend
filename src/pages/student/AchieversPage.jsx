@@ -396,7 +396,7 @@ const AchieversPage = () => {
       </div>
 
       {/* Subscribe Dialog */}
-      <SubscribeDialog isOpen={showSubscribe} onClose={() => setShowSubscribe(false)} />
+      <SubscribeDialog isOpen={showSubscribe} onClose={() => setShowSubscribe(false)} userEmail={user?.email} />
     </div>
   );
 };

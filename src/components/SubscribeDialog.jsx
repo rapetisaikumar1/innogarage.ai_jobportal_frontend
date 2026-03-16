@@ -1,29 +1,45 @@
 import { useState, useEffect } from 'react';
-import { X, Check, Crown, Shield, Target, GraduationCap, Headphones, BarChart3, FileText, MessageSquare, ArrowRight } from 'lucide-react';
+import { X, Check, Crown, Shield, Target, GraduationCap, Headphones, BarChart3, FileText, MessageSquare, ArrowRight, Sparkles, Zap, Rocket, Loader2 } from 'lucide-react';
+import api from '../services/api';
 
 const plans = [
   {
     name: 'Basic',
+    key: 'basic',
     price: '$49',
     period: '/month',
     badge: null,
+    icon: Zap,
+    accent: 'from-blue-500 to-cyan-400',
+    accentBg: 'bg-gradient-to-br from-blue-50 to-cyan-50',
+    accentBorder: 'border-blue-200',
+    accentCheck: 'text-blue-500',
+    accentBtn: 'from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 shadow-blue-200/50',
     features: [
       'Smart Job Matching',
       'Basic Resume Builder',
-      'Up to 10 Applications/month',
+      'Up to 35 Job Searches',
+      '1 My Jobs Search per Day',
       'Email Support',
     ],
     cta: 'Get Started',
   },
   {
     name: 'Pro',
+    key: 'pro',
     price: '$199',
     period: '/month',
     badge: 'MOST POPULAR',
+    icon: Sparkles,
+    accent: 'from-violet-600 to-indigo-500',
+    accentBg: 'bg-gradient-to-br from-violet-50 to-indigo-50',
+    accentBorder: 'border-violet-200',
+    accentCheck: 'text-violet-600',
+    accentBtn: 'from-violet-600 to-indigo-500 hover:from-violet-700 hover:to-indigo-600 shadow-violet-200/50',
     features: [
       'AI-Powered Job Matching',
       'ATS-Optimized Resume Builder',
-      'Unlimited Applications',
+      'Up to 200 Applications',
       'Mentor Connect (2 sessions/month)',
       'Priority Support',
     ],
@@ -31,15 +47,22 @@ const plans = [
   },
   {
     name: 'Ultra',
-    price: '$2,500',
-    period: '/month',
+    key: 'ultra',
+    price: '$2,499',
+    period: '/once',
     badge: 'BEST VALUE',
+    icon: Rocket,
+    accent: 'from-amber-500 to-orange-500',
+    accentBg: 'bg-gradient-to-br from-amber-50 to-orange-50',
+    accentBorder: 'border-amber-200',
+    accentCheck: 'text-amber-600',
+    accentBtn: 'from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-200/50',
     features: [
       'Everything in Pro',
+      '3-Month Guaranteed Placement Assistance',
+      'Full Background Verification Support',
       'Unlimited Mentor Sessions',
-      'Personal Career Roadmap',
       'Dedicated Career Advisor',
-      'Guaranteed Interview Prep',
     ],
     cta: 'Go Ultra',
   },
@@ -54,8 +77,26 @@ const highlights = [
   { icon: MessageSquare, label: '24/7 Support' },
 ];
 
-const SubscribeDialog = ({ isOpen, onClose }) => {
+const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
   const [hoveredPlan, setHoveredPlan] = useState(null);
+  const [loadingPlan, setLoadingPlan] = useState(null);
+
+  const handleCheckout = async (planKey) => {
+    try {
+      setLoadingPlan(planKey);
+      const { data } = await api.post('/stripe/create-checkout', { plan: planKey });
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('No checkout URL returned:', data);
+        setLoadingPlan(null);
+      }
+    } catch (err) {
+      console.error('Checkout error:', err?.response?.data || err.message || err);
+      alert('Failed to start checkout. Please try again.');
+      setLoadingPlan(null);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -69,113 +110,140 @@ const SubscribeDialog = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-md" onClick={onClose} />
 
       {/* Dialog */}
-      <div className="relative z-10 w-full max-w-[980px] bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-[1120px] bg-gradient-to-br from-white via-slate-50/80 to-indigo-50/40 rounded-3xl shadow-2xl overflow-hidden border border-white/60">
+        {/* Decorative blobs */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-violet-200/30 to-transparent rounded-full -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-blue-200/20 to-transparent rounded-full translate-y-1/2 -translate-x-1/4 pointer-events-none" />
+
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-3.5 right-3.5 z-20 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+          className="absolute top-4 right-4 z-20 w-9 h-9 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm border border-gray-200/60 hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all shadow-sm"
         >
-          <X size={16} strokeWidth={2} />
+          <X size={16} strokeWidth={2.5} />
         </button>
 
         {/* Header */}
-        <div className="px-8 pt-5 pb-3 text-center">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-gray-900 mb-2.5">
-            <Crown size={11} className="text-amber-400" />
-            <span className="text-[9px] font-bold text-white tracking-widest uppercase">Upgrade Your Career</span>
+        <div className="relative px-10 pt-8 pb-4 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 mb-4 shadow-lg shadow-violet-200/40">
+            <Crown size={13} className="text-amber-300" />
+            <span className="text-[10px] font-bold text-white tracking-widest uppercase">Upgrade Your Career</span>
           </div>
-          <h2 className="text-[22px] font-extrabold text-gray-900 tracking-tight leading-tight">
+          <h2 className="text-[28px] font-extrabold text-gray-900 tracking-tight leading-tight">
             Unlock Your Full Potential with{' '}
-            <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">get.hired</span>
+            <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">get.hired</span>
           </h2>
-          <p className="text-[11px] text-gray-500 max-w-lg mx-auto leading-relaxed mt-1">
+          <p className="text-[13px] text-gray-500 max-w-xl mx-auto leading-relaxed mt-2">
             Choose the plan that accelerates your career — from smart job matching to personal mentorship, we've got you covered.
           </p>
 
           {/* Feature Highlights */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-2.5">
+          <div className="flex flex-wrap items-center justify-center gap-2.5 mt-4">
             {highlights.map(({ icon: Icon, label }) => (
-              <div key={label} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200">
-                <Icon size={11} className="text-gray-500" />
-                <span className="text-[9px] font-medium text-gray-600">{label}</span>
+              <div key={label} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/70 backdrop-blur-sm border border-gray-200/50 shadow-sm">
+                <Icon size={12} className="text-indigo-500" />
+                <span className="text-[10px] font-semibold text-gray-600">{label}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Plans Grid — equal height cards */}
-        <div className="px-8 pb-3">
-          <div className="grid grid-cols-3 gap-3.5">
-            {plans.map((plan, idx) => (
-              <div
-                key={plan.name}
-                onMouseEnter={() => setHoveredPlan(idx)}
-                onMouseLeave={() => setHoveredPlan(null)}
-                className={`relative rounded-xl border border-gray-200 bg-white flex flex-col transition-all duration-200 ${
-                  hoveredPlan === idx ? 'shadow-xl border-gray-900 scale-[1.02]' : 'hover:shadow-lg'
-                }`}
-              >
-                {/* Badge */}
-                {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full text-[9px] font-bold tracking-wider text-white bg-gray-900 whitespace-nowrap">
-                    {plan.badge}
+        {/* Plans Grid */}
+        <div className="relative px-10 pb-4 pt-2">
+          <div className="grid grid-cols-3 gap-5">
+            {plans.map((plan, idx) => {
+              const PlanIcon = plan.icon;
+              return (
+                <div
+                  key={plan.name}
+                  onMouseEnter={() => setHoveredPlan(idx)}
+                  onMouseLeave={() => setHoveredPlan(null)}
+                  className={`relative rounded-2xl border bg-white/70 backdrop-blur-xl flex flex-col transition-all duration-300 ${
+                    idx === 1
+                      ? 'border-violet-300 shadow-xl shadow-violet-100/40 scale-[1.03]'
+                      : `${plan.accentBorder} shadow-md`
+                  } ${hoveredPlan === idx ? 'shadow-2xl scale-[1.04] -translate-y-1' : 'hover:shadow-lg'}`}
+                >
+                  {/* Badge */}
+                  {plan.badge && (
+                    <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-wider text-white bg-gradient-to-r ${plan.accent} whitespace-nowrap shadow-lg`}>
+                      {plan.badge}
+                    </div>
+                  )}
+
+                  <div className="px-6 pt-7 pb-6 flex flex-col flex-1">
+                    {/* Plan Icon + Name */}
+                    <div className="flex flex-col items-center mb-2">
+                      <div className={`w-12 h-12 rounded-2xl ${plan.accentBg} flex items-center justify-center mb-3 shadow-sm`}>
+                        <PlanIcon size={22} className={plan.accentCheck} />
+                      </div>
+                      <h3 className="font-extrabold text-[17px] text-gray-900">
+                        {plan.name}
+                      </h3>
+                    </div>
+
+                    {/* Price */}
+                    <div className="flex items-baseline justify-center gap-1 mt-1 mb-4">
+                      <span className={`text-[36px] font-black tracking-tight leading-none bg-gradient-to-r ${plan.accent} bg-clip-text text-transparent`}>{plan.price}</span>
+                      <span className="text-[13px] text-gray-400 font-medium">{plan.period}</span>
+                    </div>
+
+                    {/* Divider */}
+                    <div className={`h-px bg-gradient-to-r ${plan.accent} opacity-20 mb-4`} />
+
+                    {/* Features */}
+                    <ul className="space-y-3 flex-1">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-2.5">
+                          <div className={`w-5 h-5 rounded-full ${plan.accentBg} flex items-center justify-center shrink-0 mt-0.5`}>
+                            <Check size={11} className={plan.accentCheck} strokeWidth={3} />
+                          </div>
+                          <span className="text-[13px] text-gray-700 leading-snug">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* CTA Button */}
+                    <button
+                      onClick={() => handleCheckout(plan.key)}
+                      disabled={loadingPlan !== null}
+                      className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-bold tracking-wide transition-all duration-300 mt-5 bg-gradient-to-r ${plan.accentBtn} text-white shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed`}
+                    >
+                      {loadingPlan === plan.key ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          Redirecting...
+                        </>
+                      ) : (
+                        <>
+                          {plan.cta}
+                          <ArrowRight size={14} />
+                        </>
+                      )}
+                    </button>
                   </div>
-                )}
-
-                <div className="px-5 pt-4 pb-4 flex flex-col flex-1">
-                  {/* Plan Name */}
-                  <h3 className="text-center font-extrabold text-[15px] text-gray-900">
-                    {plan.name}
-                  </h3>
-
-                  {/* Price */}
-                  <div className="flex items-baseline justify-center gap-0.5 mt-1 mb-3">
-                    <span className="text-[30px] font-black text-gray-900 tracking-tight leading-none">{plan.price}</span>
-                    <span className="text-[12px] text-gray-400 font-medium">{plan.period}</span>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="h-px bg-gray-100 mb-3" />
-
-                  {/* Features */}
-                  <ul className="space-y-2 flex-1">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-center gap-2">
-                        <Check size={13} className="text-gray-900 shrink-0" strokeWidth={2.5} />
-                        <span className="text-[12px] text-gray-700">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* CTA */}
-                  <button className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-[12px] font-bold tracking-wide transition-all duration-200 mt-4 bg-gray-900 hover:bg-gray-800 text-white ${
-                    hoveredPlan === idx ? 'scale-[1.02]' : ''
-                  }`}>
-                    {plan.cta}
-                    <ArrowRight size={13} />
-                  </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-8 pt-1 pb-4 text-center">
+        <div className="relative px-10 pt-2 pb-6 text-center">
           <button
             onClick={onClose}
-            className="text-[12px] text-gray-400 hover:text-gray-600 transition-colors font-medium"
+            className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors font-medium"
           >
             Maybe later — continue to dashboard
           </button>
-          <div className="flex items-center justify-center gap-1.5 mt-1.5">
-            <Shield size={11} className="text-gray-400" />
-            <span className="text-[10px] text-gray-400 font-medium">Secure Payment</span>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <Shield size={12} className="text-gray-400" />
+            <span className="text-[11px] text-gray-400 font-medium">Secure Payment · Cancel Anytime</span>
           </div>
         </div>
       </div>

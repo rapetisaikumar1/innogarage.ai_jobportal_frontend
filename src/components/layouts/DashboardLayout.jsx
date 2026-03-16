@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 const DashboardLayout = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -50,6 +50,33 @@ const DashboardLayout = () => {
       window.history.replaceState({}, '');
     }
   }, [location.state]);
+
+  // After Stripe payment redirect, verify session and update plan
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isUpgraded = params.get('upgraded') === 'true';
+    if (isUpgraded) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    // Verify session if just upgraded OR if user plan is still free/null (self-healing)
+    if (isUpgraded || !user?.subscriptionPlan || user?.subscriptionPlan === 'free') {
+      (async () => {
+        try {
+          const { data: verifyResult } = await api.post('/stripe/verify-session');
+          if (verifyResult.success) {
+            // Refetch user to get updated subscriptionPlan
+            const { data } = await api.get('/auth/me');
+            updateUser(data);
+          }
+        } catch (err) {
+          // 400 = no checkout session found (user never subscribed) — that's OK
+          if (err.response?.status !== 400) {
+            console.error('Plan verification error:', err);
+          }
+        }
+      })();
+    }
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -102,7 +129,7 @@ const DashboardLayout = () => {
   const roleLabel = isSuperAdmin ? 'Super Admin' : isAdmin ? 'Mentor' : 'Student';
 
   return (
-    <div className={`h-screen bg-[#f8f9fb] ${useHorizontalNav ? 'flex flex-col' : 'flex'} overflow-hidden`}>
+    <div className={`h-screen bg-gradient-to-br from-slate-100 via-blue-50/80 to-indigo-100/60 ${useHorizontalNav ? 'flex flex-col' : 'flex'} overflow-hidden`}>
       {/* Mobile Overlay — sidebar roles only */}
       {!useHorizontalNav && sidebarOpen && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -110,7 +137,7 @@ const DashboardLayout = () => {
 
       {/* Sidebar — hidden for Super Admin and Admin */}
       {!useHorizontalNav && (
-      <aside className={`fixed inset-y-0 left-0 z-50 w-56 bg-white border-r border-gray-100 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} flex flex-col`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-56 bg-white/60 backdrop-blur-2xl border-r border-white/40 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} flex flex-col`}>
         {/* Logo */}
         <div className="h-14 flex items-center justify-between px-4 border-b border-gray-50">
           <Logo size="sm" />
@@ -217,7 +244,7 @@ const DashboardLayout = () => {
       {/* Main Content */}
       <div className={`flex-1 flex flex-col min-w-0 min-h-0 ${useHorizontalNav ? '' : 'lg:ml-56'}`}>
         {/* Top Header */}
-        <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 lg:px-6 shrink-0 z-30">
+        <header className="h-14 bg-white/60 backdrop-blur-2xl border-b border-white/40 flex items-center justify-between px-4 lg:px-6 shrink-0 z-30">
           {!useHorizontalNav && (
             <button className="lg:hidden text-gray-500" onClick={() => setSidebarOpen(true)}>
               <Menu size={20} />
@@ -234,6 +261,21 @@ const DashboardLayout = () => {
           </div>
 
           <div className="flex items-center gap-5">
+            {/* Plan Badge */}
+            {user?.role === 'STUDENT' && (() => {
+              const plan = user?.subscriptionPlan;
+              const config = plan === 'basic' ? { label: 'Basic', gradient: 'from-blue-500 to-cyan-400', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', Icon: Zap }
+                : plan === 'pro' ? { label: 'Pro', gradient: 'from-violet-600 to-indigo-500', bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', Icon: Crown }
+                : plan === 'ultra' ? { label: 'Ultra', gradient: 'from-amber-500 to-orange-500', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', Icon: Zap }
+                : { label: 'Free', gradient: 'from-gray-400 to-gray-500', bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200', Icon: Zap };
+              return (
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${config.bg} ${config.text} ${config.border} border text-[12px] font-bold shadow-sm`}>
+                  <config.Icon size={13} strokeWidth={2.5} />
+                  {config.label}
+                </div>
+              );
+            })()}
+
             {/* Achievers */}
             <button
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white hover:bg-gray-50 transition-all text-gray-600 hover:text-gray-800 text-[13px] font-medium border border-gray-200 shadow-sm group"
@@ -263,7 +305,7 @@ const DashboardLayout = () => {
               {notifDropdown && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setNotifDropdown(false)} />
-                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-[0_8px_30px_-8px_rgba(0,0,0,0.18)] border border-gray-200/80 z-50 overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-72 bg-white/80 backdrop-blur-2xl rounded-xl shadow-[0_8px_30px_-8px_rgba(0,0,0,0.18)] border border-white/50 z-50 overflow-hidden">
                     <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
                       <p className="text-[13px] font-bold text-gray-800">Notifications</p>
                       {queryNotifCount > 0 && (
@@ -335,7 +377,7 @@ const DashboardLayout = () => {
               {profileDropdown && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setProfileDropdown(false)} />
-                  <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-[0_8px_30px_-8px_rgba(0,0,0,0.18)] border border-gray-200/80 z-50 overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-60 bg-white/80 backdrop-blur-2xl rounded-2xl shadow-[0_8px_30px_-8px_rgba(0,0,0,0.18)] border border-white/50 z-50 overflow-hidden">
                     {/* User details */}
                     <div className="px-4 pt-4 pb-3.5 text-center">
                       <p className="text-[15px] font-bold text-gray-900">{user?.fullName}</p>
@@ -474,7 +516,7 @@ const DashboardLayout = () => {
       </div>
 
       {/* Subscribe Dialog */}
-      <SubscribeDialog isOpen={showSubscribe} onClose={() => setShowSubscribe(false)} />
+      <SubscribeDialog isOpen={showSubscribe} onClose={() => setShowSubscribe(false)} userEmail={user?.email} />
     </div>
   );
 };

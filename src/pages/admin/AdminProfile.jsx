@@ -102,8 +102,10 @@ const AdminProfile = () => {
                   <p className="text-sm font-bold text-gray-900">{profile?.fullName}</p>
                   <p className="text-xs text-gray-400">{profile?.email}</p>
                   <div className="flex items-center gap-1 mt-1">
-                    <Shield size={11} className="text-emerald-500" />
-                    <span className="text-[11px] font-medium text-emerald-600">Admin</span>
+                    <Shield size={11} className={user?.role === 'SUPER_ADMIN' ? 'text-violet-500' : 'text-emerald-500'} />
+                    <span className={`text-[11px] font-medium ${user?.role === 'SUPER_ADMIN' ? 'text-violet-600' : 'text-emerald-600'}`}>
+                      {user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -145,8 +147,8 @@ const AdminProfile = () => {
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">Role</label>
                   <div className="flex items-center gap-2 px-3.5 py-2.5 border border-gray-200 rounded-lg bg-gray-50">
-                    <Shield size={13} className="text-emerald-500" />
-                    <span className="text-[13px] font-medium text-gray-700">Admin</span>
+                    <Shield size={13} className={user?.role === 'SUPER_ADMIN' ? 'text-violet-500' : 'text-emerald-500'} />
+                    <span className="text-[13px] font-medium text-gray-700">{user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'}</span>
                   </div>
                 </div>
               </div>

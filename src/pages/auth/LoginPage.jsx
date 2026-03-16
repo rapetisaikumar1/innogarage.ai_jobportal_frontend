@@ -1,32 +1,125 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, ArrowRight, CheckCircle2, Mail, Lock, FileText, Target, Calendar, Award, Sparkles, Rocket } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, CheckCircle2, Mail, Lock, FileText, Target, Calendar, Award, Sparkles, Rocket, ShieldCheck, ArrowLeft } from 'lucide-react';
 import Logo from '../../components/Logo';
 import AuthFooter from '../../components/AuthFooter';
 
 const LoginPage = () => {
-  const { login, googleLogin } = useAuth();
+  const { login, verifyLoginOtp, resendLoginOtp, googleLogin } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  // OTP state
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpEmail, setOtpEmail] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const otpRefs = useRef([]);
+
+  // Cooldown timer for resend
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const user = await login(form.email, form.password);
-      if (user.role === 'SUPER_ADMIN') navigate('/superadmin');
-      else if (user.role === 'ADMIN') navigate('/admin');
-      else navigate('/dashboard', { state: { showSubscribe: true } });
+      const result = await login(form.email, form.password);
+      if (result.requiresOtp) {
+        setOtpEmail(result.email);
+        setOtpStep(true);
+        setResendCooldown(30);
+        setTimeout(() => otpRefs.current[0]?.focus(), 100);
+      } else {
+        // Direct login (fallback for non-OTP flow)
+        navigateByRole(result);
+      }
     } catch (error) {
       // Error handled in context
     } finally {
       setLoading(false);
     }
+  };
+
+  const navigateByRole = (user) => {
+    if (user.role === 'SUPER_ADMIN') navigate('/superadmin');
+    else if (user.role === 'ADMIN') navigate('/admin');
+    else navigate('/dashboard', { state: { showSubscribe: true } });
+  };
+
+  const handleOtpChange = (index, value) => {
+    if (!/^\d*$/.test(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1);
+    setOtp(newOtp);
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      otpRefs.current[index + 1]?.focus();
+    }
+
+    // Auto-submit when all 6 digits entered
+    if (newOtp.every(d => d !== '') && newOtp.join('').length === 6) {
+      submitOtp(newOtp.join(''));
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasted.length === 6) {
+      const newOtp = pasted.split('');
+      setOtp(newOtp);
+      otpRefs.current[5]?.focus();
+      submitOtp(pasted);
+    }
+  };
+
+  const submitOtp = async (code) => {
+    setOtpLoading(true);
+    try {
+      const user = await verifyLoginOtp(otpEmail, code);
+      navigateByRole(user);
+    } catch (error) {
+      setOtp(['', '', '', '', '', '']);
+      otpRefs.current[0]?.focus();
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    try {
+      await resendLoginOtp(otpEmail);
+      setResendCooldown(30);
+      setOtp(['', '', '', '', '', '']);
+      otpRefs.current[0]?.focus();
+    } catch (error) {
+      // handled in context
+    }
+  };
+
+  const handleBackToLogin = () => {
+    setOtpStep(false);
+    setOtp(['', '', '', '', '', '']);
+    setOtpEmail('');
   };
 
   const handleGoogleLogin = () => {
@@ -152,6 +245,89 @@ const LoginPage = () => {
             {/* Right: Form card */}
             <div>
               <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/60 border border-gray-100/80 p-7 sm:p-9">
+
+                {otpStep ? (
+                  <>
+                    {/* OTP Verification Form */}
+                    <div className="mb-6">
+                      <button 
+                        onClick={handleBackToLogin}
+                        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors"
+                      >
+                        <ArrowLeft size={14} />
+                        Back to login
+                      </button>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center">
+                          <ShieldCheck size={20} className="text-white" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Verify Your Identity</h2>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1.5">
+                        We sent a 6-digit code to <strong className="text-gray-700">{otpEmail}</strong>
+                      </p>
+                    </div>
+
+                    {/* OTP Input */}
+                    <div className="flex justify-center gap-2.5 mb-6" onPaste={handleOtpPaste}>
+                      {otp.map((digit, idx) => (
+                        <input
+                          key={idx}
+                          ref={(el) => (otpRefs.current[idx] = el)}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={digit}
+                          onChange={(e) => handleOtpChange(idx, e.target.value)}
+                          onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                          className="w-12 h-14 text-center text-xl font-bold border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-gray-50/50 text-gray-900 transition-all"
+                          disabled={otpLoading}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Verify Button */}
+                    <button
+                      onClick={() => submitOtp(otp.join(''))}
+                      disabled={otpLoading || otp.some(d => d === '')}
+                      className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-indigo-200/50 hover:shadow-xl transition-all text-[15px] disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {otpLoading ? (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          Verify & Sign In
+                          <ArrowRight size={17} />
+                        </>
+                      )}
+                    </button>
+
+                    {/* Resend */}
+                    <div className="mt-4 text-center">
+                      <p className="text-sm text-gray-500">
+                        Didn't receive the code?{' '}
+                        {resendCooldown > 0 ? (
+                          <span className="text-gray-400 font-medium">Resend in {resendCooldown}s</span>
+                        ) : (
+                          <button 
+                            onClick={handleResendOtp} 
+                            className="text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+                          >
+                            Resend Code
+                          </button>
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Info */}
+                    <div className="mt-5 p-3.5 bg-blue-50 border border-blue-100 rounded-xl">
+                      <p className="text-xs text-blue-700 leading-relaxed">
+                        <strong>Tip:</strong> Check your inbox and spam folder. The code expires in 5 minutes.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
                 {/* Form header */}
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Sign in to your account</h2>
@@ -258,6 +434,8 @@ const LoginPage = () => {
                   Don't have an account?{' '}
                   <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-semibold">Create one now</Link>
                 </p>
+                  </>
+                )}
               </div>
             </div>
           </div>

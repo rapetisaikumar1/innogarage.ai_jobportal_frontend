@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { User, Mail, Phone, Linkedin, GraduationCap, Briefcase, Tag, FileText, Lock, MapPin, Target } from 'lucide-react';
+import { User, Mail, Phone, Linkedin, GraduationCap, Briefcase, Tag, FileText, Lock, MapPin, Target, Upload, Eye, X, CreditCard, Car, Plane } from 'lucide-react';
 
 const ProfilePage = () => {
   const { user, updateUser } = useAuth();
@@ -22,6 +22,8 @@ const ProfilePage = () => {
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [changingPassword, setChangingPassword] = useState(false);
   const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(null);
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -95,6 +97,24 @@ const ProfilePage = () => {
       toast.error(error.response?.data?.message || 'Failed to change password');
     } finally {
       setChangingPassword(false);
+    }
+  };
+
+  const handleDocUpload = async (e, docType) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingDoc(docType);
+    const formData = new FormData();
+    formData.append('document', file);
+    formData.append('docType', docType);
+    try {
+      const { data } = await api.put('/users/profile/document', formData);
+      setProfile(prev => ({ ...prev, ...data }));
+      toast.success(`${docType === 'drivingLicence' ? 'Driving Licence' : docType.charAt(0).toUpperCase() + docType.slice(1)} uploaded!`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to upload document');
+    } finally {
+      setUploadingDoc(null);
     }
   };
 
@@ -234,6 +254,59 @@ const ProfilePage = () => {
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </form>
+
+          {/* Documents Section */}
+          <div className="px-5 py-4 border-t border-gray-100">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText size={15} className="text-gray-500" />
+              <span className="text-[13px] font-bold text-gray-800">Identity Documents</span>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { key: 'passport', label: 'Passport', icon: CreditCard, color: 'blue', url: profile?.passportUrl },
+                { key: 'drivingLicence', label: 'Driving Licence', icon: Car, color: 'emerald', url: profile?.drivingLicenceUrl },
+                { key: 'visa', label: 'Visa', icon: Plane, color: 'violet', url: profile?.visaUrl },
+              ].map(doc => (
+                <div key={doc.key} className={`border border-${doc.color}-200 bg-${doc.color}-50/30 rounded-lg p-3`}>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <doc.icon size={13} className={`text-${doc.color}-500`} />
+                    <span className="text-[11px] font-semibold text-gray-700">{doc.label}</span>
+                  </div>
+                  {doc.url ? (
+                    <div className="space-y-2">
+                      <div className="relative group">
+                        <img
+                          src={doc.url}
+                          alt={doc.label}
+                          className="w-full h-24 object-cover rounded-md border border-gray-200 cursor-pointer"
+                          onClick={() => setPreviewDoc({ url: doc.url, label: doc.label })}
+                        />
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center">
+                          <Eye size={16} className="text-white" />
+                        </div>
+                      </div>
+                      <label className="flex items-center justify-center gap-1 text-[10px] font-medium text-gray-500 hover:text-blue-600 cursor-pointer transition-colors">
+                        <Upload size={10} /> Replace
+                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={(e) => handleDocUpload(e, doc.key)} disabled={uploadingDoc === doc.key} />
+                      </label>
+                    </div>
+                  ) : (
+                    <label className={`flex flex-col items-center justify-center h-24 border-2 border-dashed border-${doc.color}-200 rounded-md cursor-pointer hover:border-${doc.color}-400 hover:bg-${doc.color}-50/50 transition-all ${uploadingDoc === doc.key ? 'opacity-50 pointer-events-none' : ''}`}>
+                      {uploadingDoc === doc.key ? (
+                        <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Upload size={16} className="text-gray-400 mb-1" />
+                          <span className="text-[10px] text-gray-400">Upload {doc.label}</span>
+                        </>
+                      )}
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={(e) => handleDocUpload(e, doc.key)} disabled={uploadingDoc === doc.key} />
+                    </label>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Right Column — Change Password */}
@@ -287,6 +360,19 @@ const ProfilePage = () => {
           )}
         </div>
       </div>
+
+      {/* Document Preview Modal */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setPreviewDoc(null)}>
+          <div className="relative bg-white rounded-xl max-w-lg w-full p-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-3 py-2">
+              <span className="text-[13px] font-bold text-gray-800">{previewDoc.label}</span>
+              <button onClick={() => setPreviewDoc(null)} className="p-1 hover:bg-gray-100 rounded-md transition-colors"><X size={16} className="text-gray-500" /></button>
+            </div>
+            <img src={previewDoc.url} alt={previewDoc.label} className="w-full rounded-lg object-contain max-h-[70vh]" />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

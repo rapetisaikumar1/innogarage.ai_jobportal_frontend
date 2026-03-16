@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Users, Search, Trash2, Info, Plus, ChevronLeft, ChevronRight, ArrowLeft, Mail, Phone, MapPin, Calendar, GraduationCap, Briefcase, Award, X, ExternalLink, Shield, Hash, Clock, User, FileText, BookOpen, Zap, TrendingUp, CheckCircle2, XCircle, AlertCircle, Star, ChevronDown, Check } from 'lucide-react';
+import { Users, Search, Trash2, Info, Plus, ChevronLeft, ChevronRight, ArrowLeft, Mail, Phone, MapPin, Calendar, GraduationCap, Briefcase, Award, X, ExternalLink, Shield, Hash, Clock, User, FileText, BookOpen, Zap, TrendingUp, CheckCircle2, XCircle, AlertCircle, Star, ChevronDown, Check, Crown } from 'lucide-react';
 
 const AVATAR_COLORS = [
   'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500',
@@ -27,12 +27,18 @@ const ManageStudents = () => {
   const [addForm, setAddForm] = useState({ fullName: '', email: '', phone: '', education: '' });
   const [addLoading, setAddLoading] = useState(false);
   const [openMentorDropdown, setOpenMentorDropdown] = useState(null);
+  const [openPlanDropdown, setOpenPlanDropdown] = useState(null);
+  const [planFilter, setPlanFilter] = useState('all');
   const dropdownRef = useRef(null);
+  const planDropdownRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setOpenMentorDropdown(null);
+      }
+      if (planDropdownRef.current && !planDropdownRef.current.contains(e.target)) {
+        setOpenPlanDropdown(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -99,6 +105,27 @@ const ManageStudents = () => {
     }
   };
 
+  const PLAN_OPTIONS = ['FREE', 'BASIC', 'PRO', 'ULTRA'];
+  const PLAN_COLORS = {
+    FREE: 'bg-gray-50 text-gray-600 ring-gray-200',
+    BASIC: 'bg-blue-50 text-blue-700 ring-blue-200',
+    PRO: 'bg-violet-50 text-violet-700 ring-violet-200',
+    ULTRA: 'bg-amber-50 text-amber-700 ring-amber-200',
+  };
+
+  const changePlan = async (studentId, plan) => {
+    try {
+      await api.patch(`/admin/students/${studentId}/plan`, { plan });
+      toast.success(`Plan updated to ${plan}`);
+      fetchStudents();
+      if (detail && detail.id === studentId) {
+        setDetail(prev => ({ ...prev, subscriptionPlan: plan }));
+      }
+    } catch (error) {
+      toast.error('Failed to update plan');
+    }
+  };
+
   const changeMentor = async (studentId, mentorId) => {
     try {
       await api.post('/admin/assign-mentor', {
@@ -140,14 +167,17 @@ const ManageStudents = () => {
       const matchesMentor = mentorFilter === 'all' ||
         (mentorFilter === 'unassigned' && !s.assignedMentorId) ||
         s.assignedMentorId === mentorFilter;
-      return matchesSearch && matchesStatus && matchesMentor;
+      const matchesPlan = planFilter === 'all' ||
+        (planFilter === 'none' && !s.subscriptionPlan) ||
+        s.subscriptionPlan === planFilter;
+      return matchesSearch && matchesStatus && matchesMentor && matchesPlan;
     });
-  }, [students, search, statusFilter, mentorFilter]);
+  }, [students, search, statusFilter, mentorFilter, planFilter]);
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  useEffect(() => { setPage(1); }, [search, statusFilter, mentorFilter]);
+  useEffect(() => { setPage(1); }, [search, statusFilter, mentorFilter, planFilter]);
 
   if (loading) {
     return (
@@ -230,6 +260,10 @@ const ManageStudents = () => {
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${detail.isEmailVerified ? 'bg-sky-400 text-sky-950' : 'bg-slate-400 text-slate-900'}`}>
                   <Shield size={11} />
                   {detail.isEmailVerified ? 'Verified' : 'Unverified'}
+                </span>
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${PLAN_COLORS[detail.subscriptionPlan] || 'bg-gray-100 text-gray-500 ring-gray-200'}`}>
+                  <Crown size={11} />
+                  {detail.subscriptionPlan || 'No Plan'}
                 </span>
               </div>
               <div className="flex items-center gap-2.5 mt-3 flex-wrap text-sm font-medium text-white">
@@ -372,6 +406,7 @@ const ManageStudents = () => {
                 {[
                   { label: 'Account Status', value: detail.isActive ? 'Active' : 'Inactive', color: detail.isActive ? 'text-emerald-600' : 'text-red-600' },
                   { label: 'Email Verified', value: detail.isEmailVerified ? 'Yes' : 'No', color: detail.isEmailVerified ? 'text-blue-600' : 'text-gray-400' },
+                  { label: 'Subscription Plan', value: detail.subscriptionPlan || 'None', color: detail.subscriptionPlan === 'ULTRA' ? 'text-amber-600' : detail.subscriptionPlan === 'PRO' ? 'text-violet-600' : detail.subscriptionPlan === 'BASIC' ? 'text-blue-600' : 'text-gray-500' },
                   { label: 'Registration No.', value: detail.registrationNumber || '—', mono: true },
                   { label: 'Member Since', value: new Date(detail.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) },
                   { label: 'Last Updated', value: detail.updatedAt ? new Date(detail.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' },
@@ -614,6 +649,18 @@ const ManageStudents = () => {
             <option key={m.id} value={m.id}>{m.fullName}</option>
           ))}
         </select>
+        <select
+          value={planFilter}
+          onChange={(e) => setPlanFilter(e.target.value)}
+          className="px-3.5 py-2.5 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white"
+        >
+          <option value="all">All Plans</option>
+          <option value="none">No Plan</option>
+          <option value="FREE">Free</option>
+          <option value="BASIC">Basic</option>
+          <option value="PRO">Pro</option>
+          <option value="ULTRA">Ultra</option>
+        </select>
       </div>
 
       {/* Table */}
@@ -631,6 +678,7 @@ const ManageStudents = () => {
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Reg No.</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Plan</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Mentor</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Joined</th>
                   <th className="px-5 py-3.5 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wider">Actions</th>
@@ -653,6 +701,34 @@ const ManageStudents = () => {
                         <span className={`w-1.5 h-1.5 rounded-full ${student.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
                         {student.status === 'ACTIVE' ? 'Active' : 'Inactive'}
                       </button>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="relative" ref={openPlanDropdown === student.id ? planDropdownRef : null}>
+                        <button
+                          onClick={() => setOpenPlanDropdown(openPlanDropdown === student.id ? null : student.id)}
+                          className={`inline-flex items-center justify-between gap-2 text-[12px] font-semibold ring-1 rounded-full px-3 py-1 cursor-pointer transition-colors ${PLAN_COLORS[student.subscriptionPlan] || 'bg-gray-50 text-gray-500 ring-gray-200'}`}
+                        >
+                          <Crown size={11} />
+                          {student.subscriptionPlan || 'None'}
+                          <ChevronDown size={11} className={`transition-transform ${openPlanDropdown === student.id ? 'rotate-180' : ''}`} />
+                        </button>
+                        {openPlanDropdown === student.id && (
+                          <div className="absolute z-50 mt-1.5 w-[130px] bg-white rounded-xl border border-gray-200 shadow-lg py-1.5 max-h-[200px] overflow-y-auto">
+                            {PLAN_OPTIONS.map(plan => (
+                              <button
+                                key={plan}
+                                onClick={() => { changePlan(student.id, plan); setOpenPlanDropdown(null); }}
+                                className={`w-full flex items-center justify-between px-3.5 py-2 text-[13px] hover:bg-gray-50 transition-colors ${
+                                  student.subscriptionPlan === plan ? 'text-blue-600 font-semibold bg-blue-50/50' : 'text-gray-700'
+                                }`}
+                              >
+                                {plan}
+                                {student.subscriptionPlan === plan && <Check size={13} className="text-blue-500" />}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="relative" ref={openMentorDropdown === student.id ? dropdownRef : null}>

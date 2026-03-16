@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { ArrowRight, User, GraduationCap, Briefcase, FileText, Mail, CheckCircle2, Phone } from 'lucide-react';
+import { ArrowRight, User, GraduationCap, Briefcase, FileText, Mail, CheckCircle2, Phone, Linkedin, Target } from 'lucide-react';
 import Logo from '../../components/Logo';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -12,7 +12,9 @@ const CompleteProfilePage = () => {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     fullName: user?.fullName || '',
+    jobRole: '',
     phone: '',
+    linkedinProfile: '',
     education: '',
     experience: '',
     keySkills: '',
@@ -31,7 +33,9 @@ const CompleteProfilePage = () => {
     try {
       const formData = new FormData();
       formData.append('fullName', form.fullName);
+      formData.append('jobRole', form.jobRole);
       formData.append('phone', form.phone);
+      formData.append('linkedinProfile', form.linkedinProfile);
       formData.append('education', form.education);
       formData.append('experience', form.experience);
       formData.append('keySkills', form.keySkills);
@@ -130,6 +134,21 @@ const CompleteProfilePage = () => {
                 />
               </div>
 
+              {/* LinkedIn */}
+              <div>
+                <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 mb-1.5">
+                  <Linkedin size={14} className="text-gray-400" />
+                  LinkedIn Profile URL
+                </label>
+                <input
+                  type="url"
+                  className="w-full px-3.5 py-2.5 text-[15px] border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
+                  placeholder="https://linkedin.com/in/your-profile"
+                  value={form.linkedinProfile}
+                  onChange={(e) => setForm({ ...form, linkedinProfile: e.target.value })}
+                />
+              </div>
+
               {/* Education & Experience */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
@@ -159,6 +178,23 @@ const CompleteProfilePage = () => {
                     onChange={(e) => setForm({ ...form, experience: e.target.value })}
                   />
                 </div>
+              </div>
+
+              {/* Job Role / Title */}
+              <div>
+                <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 mb-1.5">
+                  <Target size={14} className="text-gray-400" />
+                  Job Role You're Looking For <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3.5 py-2.5 text-[15px] border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
+                  placeholder="e.g. Frontend Developer, Data Analyst, UI/UX Designer"
+                  value={form.jobRole}
+                  onChange={(e) => setForm({ ...form, jobRole: e.target.value })}
+                  required
+                />
+                <p className="text-xs text-gray-400 mt-1">This is the main role used to find matching jobs for you.</p>
               </div>
 
               {/* Key Skills */}

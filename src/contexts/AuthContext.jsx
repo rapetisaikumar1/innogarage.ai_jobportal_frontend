@@ -66,6 +66,14 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const { data } = await api.post('/auth/login', { email, password });
+      
+      // OTP required - return the response for the login page to handle
+      if (data.requiresOtp) {
+        toast.success('Verification code sent to your email!');
+        return { requiresOtp: true, email: data.email };
+      }
+
+      // Direct login (fallback)
       const role = data.user.role;
       localStorage.setItem(`${role}_accessToken`, data.accessToken);
       localStorage.setItem(`${role}_refreshToken`, data.refreshToken);
@@ -75,6 +83,34 @@ export const AuthProvider = ({ children }) => {
       return data.user;
     } catch (error) {
       const msg = error.response?.data?.message || 'Login failed';
+      toast.error(msg);
+      throw error;
+    }
+  };
+
+  const verifyLoginOtp = async (email, otp) => {
+    try {
+      const { data } = await api.post('/auth/verify-login-otp', { email, otp });
+      const role = data.user.role;
+      localStorage.setItem(`${role}_accessToken`, data.accessToken);
+      localStorage.setItem(`${role}_refreshToken`, data.refreshToken);
+      localStorage.setItem(`${role}_user`, JSON.stringify(data.user));
+      setUser(data.user);
+      toast.success('Login successful!');
+      return data.user;
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Verification failed';
+      toast.error(msg);
+      throw error;
+    }
+  };
+
+  const resendLoginOtp = async (email) => {
+    try {
+      const { data } = await api.post('/auth/resend-login-otp', { email });
+      toast.success(data.message || 'New code sent!');
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Failed to resend code';
       toast.error(msg);
       throw error;
     }
@@ -138,7 +174,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, googleLogin, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, verifyLoginOtp, resendLoginOtp, signup, googleLogin, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
