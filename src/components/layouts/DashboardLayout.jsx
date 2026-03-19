@@ -7,7 +7,7 @@ import api from '../../services/api';
 import {
   LayoutDashboard, Briefcase, FileText, GraduationCap, Users, MessageSquare,
   UserCog, BarChart3, BookOpen, Calendar, LogOut, Menu, X, Bell, ChevronDown,
-  Settings, StickyNote, UserPlus, Contact, Hash, Trophy, Crown, Megaphone, HelpCircle, Zap
+  Settings, StickyNote, UserPlus, Contact, Hash, Trophy, Crown, Megaphone, HelpCircle, Zap, Lock
 } from 'lucide-react';
 
 const DashboardLayout = () => {
@@ -21,12 +21,11 @@ const DashboardLayout = () => {
   const [notifDropdown, setNotifDropdown] = useState(false);
 
   const fetchQueryCount = useCallback(async () => {
-    if (user?.role === 'SUPER_ADMIN') {
+    if (user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') {
       try {
-        const { data } = await api.get('/queries/count');
-        const currentCount = data.count;
-        const lastSeen = parseInt(localStorage.getItem('lastSeenQueryCount') || '0', 10);
-        setQueryNotifCount(currentCount > lastSeen ? currentCount - lastSeen : 0);
+        const lastSeen = localStorage.getItem('adminQueryLastSeen') || new Date(0).toISOString();
+        const { data } = await api.get(`/queries/count?since=${encodeURIComponent(lastSeen)}`);
+        setQueryNotifCount(data.count);
       } catch {}
     } else if (user?.role === 'STUDENT') {
       try {
@@ -102,9 +101,13 @@ const DashboardLayout = () => {
         return [
           { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
           { to: '/admin/students', icon: Users, label: 'My Students' },
+          { to: '/admin/jobs', icon: Briefcase, label: 'Job Listings' },
+          { to: '/admin/applications', icon: FileText, label: 'Applications' },
+          { to: '/admin/training', icon: GraduationCap, label: 'Training' },
           { to: '/admin/slots', icon: Calendar, label: 'Time Slots' },
           { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
           { to: '/admin/chat', icon: MessageSquare, label: 'Chat' },
+          { to: '/admin/queries', icon: HelpCircle, label: 'Queries' },
           { to: '/admin/profile', icon: Settings, label: 'Profile' },
         ];
       case 'SUPER_ADMIN':
@@ -115,6 +118,7 @@ const DashboardLayout = () => {
           { to: '/superadmin/training', icon: GraduationCap, label: 'Training Materials' },
           { to: '/superadmin/analytics', icon: BarChart3, label: 'Analytics', disabled: true },
           { to: '/superadmin/queries', icon: HelpCircle, label: 'Queries' },
+          { to: '/superadmin/chat', icon: MessageSquare, label: 'Chat' },
           { to: '/superadmin/profile', icon: Settings, label: 'Profile' },
         ];
       default:
@@ -129,7 +133,7 @@ const DashboardLayout = () => {
   const roleLabel = isSuperAdmin ? 'Super Admin' : isAdmin ? 'Mentor' : 'Student';
 
   return (
-    <div className={`h-screen bg-gradient-to-br from-slate-100 via-blue-50/80 to-indigo-100/60 ${useHorizontalNav ? 'flex flex-col' : 'flex'} overflow-hidden`}>
+    <div className={`h-screen bg-gradient-to-br from-slate-50 via-blue-50/60 to-violet-50/40 ${useHorizontalNav ? 'flex flex-col' : 'flex'} overflow-hidden`}>
       {/* Mobile Overlay — sidebar roles only */}
       {!useHorizontalNav && sidebarOpen && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -150,6 +154,7 @@ const DashboardLayout = () => {
         <nav className="flex-1 px-3 pt-4 pb-2 overflow-y-auto sidebar-nav-scroll">
           {(() => {
             const isStudent = user?.role === 'STUDENT';
+            const hasPremiumAccess = ['pro', 'ultra'].includes(user?.subscriptionPlan);
             const mainItems = isStudent
               ? navItems.filter(i => ['Dashboard', 'Job Listings', 'My Applications'].includes(i.label))
               : navItems.filter(i => i.label !== 'Profile');
@@ -161,12 +166,24 @@ const DashboardLayout = () => {
               : [];
             const profileItem = navItems.find(i => i.label === 'Profile');
 
-            const renderItem = ({ to, icon: Icon, label, end, disabled }) => (
+            const renderItem = ({ to, icon: Icon, label, end, disabled }, { locked } = {}) => (
               disabled ? (
                 <div key={to} className="sidebar-link opacity-40 cursor-not-allowed pointer-events-none">
                   <Icon size={17} strokeWidth={1.8} />
                   <span>{label}</span>
                 </div>
+              ) : locked ? (
+                <button
+                  key={to}
+                  onClick={() => { setShowSubscribe(true); setSidebarOpen(false); }}
+                  className="sidebar-link opacity-50 hover:opacity-70 w-full justify-between"
+                >
+                  <span className="flex items-center gap-3">
+                    <Icon size={17} strokeWidth={1.8} />
+                    <span>{label}</span>
+                  </span>
+                  <Lock size={13} strokeWidth={2} className="text-gray-400" />
+                </button>
               ) : (
                 <NavLink
                   key={to}
@@ -193,14 +210,14 @@ const DashboardLayout = () => {
                 {learnItems.length > 0 && (
                   <>
                     <SectionLabel>Learning</SectionLabel>
-                    <div className="space-y-0.5">{learnItems.map(renderItem)}</div>
+                    <div className="space-y-0.5">{learnItems.map(item => renderItem(item, { locked: isStudent && !hasPremiumAccess }))}</div>
                   </>
                 )}
 
                 {communityItems.length > 0 && (
                   <>
                     <SectionLabel>Community</SectionLabel>
-                    <div className="space-y-0.5">{communityItems.map(renderItem)}</div>
+                    <div className="space-y-0.5">{communityItems.map(item => renderItem(item, { locked: isStudent && !hasPremiumAccess }))}</div>
                   </>
                 )}
 
@@ -209,7 +226,7 @@ const DashboardLayout = () => {
                   <div className="mt-5">
                     <button
                       onClick={() => { setShowSubscribe(true); setSidebarOpen(false); }}
-                      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-md shadow-violet-200 transition-all duration-200"
+                      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-gradient-to-r from-blue-600 via-violet-600 to-purple-600 hover:from-blue-700 hover:via-violet-700 hover:to-purple-700 shadow-md shadow-violet-200 transition-all duration-200"
                     >
                       <Crown size={17} strokeWidth={1.8} className="text-violet-200" />
                       <span>Upgrade Plan</span>
@@ -277,6 +294,7 @@ const DashboardLayout = () => {
             })()}
 
             {/* Achievers */}
+            {user?.role === 'STUDENT' && (
             <button
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white hover:bg-gray-50 transition-all text-gray-600 hover:text-gray-800 text-[13px] font-medium border border-gray-200 shadow-sm group"
               onClick={() => navigate('/dashboard/achievers')}
@@ -284,13 +302,14 @@ const DashboardLayout = () => {
               <Trophy size={15} strokeWidth={2} className="text-amber-500" />
               Achievers
             </button>
+            )}
 
             {/* Notifications */}
             <div className="relative">
               <button
                 className="relative text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-xl hover:bg-gray-100"
                 onClick={() => {
-                  if (user?.role === 'SUPER_ADMIN' || user?.role === 'STUDENT') {
+                  if (user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || user?.role === 'STUDENT') {
                     setNotifDropdown(!notifDropdown);
                     setProfileDropdown(false);
                   }
@@ -317,11 +336,15 @@ const DashboardLayout = () => {
                         className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-blue-50/50 transition-colors text-left"
                         onClick={() => {
                           if (user?.role === 'SUPER_ADMIN') {
-                            const lastSeen = parseInt(localStorage.getItem('lastSeenQueryCount') || '0', 10);
-                            localStorage.setItem('lastSeenQueryCount', String(lastSeen + queryNotifCount));
+                            localStorage.setItem('adminQueryLastSeen', new Date().toISOString());
                             setQueryNotifCount(0);
                             setNotifDropdown(false);
                             navigate('/superadmin/queries');
+                          } else if (user?.role === 'ADMIN') {
+                            localStorage.setItem('adminQueryLastSeen', new Date().toISOString());
+                            setQueryNotifCount(0);
+                            setNotifDropdown(false);
+                            navigate('/admin/queries');
                           } else if (user?.role === 'STUDENT') {
                             localStorage.setItem('studentQueryLastSeen', new Date().toISOString());
                             setQueryNotifCount(0);
@@ -335,13 +358,13 @@ const DashboardLayout = () => {
                         </div>
                         <div>
                           <p className="text-[12px] font-semibold text-gray-800">
-                            {user?.role === 'SUPER_ADMIN'
+                            {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN')
                               ? `You have ${queryNotifCount} new ${queryNotifCount === 1 ? 'query' : 'queries'}`
                               : `You have ${queryNotifCount} ${queryNotifCount === 1 ? 'update' : 'updates'} on your queries`
                             }
                           </p>
                           <p className="text-[11px] text-gray-400 mt-0.5">
-                            {user?.role === 'SUPER_ADMIN' ? 'Click to view and respond' : 'Click to view in Help & Support'}
+                            {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') ? 'Click to view and respond' : 'Click to view in Help & Support'}
                           </p>
                         </div>
                       </button>
@@ -472,7 +495,7 @@ const DashboardLayout = () => {
                       Your AI-powered career copilot. Build resumes, apply to jobs, connect with mentors — all in one platform.
                     </p>
                     <div className="flex items-center gap-3 mt-5">
-                      <span className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full">✉ support@gethired.app</span>
+                      <span className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full">✉ support@innogarage.ai</span>
                     </div>
                   </div>
                   <div>
@@ -504,7 +527,7 @@ const DashboardLayout = () => {
                   </div>
                 </div>
                 <div className="border-t border-gray-200 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <p className="text-[13px] text-gray-500">&copy; {new Date().getFullYear()} get.hired &mdash; All rights reserved.</p>
+                  <p className="text-[13px] text-gray-500">&copy; {new Date().getFullYear()} INNOGARAGE.ai &mdash; All rights reserved.</p>
                   <div className="flex items-center gap-2 text-[13px] text-gray-500">
                     <Zap size={14} className="text-amber-400" />
                     <span>Built with passion for job seekers everywhere.</span>

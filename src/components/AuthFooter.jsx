@@ -14,7 +14,7 @@ const AuthFooter = () => {
               Your AI-powered career copilot. Build resumes, apply to jobs, connect with mentors — all in one platform.
             </p>
             <div className="flex items-center gap-3 mt-5">
-              <span className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full">✉ support@gethired.app</span>
+              <span className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full">✉ support@innogarage.ai</span>
             </div>
           </div>
 
@@ -50,7 +50,7 @@ const AuthFooter = () => {
         </div>
 
         <div className="border-t border-gray-200 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} get.hired &mdash; All rights reserved.</p>
+          <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} INNOGARAGE.ai &mdash; All rights reserved.</p>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Zap size={14} className="text-amber-400" />
             <span>Built with passion for job seekers everywhere.</span>

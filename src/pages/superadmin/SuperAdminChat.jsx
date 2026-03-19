@@ -10,7 +10,7 @@ import {
 import { format, isToday, isYesterday } from 'date-fns';
 import GroupChatPanel from '../../components/chat/GroupChatPanel';
 
-const AdminChat = () => {
+const SuperAdminChat = () => {
   const { user } = useAuth();
   const [contacts, setContacts] = useState([]);
   const [activeContact, setActiveContact] = useState(null);
@@ -31,7 +31,7 @@ const AdminChat = () => {
 
   useEffect(() => {
     const newSocket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
-      auth: { token: localStorage.getItem('ADMIN_accessToken') },
+      auth: { token: localStorage.getItem('SUPER_ADMIN_accessToken') },
     });
     setSocket(newSocket);
     newSocket.on('newMessage', (msg) => {
@@ -79,7 +79,6 @@ const AdminChat = () => {
     if (!text && !attachedFile) return;
     if (!activeContact) return;
 
-    // Build the message text
     let msgText = text;
     if (attachedFile) {
       const fileInfo = `📎 ${attachedFile.name} (${formatFileSize(attachedFile.size)})`;
@@ -139,7 +138,6 @@ const AdminChat = () => {
     return <File size={14} />;
   };
 
-  // Check if message contains a file attachment marker
   const parseMessage = (text) => {
     if (!text) return { isFile: false, fileName: null, fileSize: null, textContent: text };
     const fileMatch = text.match(/^📎\s+(.+?)\s+\(([^)]+)\)/);
@@ -150,7 +148,6 @@ const AdminChat = () => {
     return { isFile: false, fileName: null, fileSize: null, textContent: text };
   };
 
-  // Group messages by date
   const groupedMessages = messages.reduce((groups, msg) => {
     const dateKey = format(new Date(msg.createdAt), 'yyyy-MM-dd');
     if (!groups[dateKey]) groups[dateKey] = [];
@@ -317,6 +314,7 @@ const AdminChat = () => {
           ) : (
             filteredContacts.map((contact) => {
               const isActive = activeContact?.id === contact.id;
+              const badge = getRoleBadge(contact.role, contact.department);
               return (
                 <button
                   key={contact.id}
@@ -330,14 +328,9 @@ const AdminChat = () => {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <p className={`text-[13px] font-semibold truncate ${isActive ? 'text-blue-900' : 'text-gray-900'}`}>{contact.fullName}</p>
-                        {contact.role !== 'STUDENT' && (() => {
-                          const badge = getRoleBadge(contact.role, contact.department);
-                          return (
-                            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${badge.text} ${badge.bg} ${badge.border}`}>
-                              {getRoleLabel(contact.role, contact.department)}
-                            </span>
-                          );
-                        })()}
+                        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border flex-shrink-0 ${badge.text} ${badge.bg} ${badge.border}`}>
+                          {getRoleLabel(contact.role, contact.department)}
+                        </span>
                       </div>
                       {contact.unreadCount > 0 && (
                         <span className="w-5 h-5 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center flex-shrink-0">
@@ -374,7 +367,7 @@ const AdminChat = () => {
                 <p className="text-[11px] text-gray-500">{activeContact.email}</p>
               </div>
               <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
-                {activeContact.role === 'STUDENT' ? 'Student' : getRoleLabel(activeContact.role, activeContact.department)}
+                {getRoleLabel(activeContact.role, activeContact.department)}
               </span>
             </div>
 
@@ -395,13 +388,11 @@ const AdminChat = () => {
               ) : (
                 Object.entries(groupedMessages).map(([dateKey, msgs]) => (
                   <div key={dateKey}>
-                    {/* Date Separator */}
                     <div className="flex items-center justify-center my-4">
                       <span className="px-3 py-1 bg-white text-[10px] font-semibold text-gray-400 rounded-full border border-gray-100 shadow-sm">
                         {getDateLabel(dateKey)}
                       </span>
                     </div>
-                    {/* Messages for this date */}
                     <div className="space-y-2">
                       {msgs.map((msg, idx) => {
                         const isMine = msg.senderId === user.id;
@@ -414,7 +405,6 @@ const AdminChat = () => {
                               </div>
                             )}
                             <div className={`max-w-[65%] ${isMine ? 'order-1' : ''}`}>
-                              {/* File attachment */}
                               {parsed.isFile && (
                                 <div className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl mb-1 ${isMine ? 'bg-blue-600' : 'bg-white border border-gray-200'}`}>
                                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isMine ? 'bg-blue-500/30 text-blue-100' : 'bg-gray-100 text-gray-500'}`}>
@@ -427,7 +417,6 @@ const AdminChat = () => {
                                   <Download size={13} className={`flex-shrink-0 cursor-pointer ${isMine ? 'text-blue-200 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`} />
                                 </div>
                               )}
-                              {/* Text content */}
                               {parsed.textContent && (
                                 <div className={`px-3.5 py-2.5 ${isMine
                                   ? 'bg-blue-600 text-white rounded-2xl rounded-br-md'
@@ -435,7 +424,6 @@ const AdminChat = () => {
                                   <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{renderMessageText(parsed.textContent, isMine)}</p>
                                 </div>
                               )}
-                              {/* Timestamp */}
                               <div className={`flex items-center gap-1 mt-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
                                 <p className="text-[10px] text-gray-400">
                                   {format(new Date(msg.createdAt), 'h:mm a')}
@@ -555,4 +543,4 @@ const AdminChat = () => {
   );
 };
 
-export default AdminChat;
+export default SuperAdminChat;

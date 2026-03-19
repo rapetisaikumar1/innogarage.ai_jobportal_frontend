@@ -94,8 +94,13 @@ const LoginPage = () => {
   const submitOtp = async (code) => {
     setOtpLoading(true);
     try {
-      const user = await verifyLoginOtp(otpEmail, code);
-      navigateByRole(user);
+      const result = await verifyLoginOtp(otpEmail, code);
+      const user = result.user || result;
+      if (user.role === 'STUDENT' && !user.profileCompleted) {
+        navigate('/complete-profile');
+      } else {
+        navigateByRole(user);
+      }
     } catch (error) {
       setOtp(['', '', '', '', '', '']);
       otpRefs.current[0]?.focus();
@@ -150,7 +155,7 @@ const LoginPage = () => {
             });
             const profile = await res.json();
             const result = await googleLogin(null, profile);
-            if (result.isNewUser || !result.profileComplete) {
+            if (result.isNewUser || !result.user?.profileCompleted) {
               navigate('/complete-profile');
             } else {
               const u = result.user;
@@ -237,7 +242,7 @@ const LoginPage = () => {
                 </div>
                 <div>
                   <p className="font-bold text-gray-900 text-sm">3x more interview calls within 30 days</p>
-                  <p className="text-gray-500 text-xs">Average result reported by active get.hired users.</p>
+                  <p className="text-gray-500 text-xs">Average result reported by active INNOGARAGE.ai users.</p>
                 </div>
               </div>
             </div>

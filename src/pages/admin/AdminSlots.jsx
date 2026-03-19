@@ -3,7 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
   Calendar, Plus, Trash2, Clock, ChevronDown, ChevronUp,
-  Users, CheckCircle2, XCircle, AlertCircle, X
+  Users, CheckCircle2, XCircle, AlertCircle, X, Video
 } from 'lucide-react';
 import { format, isToday, isTomorrow } from 'date-fns';
 
@@ -383,20 +383,54 @@ const AdminSlots = () => {
                           );
                         }
 
-                        // Booked
-                        if (slot.booked) {
+                        // Booked - PENDING
+                        if (slot.booked && slot.booking?.status === 'PENDING') {
                           return (
-                            <div key={slot.id} className={`relative rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 ring-1 ring-emerald-100 transition-opacity ${slot.pastBooked ? 'opacity-40' : ''}`}>
-                              <p className="text-[12px] font-semibold text-emerald-800">{startF}</p>
-                              <p className="text-[10px] text-emerald-600">to {endF}</p>
+                            <div key={slot.id} className="relative rounded-lg border border-amber-200 bg-amber-50/60 p-3 ring-1 ring-amber-100">
+                              <p className="text-[12px] font-semibold text-amber-800">{startF}</p>
+                              <p className="text-[10px] text-amber-600">to {endF}</p>
                               <div className="mt-2">
-                                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-semibold">
-                                  <CheckCircle2 size={10} /> Booked
+                                <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 font-semibold">
+                                  <AlertCircle size={10} /> Pending
                                 </span>
                                 {slot.booking?.student?.fullName && (
-                                  <p className="text-[10px] text-emerald-600 mt-0.5 truncate" title={slot.booking.student.fullName}>
+                                  <p className="text-[10px] text-amber-600 mt-0.5 truncate" title={slot.booking.student.fullName}>
                                     {slot.booking.student.fullName}
                                   </p>
+                                )}
+                                <p className="text-[9px] text-amber-500 mt-1">Confirm in Bookings tab</p>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        // Booked - CONFIRMED or COMPLETED
+                        if (slot.booked) {
+                          const isConfirmed = slot.booking?.status === 'CONFIRMED';
+                          const isCancelled = slot.booking?.status === 'CANCELLED';
+                          return (
+                            <div key={slot.id} className={`relative rounded-lg border ${isCancelled ? 'border-red-200 bg-red-50/60 ring-1 ring-red-100' : 'border-emerald-200 bg-emerald-50/60 ring-1 ring-emerald-100'} p-3 transition-opacity ${slot.pastBooked ? 'opacity-40' : ''}`}>
+                              <p className={`text-[12px] font-semibold ${isCancelled ? 'text-red-800' : 'text-emerald-800'}`}>{startF}</p>
+                              <p className={`text-[10px] ${isCancelled ? 'text-red-600' : 'text-emerald-600'}`}>to {endF}</p>
+                              <div className="mt-2">
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${isCancelled ? 'text-red-600' : 'text-emerald-700'}`}>
+                                  {isCancelled ? <XCircle size={10} /> : <CheckCircle2 size={10} />}
+                                  {isCancelled ? 'Cancelled' : isConfirmed ? 'Confirmed' : 'Completed'}
+                                </span>
+                                {slot.booking?.student?.fullName && (
+                                  <p className={`text-[10px] mt-0.5 truncate ${isCancelled ? 'text-red-500' : 'text-emerald-600'}`} title={slot.booking.student.fullName}>
+                                    {slot.booking.student.fullName}
+                                  </p>
+                                )}
+                                {isConfirmed && slot.booking?.meetLink && !slot.pastBooked && (
+                                  <a
+                                    href={slot.booking.meetLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-1.5 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-600 text-white text-[10px] font-semibold hover:bg-green-700 transition-colors"
+                                  >
+                                    <Video size={10} /> Join Meet
+                                  </a>
                                 )}
                               </div>
                             </div>

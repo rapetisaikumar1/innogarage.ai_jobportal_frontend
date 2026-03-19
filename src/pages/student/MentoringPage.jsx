@@ -63,19 +63,19 @@ const MentoringPage = () => {
     return grouped;
   }, [slots]);
 
-  // Dates the student already has a confirmed booking
+  // Dates the student already has a pending or confirmed booking
   const bookedDates = useMemo(() => {
     const dates = new Set();
     bookings.forEach((b) => {
-      if (b.status === 'CONFIRMED' && b.slot?.startTime) {
+      if ((b.status === 'CONFIRMED' || b.status === 'PENDING') && b.slot?.startTime) {
         dates.add(new Date(b.slot.startTime).toDateString());
       }
     });
     return dates;
   }, [bookings]);
 
-  const confirmedBookings = bookings.filter((b) => b.status === 'CONFIRMED');
-  const pastBookings = bookings.filter((b) => b.status !== 'CONFIRMED');
+  const upcomingBookings = bookings.filter((b) => b.status === 'CONFIRMED' || b.status === 'PENDING');
+  const pastBookings = bookings.filter((b) => b.status !== 'CONFIRMED' && b.status !== 'PENDING');
 
   const handleBook = async (slotId, slotDate) => {
     if (bookedDates.has(new Date(slotDate).toDateString())) {
@@ -84,7 +84,7 @@ const MentoringPage = () => {
     }
     try {
       await api.post(`/mentoring/book/${slotId}`);
-      toast.success('Session booked! Check your email for details.');
+      toast.success('Booking request sent! Your mentor will confirm shortly.');
       refreshData();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Booking failed');
@@ -169,7 +169,7 @@ const MentoringPage = () => {
             tab === 'upcoming' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          <CalendarCheck size={12} /> Upcoming ({confirmedBookings.length})
+          <CalendarCheck size={12} /> Upcoming ({upcomingBookings.length})
         </button>
         <button
           onClick={() => setTab('history')}
@@ -253,7 +253,7 @@ const MentoringPage = () => {
       {/* Upcoming Bookings Tab */}
       {tab === 'upcoming' && (
         <div>
-          {confirmedBookings.length === 0 ? (
+          {upcomingBookings.length === 0 ? (
             <div className="bg-white rounded-lg border border-gray-200 text-center py-14">
               <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
                 <CalendarCheck size={20} className="text-gray-300" />
@@ -263,17 +263,18 @@ const MentoringPage = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {confirmedBookings.map((booking) => {
+              {upcomingBookings.map((booking) => {
                 const slotDate = new Date(booking.slot?.startTime);
                 const isPast = slotDate < new Date();
+                const isPending = booking.status === 'PENDING';
                 return (
                   <div
                     key={booking.id}
-                    className={`bg-white rounded-lg border border-gray-200 overflow-hidden ${isPast ? 'opacity-50' : ''}`}
+                    className={`bg-white rounded-lg border overflow-hidden ${isPending ? 'border-amber-200' : 'border-gray-200'} ${isPast ? 'opacity-50' : ''}`}
                   >
                     <div className="flex items-center justify-between px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <CalendarCheck size={15} className="text-emerald-500 shrink-0" />
+                        <CalendarCheck size={15} className={isPending ? 'text-amber-500 shrink-0' : 'text-emerald-500 shrink-0'} />
                         <div>
                           <p className="text-[13px] font-bold text-gray-800">
                             {slotDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
@@ -289,17 +290,23 @@ const MentoringPage = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2.5">
-                        <span className="inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-100">
-                          Confirmed
-                        </span>
-                        {booking.meetLink && !isPast && (
+                        {isPending ? (
+                          <span className="inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-600 ring-1 ring-inset ring-amber-100">
+                            Awaiting Confirmation
+                          </span>
+                        ) : (
+                          <span className="inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-100">
+                            Confirmed
+                          </span>
+                        )}
+                        {!isPending && booking.meetLink && !isPast && (
                           <a
                             href={booking.meetLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[12px] font-semibold hover:bg-blue-700 transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-[12px] font-semibold hover:bg-green-700 transition-colors"
                           >
-                            <Video size={13} /> Join
+                            <Video size={13} /> Join Meet
                           </a>
                         )}
                         {!isPast && (

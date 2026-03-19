@@ -97,7 +97,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem(`${role}_user`, JSON.stringify(data.user));
       setUser(data.user);
       toast.success('Login successful!');
-      return data.user;
+      return { user: data.user, profileComplete: data.profileComplete };
     } catch (error) {
       const msg = error.response?.data?.message || 'Verification failed';
       toast.error(msg);

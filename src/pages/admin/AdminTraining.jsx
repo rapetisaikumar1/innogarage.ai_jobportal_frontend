@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { BookOpen, Plus, Edit, Trash2, Upload, FileText, Video, Link as LinkIcon, ExternalLink, Download, Calendar, Tag, FolderOpen, Users, UserPlus, X, Check, Search, ChevronDown, ChevronRight, Layers } from 'lucide-react';
+import { BookOpen, Plus, Edit, Trash2, FileText, Video, Link as LinkIcon, ExternalLink, Download, Calendar, Tag, FolderOpen, Users, UserPlus, X, Check, Search, ChevronDown, ChevronRight, Layers } from 'lucide-react';
 
 const CATEGORIES = ['Interview Prep', 'Career Development', 'Technical Skills', 'Soft Skills'];
 
@@ -13,7 +13,7 @@ const CAT_STYLE = {
   'Uncategorized':      { bg: 'bg-gray-50',    text: 'text-gray-600',    border: 'border-gray-200',    headerBg: 'bg-gradient-to-r from-gray-50 to-gray-100/60',    icon: '\u{1F4C1}', pill: 'bg-gray-100 text-gray-600' },
 };
 
-const ManageTraining = () => {
+const AdminTraining = () => {
   const [materials, setMaterials] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,12 +25,10 @@ const ManageTraining = () => {
   const [filterCategory, setFilterCategory] = useState('');
   const [collapsed, setCollapsed] = useState({});
 
-  // Single material assign
   const [assignModal, setAssignModal] = useState(null);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [studentSearch, setStudentSearch] = useState('');
 
-  // Category bulk assign
   const [categoryAssignModal, setCategoryAssignModal] = useState(null);
   const [categoryAssignStudents, setCategoryAssignStudents] = useState([]);
   const [categoryStudentSearch, setCategoryStudentSearch] = useState('');
@@ -45,7 +43,7 @@ const ManageTraining = () => {
     try {
       const res = await api.get('/training/materials');
       setMaterials(res.data);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load materials');
     } finally {
       setLoading(false);
@@ -105,12 +103,11 @@ const ManageTraining = () => {
       await api.delete(`/training/materials/${id}`);
       toast.success('Material deleted');
       fetchMaterials();
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete material');
     }
   };
 
-  // --- Single material assign ---
   const openAssignModal = (mat) => {
     const alreadyAssigned = (mat.assignments || []).map(a => a.student.id);
     setSelectedStudents(alreadyAssigned);
@@ -145,7 +142,6 @@ const ManageTraining = () => {
     }
   };
 
-  // --- Category bulk assign ---
   const openCategoryAssign = (category) => {
     setCategoryAssignModal(category);
     setCategoryAssignStudents([]);
@@ -195,7 +191,6 @@ const ManageTraining = () => {
     return s.fullName.toLowerCase().includes(q) || s.email.toLowerCase().includes(q) || (s.registrationNumber || '').toLowerCase().includes(q);
   });
 
-  // Group materials by category
   const grouped = useMemo(() => {
     const groups = {};
     CATEGORIES.forEach(c => { groups[c] = []; });
@@ -211,7 +206,6 @@ const ManageTraining = () => {
     return Object.entries(groups).filter(([, items]) => items.length > 0);
   }, [materials, filterCategory]);
 
-  // Count per category for the filter tabs
   const categoryCounts = useMemo(() => {
     const counts = { All: materials.length };
     CATEGORIES.forEach(c => { counts[c] = 0; });
@@ -240,18 +234,16 @@ const ManageTraining = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-900">Training Materials</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Upload and manage training resources by category</p>
+          <p className="text-xs text-gray-500 mt-0.5">Upload documents and assign to your students by category</p>
         </div>
         <button onClick={() => { resetForm(); setShowForm(true); }} className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm">
           <Plus size={14} /> Add Material
         </button>
       </div>
 
-      {/* Add/Edit Form */}
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-3">
           <h3 className="text-sm font-bold text-gray-900">{editId ? 'Edit Material' : 'Add New Material'}</h3>
@@ -318,7 +310,6 @@ const ManageTraining = () => {
         )}
       </div>
 
-      {/* Materials grouped by category */}
       {materials.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 text-center py-10 shadow-sm">
           <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
@@ -335,7 +326,6 @@ const ManageTraining = () => {
             const totalAssigned = items.reduce((sum, m) => sum + (m.assignments || []).length, 0);
             return (
               <div key={category} className={`border ${style.border} rounded-xl overflow-hidden shadow-sm bg-white`}>
-                {/* Category Section Header */}
                 <div className={`flex items-center justify-between px-5 py-3 ${style.headerBg}`}>
                   <button onClick={() => toggleCollapse(category)} className="flex items-center gap-3 flex-1 text-left">
                     <span className="text-lg">{style.icon}</span>
@@ -353,7 +343,6 @@ const ManageTraining = () => {
                   </button>
                 </div>
 
-                {/* Material Cards */}
                 {!isCollapsed && (
                   <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {items.map((mat) => {
@@ -391,7 +380,7 @@ const ManageTraining = () => {
                               {mat.url && ['PDF', 'DOCUMENT'].includes((mat.type || '').toUpperCase()) && (
                                 <a href="#" onClick={(e) => {
                                     e.preventDefault();
-                                    const token = localStorage.getItem('SUPER_ADMIN_accessToken');
+                                    const token = localStorage.getItem('ADMIN_accessToken');
                                     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/training/materials/${mat.id}/download`, {
                                       headers: { Authorization: `Bearer ${token}` }
                                     })
@@ -551,4 +540,4 @@ const ManageTraining = () => {
   );
 };
 
-export default ManageTraining;
+export default AdminTraining;

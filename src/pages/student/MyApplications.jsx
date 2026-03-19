@@ -147,6 +147,7 @@ const MyApplications = () => {
         appliedAt: app.appliedAt,
         jobLink: null,
         source: 'db',
+        applicant: app.user || null,
       }));
       const sheetApps = (sheetRes.data.applications || []).map(app => {
         const fullJob = jobsMap[app.jobLink];
@@ -291,6 +292,15 @@ const MyApplications = () => {
                         </span>
                       )}
                     </div>
+                    {app.applicant && (
+                      <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-400">
+                        <span className="font-medium text-gray-500">Applied by:</span>
+                        <span>{app.applicant.fullName}</span>
+                        <span>·</span>
+                        <span>{app.applicant.email}</span>
+                        {app.applicant.phone && <><span>·</span><span>{app.applicant.phone}</span></>}
+                      </div>
+                    )}
                   </div>
 
                   {/* Action Buttons */}

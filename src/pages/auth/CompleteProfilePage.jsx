@@ -44,7 +44,7 @@ const CompleteProfilePage = () => {
       const { data } = await api.post('/auth/complete-profile', formData);
 
       updateUser(data.user);
-      toast.success('Profile completed! Welcome to get.hired');
+      toast.success('Profile completed! Welcome to INNOGARAGE.ai');
       navigate('/dashboard', { replace: true, state: { showSubscribe: true } });
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to save profile';
@@ -123,7 +123,7 @@ const CompleteProfilePage = () => {
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 mb-1.5">
                   <Phone size={14} className="text-gray-400" />
-                  Phone Number
+                  Phone Number <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="tel"
@@ -131,6 +131,7 @@ const CompleteProfilePage = () => {
                   placeholder="+91 9876543210"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  required
                 />
               </div>
 
@@ -138,7 +139,7 @@ const CompleteProfilePage = () => {
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 mb-1.5">
                   <Linkedin size={14} className="text-gray-400" />
-                  LinkedIn Profile URL
+                  LinkedIn Profile URL <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="url"
@@ -146,6 +147,7 @@ const CompleteProfilePage = () => {
                   placeholder="https://linkedin.com/in/your-profile"
                   value={form.linkedinProfile}
                   onChange={(e) => setForm({ ...form, linkedinProfile: e.target.value })}
+                  required
                 />
               </div>
 
@@ -168,7 +170,7 @@ const CompleteProfilePage = () => {
                 <div>
                   <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 mb-1.5">
                     <Briefcase size={14} className="text-gray-400" />
-                    Experience
+                    Experience <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -176,6 +178,7 @@ const CompleteProfilePage = () => {
                     placeholder="2 years in Software Dev"
                     value={form.experience}
                     onChange={(e) => setForm({ ...form, experience: e.target.value })}
+                    required
                   />
                 </div>
               </div>
@@ -201,7 +204,7 @@ const CompleteProfilePage = () => {
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 mb-1.5">
                   <Briefcase size={14} className="text-gray-400" />
-                  Key Skills
+                  Key Skills <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -209,6 +212,7 @@ const CompleteProfilePage = () => {
                   placeholder="React, Node.js, Python"
                   value={form.keySkills}
                   onChange={(e) => setForm({ ...form, keySkills: e.target.value })}
+                  required
                 />
               </div>
 
@@ -216,11 +220,12 @@ const CompleteProfilePage = () => {
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 mb-1.5">
                   <FileText size={14} className="text-gray-400" />
-                  Resume <span className="text-gray-400 font-normal">(optional)</span>
+                  Resume (PDF) <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx"
+                  accept=".pdf"
+                  required
                   className="w-full px-3.5 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50/50 text-gray-600 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 transition-all cursor-pointer"
                   onChange={(e) => setResume(e.target.files[0])}
                 />

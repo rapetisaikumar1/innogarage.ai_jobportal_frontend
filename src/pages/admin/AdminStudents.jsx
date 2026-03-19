@@ -1,13 +1,21 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, Search, Mail, Phone, GraduationCap, Briefcase,
   Calendar, MapPin, Clock, User, FileText, BookOpen, ExternalLink,
-  Shield, Hash, CheckCircle2, XCircle, AlertCircle, TrendingUp, Zap, Users
+  Shield, Hash, CheckCircle2, XCircle, AlertCircle, TrendingUp, Zap, Users, Eye
 } from 'lucide-react';
 
+const DEPT_COLORS = {
+  MARKETING: { bg: 'bg-blue-50', text: 'text-blue-700', ring: 'ring-blue-100', fill: 'bg-blue-100 text-blue-600', label: 'Marketing' },
+  PROXY: { bg: 'bg-violet-50', text: 'text-violet-700', ring: 'ring-violet-100', fill: 'bg-violet-100 text-violet-600', label: 'Proxy' },
+  HR: { bg: 'bg-emerald-50', text: 'text-emerald-700', ring: 'ring-emerald-100', fill: 'bg-emerald-100 text-emerald-600', label: 'HR' },
+};
+
 const AdminStudents = () => {
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -121,11 +129,20 @@ const AdminStudents = () => {
 
     return (
       <div className="space-y-5 max-w-6xl mx-auto">
-        {/* Back */}
-        <button onClick={goBack} className="group inline-flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-900 transition-colors font-medium">
-          <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
-          Back to Students
-        </button>
+        {/* Back + View as Student */}
+        <div className="flex items-center justify-between">
+          <button onClick={goBack} className="group inline-flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-900 transition-colors font-medium">
+            <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+            Back to Students
+          </button>
+          <button
+            onClick={() => navigate(`/admin/students/${detail.id}/view`)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-[13px] font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <Eye size={15} />
+            View as Student
+          </button>
+        </div>
 
         {/* Profile Header */}
         <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 p-6">
@@ -246,20 +263,41 @@ const AdminStudents = () => {
               </div>
             </div>
 
-            {/* Assigned Mentor */}
-            {detail.assignedMentor && (
+            {/* Assigned Admins */}
+            {(detail.adminAssignments?.length > 0 || detail.assignedMentor) && (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-gray-100">
-                  <h3 className="text-[13px] font-semibold text-gray-900 flex items-center gap-2"><User size={15} className="text-violet-600" />Assigned Mentor</h3>
+                  <h3 className="text-[13px] font-semibold text-gray-900 flex items-center gap-2"><Users size={15} className="text-violet-600" />Assigned Admins</h3>
                 </div>
-                <div className="p-5 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-violet-50 flex items-center justify-center text-violet-600 text-sm font-bold ring-1 ring-violet-100">
-                    {getInitials(detail.assignedMentor.fullName)}
-                  </div>
-                  <div>
-                    <p className="text-[13px] font-semibold text-gray-900">{detail.assignedMentor.fullName}</p>
-                    <p className="text-[12px] text-gray-500">{detail.assignedMentor.email}</p>
-                  </div>
+                <div className="p-5 space-y-2">
+                  {detail.adminAssignments?.length > 0 ? detail.adminAssignments.map(a => {
+                    const dept = a.department || a.admin?.department;
+                    const dc = dept && DEPT_COLORS[dept];
+                    return (
+                      <div key={a.id} className={`flex items-center gap-3 rounded-lg p-3 ring-1 ${dc ? `${dc.bg}/50 ${dc.ring}` : 'bg-violet-50/50 ring-violet-100'}`}>
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold ring-1 ${dc ? dc.fill + ' ' + dc.ring : 'bg-violet-100 text-violet-600 ring-violet-200'}`}>
+                          {getInitials(a.admin?.fullName)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-gray-900 truncate">{a.admin?.fullName}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-[12px] text-gray-500 truncate">{a.admin?.email}</p>
+                            {dc && <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${dc.bg} ${dc.text}`}>{dc.label}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }) : detail.assignedMentor ? (
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-violet-50 flex items-center justify-center text-violet-600 text-sm font-bold ring-1 ring-violet-100">
+                        {getInitials(detail.assignedMentor.fullName)}
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-semibold text-gray-900">{detail.assignedMentor.fullName}</p>
+                        <p className="text-[12px] text-gray-500">{detail.assignedMentor.email}</p>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             )}
@@ -438,6 +476,7 @@ const AdminStudents = () => {
                 <th className="text-center px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Applications</th>
                 <th className="text-center px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Joined</th>
+                <th className="text-center px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">View</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -480,6 +519,15 @@ const AdminStudents = () => {
                   </td>
                   <td className="px-5 py-3.5 text-right">
                     <p className="text-[12px] text-gray-500">{formatDate(student.createdAt)}</p>
+                  </td>
+                  <td className="px-5 py-3.5 text-center">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/students/${student.id}/view`); }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors ring-1 ring-blue-200"
+                      title="View as Student"
+                    >
+                      <Eye size={13} />
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -246,7 +246,7 @@ const ProfilePage = () => {
                 {profile?.resumeUrl && (
                   <p className="text-[11px] text-gray-500 mb-1.5">Current: <a href={profile.resumeUrl} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">View Resume</a></p>
                 )}
-                <input type="file" accept=".pdf,.doc,.docx" className="w-full text-[12px] text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 border border-gray-200 rounded-lg py-1.5 px-2 cursor-pointer" onChange={handleResumeUpload} />
+                <input type="file" accept=".pdf" className="w-full text-[12px] text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 border border-gray-200 rounded-lg py-1.5 px-2 cursor-pointer" onChange={handleResumeUpload} />
               </div>
             </div>
 

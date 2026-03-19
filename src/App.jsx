@@ -34,6 +34,9 @@ import AdminSlots from './pages/admin/AdminSlots';
 import AdminBookings from './pages/admin/AdminBookings';
 import AdminChat from './pages/admin/AdminChat';
 import AdminProfile from './pages/admin/AdminProfile';
+import AdminApplications from './pages/admin/AdminApplications';
+import AdminStudentView from './pages/admin/AdminStudentView';
+import AdminTraining from './pages/admin/AdminTraining';
 
 // Super Admin Pages
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
@@ -43,6 +46,7 @@ import ManageTraining from './pages/superadmin/ManageTraining';
 import Analytics from './pages/superadmin/Analytics';
 import SuperAdminProfile from './pages/superadmin/SuperAdminProfile';
 import QueriesPage from './pages/superadmin/QueriesPage';
+import SuperAdminChat from './pages/superadmin/SuperAdminChat';
 
 // Loading spinner
 const LoadingScreen = () => (
@@ -54,7 +58,7 @@ const LoadingScreen = () => (
   </div>
 );
 
-const ProtectedRoute = ({ children, roles }) => {
+const ProtectedRoute = ({ children, roles, allowIncomplete }) => {
   const { user, loading } = useAuth();
   
   if (loading) return <LoadingScreen />;
@@ -64,6 +68,20 @@ const ProtectedRoute = ({ children, roles }) => {
     if (user.role === 'SUPER_ADMIN') return <Navigate to="/superadmin" replace />;
     if (user.role === 'ADMIN') return <Navigate to="/admin" replace />;
     return <Navigate to="/dashboard" replace />;
+  }
+  // Redirect students with incomplete profiles to complete-profile page
+  if (!allowIncomplete && user.role === 'STUDENT' && user.profileCompleted === false) {
+    return <Navigate to="/complete-profile" replace />;
+  }
+  return children;
+};
+
+const PremiumRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'STUDENT' && !['pro', 'ultra'].includes(user.subscriptionPlan)) {
+    return <Navigate to="/dashboard" replace state={{ showSubscribe: true }} />;
   }
   return children;
 };
@@ -81,7 +99,7 @@ function App() {
       {/* Public Routes */}
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
-      <Route path="/complete-profile" element={<ProtectedRoute roles={['STUDENT']}><CompleteProfilePage /></ProtectedRoute>} />
+      <Route path="/complete-profile" element={<ProtectedRoute roles={['STUDENT']} allowIncomplete><CompleteProfilePage /></ProtectedRoute>} />
       <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
@@ -93,22 +111,28 @@ function App() {
         <Route path="jobs/:id" element={<JobDetail />} />
         <Route path="applications" element={<MyApplications />} />
         <Route path="profile" element={<ProfilePage />} />
-        <Route path="training" element={<TrainingPage />} />
-        <Route path="notes" element={<NotesPage />} />
-        <Route path="mentoring" element={<MentoringPage />} />
-        <Route path="chat" element={<ChatPage />} />
+        <Route path="training" element={<PremiumRoute><TrainingPage /></PremiumRoute>} />
+        <Route path="notes" element={<PremiumRoute><NotesPage /></PremiumRoute>} />
+        <Route path="mentoring" element={<PremiumRoute><MentoringPage /></PremiumRoute>} />
+        <Route path="chat" element={<PremiumRoute><ChatPage /></PremiumRoute>} />
         <Route path="achievers" element={<AchieversPage />} />
-        <Route path="shoutboard" element={<ShoutboardPage />} />
-        <Route path="help-support" element={<HelpSupportPage />} />
+        <Route path="shoutboard" element={<PremiumRoute><ShoutboardPage /></PremiumRoute>} />
+        <Route path="help-support" element={<PremiumRoute><HelpSupportPage /></PremiumRoute>} />
       </Route>
 
       {/* Admin/Mentor Routes */}
       <Route path="/admin" element={<ProtectedRoute roles={['ADMIN']}><DashboardLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
         <Route path="students" element={<AdminStudents />} />
+        <Route path="students/:studentId/view" element={<AdminStudentView />} />
+        <Route path="jobs" element={<JobListings />} />
+        <Route path="jobs/:id" element={<JobDetail />} />
+        <Route path="applications" element={<AdminApplications />} />
+        <Route path="training" element={<AdminTraining />} />
         <Route path="slots" element={<AdminSlots />} />
         <Route path="bookings" element={<AdminBookings />} />
         <Route path="chat" element={<AdminChat />} />
+        <Route path="queries" element={<QueriesPage />} />
         <Route path="profile" element={<AdminProfile />} />
       </Route>
 
@@ -120,6 +144,7 @@ function App() {
         <Route path="training" element={<ManageTraining />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="queries" element={<QueriesPage />} />
+        <Route path="chat" element={<SuperAdminChat />} />
         <Route path="profile" element={<SuperAdminProfile />} />
       </Route>
 

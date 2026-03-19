@@ -24,7 +24,7 @@ const LandingPage = () => {
       </div>
 
       {/* ─── Navbar ─── */}
-      <nav className="fixed top-0 w-full bg-white border-b border-gray-100 z-50">
+      <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-xl border-b border-gray-100/80 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Logo size="md" />
           <div className="hidden md:flex items-center gap-8">
@@ -36,7 +36,7 @@ const LandingPage = () => {
             <Link to="/login" className="text-sm font-semibold text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg transition-colors">
               Log in
             </Link>
-            <Link to="/signup" className="text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 px-5 py-2.5 rounded-xl shadow-md shadow-indigo-200 hover:shadow-lg transition-all">
+            <Link to="/signup" className="text-sm font-semibold text-white bg-gradient-to-r from-blue-600 via-violet-600 to-purple-600 hover:from-blue-700 hover:via-violet-700 hover:to-purple-700 px-5 py-2.5 rounded-xl shadow-md shadow-violet-200 hover:shadow-lg transition-all">
               Get Started Free
             </Link>
           </div>
@@ -47,26 +47,26 @@ const LandingPage = () => {
       <section className="relative pt-32 pb-20 lg:pt-44 lg:pb-32 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           {/* Pill badge */}
-          <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-full px-4 py-1.5 mb-8">
-            <Sparkles size={14} className="text-indigo-500" />
-            <span className="text-sm font-medium text-indigo-700">AI-Powered Job Search & Mentorship</span>
+          <div className="inline-flex items-center gap-2 bg-violet-50 border border-violet-100 rounded-full px-4 py-1.5 mb-8">
+            <Sparkles size={14} className="text-violet-500" />
+            <span className="text-sm font-medium text-violet-700">AI-Powered Job Search & Mentorship</span>
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-gray-900 tracking-tight leading-[1.1] max-w-4xl mx-auto">
             Land Your Dream Job,{' '}
-            <span className="bg-gradient-to-r from-indigo-600 via-blue-500 to-cyan-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">
               Faster
             </span>
           </h1>
 
           <p className="mt-6 text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
-            From resume tailoring to one-click applications, mentorship scheduling to real-time chat — everything you need to get hired, in one platform.
+            From resume tailoring to one-click applications, mentorship scheduling to real-time chat — everything you need to land your dream job, in one platform.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               to="/signup"
-              className="group flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg shadow-indigo-200 hover:shadow-xl transition-all text-lg"
+              className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 via-violet-600 to-purple-600 hover:from-blue-700 hover:via-violet-700 hover:to-purple-700 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg shadow-violet-200 hover:shadow-xl transition-all text-lg"
             >
               Start Your Journey
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
@@ -196,13 +196,13 @@ const LandingPage = () => {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
-            <span className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-700 text-sm font-semibold px-5 py-2 rounded-full mb-5">
+            <span className="inline-flex items-center gap-2 bg-violet-50 border border-violet-100 text-violet-700 text-sm font-semibold px-5 py-2 rounded-full mb-5">
               <Zap size={14} />
               How It Works
             </span>
             <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight">
               Your Journey from Aspiration{' '}
-              <span className="bg-gradient-to-r from-indigo-600 via-blue-500 to-cyan-500 bg-clip-text text-transparent">to Achievement</span>
+              <span className="bg-gradient-to-r from-blue-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">to Achievement</span>
             </h2>
             <p className="mt-5 text-lg text-gray-500 max-w-2xl mx-auto">
               Six simple steps to transform your career. We guide you every step of the way.
@@ -217,18 +217,18 @@ const LandingPage = () => {
                   step: '01',
                   title: 'Create Your Profile',
                   desc: 'Sign up, upload your resume, add your skills and experience.',
-                  gradient: 'from-indigo-500 to-blue-500',
-                  shadow: 'shadow-indigo-200/50',
-                  dotColor: 'bg-indigo-500',
+                  gradient: 'from-blue-500 to-indigo-600',
+                  shadow: 'shadow-blue-200/50',
+                  dotColor: 'bg-blue-500',
                   icon: FileText,
                 },
                 {
                   step: '02',
                   title: 'Discover & Apply',
                   desc: 'Browse jobs, let AI tailor your resume, and apply with one click.',
-                  gradient: 'from-blue-500 to-cyan-500',
-                  shadow: 'shadow-blue-200/50',
-                  dotColor: 'bg-blue-500',
+                  gradient: 'from-violet-500 to-purple-600',
+                  shadow: 'shadow-violet-200/50',
+                  dotColor: 'bg-violet-500',
                   icon: Target,
                 },
                 {
@@ -388,7 +388,7 @@ const LandingPage = () => {
               Loved by Job Seekers
             </h2>
             <p className="mt-4 text-lg text-gray-500 max-w-2xl mx-auto">
-              Real stories from people who transformed their job search with get.hired.
+              Real stories from people who transformed their job search with INNOGARAGE.ai.
             </p>
           </div>
 
@@ -463,7 +463,7 @@ const LandingPage = () => {
 
       {/* ─── CTA Section ─── */}
       <section className="py-24 relative z-[1] overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-600" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-violet-600 to-purple-700" />
         {/* Decorative shapes */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute -top-20 -left-20 w-80 h-80 bg-white rounded-full" />
@@ -473,10 +473,10 @@ const LandingPage = () => {
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
-            Ready to Get Hired?
+            Ready to Land Your Dream Job?
           </h2>
-          <p className="mt-6 text-lg sm:text-xl text-cyan-50 max-w-2xl mx-auto leading-relaxed">
-            Thousands of professionals have transformed their job search with <span className="text-white font-bold">get.hired</span>. AI-powered resumes, smart applications, and expert mentorship — your unfair advantage in today's job market.
+          <p className="mt-6 text-lg sm:text-xl text-violet-100 max-w-2xl mx-auto leading-relaxed">
+            Thousands of professionals have transformed their job search with <span className="text-white font-bold">INNOGARAGE.ai</span>. AI-powered resumes, smart applications, and expert mentorship — your unfair advantage in today's job market.
           </p>
           <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-5">
             <Link
@@ -507,7 +507,7 @@ const LandingPage = () => {
                 Your AI-powered career copilot. Build resumes, apply to jobs, connect with mentors — all in one platform.
               </p>
               <div className="flex items-center gap-3 mt-5">
-                <span className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full">✉ support@gethired.app</span>
+                <span className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full">✉ support@innogarage.ai</span>
               </div>
             </div>
 
@@ -544,7 +544,7 @@ const LandingPage = () => {
           </div>
 
           <div className="border-t border-gray-200 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm">&copy; {new Date().getFullYear()} get.hired &mdash; All rights reserved.</p>
+            <p className="text-sm">&copy; {new Date().getFullYear()} INNOGARAGE.ai &mdash; All rights reserved.</p>
             <div className="flex items-center gap-2 text-sm">
               <Zap size={14} className="text-amber-400" />
               <span>Built with passion for job seekers everywhere.</span>

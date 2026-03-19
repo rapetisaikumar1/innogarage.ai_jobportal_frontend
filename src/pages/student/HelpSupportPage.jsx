@@ -3,7 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
   HelpCircle, MessageCircle, Mail, ChevronDown, ChevronUp,
-  Search, Plus, Send, X, Clock, CheckCircle2, AlertCircle, MessageSquareMore
+  Search, Plus, Send, X, Clock, CheckCircle2, AlertCircle, MessageSquareMore, UserCheck
 } from 'lucide-react';
 
 const FAQ_DATA = [
@@ -51,12 +51,26 @@ const HelpSupportPage = () => {
   const [loadingQueries, setLoadingQueries] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ subject: '', description: '', category: 'General' });
+  const [form, setForm] = useState({ subject: '', description: '', category: 'General', assignedToId: '' });
   const [expandedQuery, setExpandedQuery] = useState(null);
+  const [staffList, setStaffList] = useState([]);
+
+  useEffect(() => {
+    fetchStaff();
+  }, []);
 
   useEffect(() => {
     if (tab === 'my-queries') fetchQueries();
   }, [tab]);
+
+  const fetchStaff = async () => {
+    try {
+      const { data } = await api.get('/queries/staff');
+      setStaffList(data);
+    } catch {
+      // Staff list not critical
+    }
+  };
 
   const fetchQueries = async () => {
     setLoadingQueries(true);
@@ -75,9 +89,11 @@ const HelpSupportPage = () => {
     if (!form.subject.trim() || !form.description.trim()) return;
     setSubmitting(true);
     try {
-      await api.post('/queries', form);
+      const payload = { subject: form.subject, description: form.description, category: form.category };
+      if (form.assignedToId) payload.assignedToId = form.assignedToId;
+      await api.post('/queries', payload);
       toast.success('Query submitted successfully');
-      setForm({ subject: '', description: '', category: 'General' });
+      setForm({ subject: '', description: '', category: 'General', assignedToId: '' });
       setShowForm(false);
       fetchQueries();
       setTab('my-queries');
@@ -177,6 +193,21 @@ const HelpSupportPage = () => {
                 </select>
               </div>
               <div>
+                <label className="block text-[12px] font-semibold text-gray-700 mb-1">Assign To</label>
+                <select
+                  className="w-full text-[12px] bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-300 text-gray-700 transition-all"
+                  value={form.assignedToId}
+                  onChange={(e) => setForm({ ...form, assignedToId: e.target.value })}
+                >
+                  <option value="">-- Select Admin / Super Admin --</option>
+                  {staffList.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.fullName} ({s.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="block text-[12px] font-semibold text-gray-700 mb-1">Description</label>
                 <textarea
                   rows={4}
@@ -272,7 +303,7 @@ const HelpSupportPage = () => {
               <p className="text-[11px] text-gray-500 leading-relaxed">
                 Reach out to our support team and we'll get back to you within 24 hours.
               </p>
-              <p className="text-[11px] font-semibold text-violet-600 mt-2">support@gethired.app</p>
+              <p className="text-[11px] font-semibold text-violet-600 mt-2">support@innogarage.ai</p>
             </div>
           </div>
         </div>
@@ -317,6 +348,12 @@ const HelpSupportPage = () => {
                         <div className="flex items-center gap-3 text-[11px] text-gray-400">
                           <span className="px-1.5 py-0.5 rounded bg-gray-100 text-[10px] font-medium text-gray-500">{query.category}</span>
                           <span>{dateStr}</span>
+                          {query.assignedTo && (
+                            <span className="flex items-center gap-1 text-violet-600">
+                              <UserCheck size={10} />
+                              {query.assignedTo.fullName}
+                            </span>
+                          )}
                         </div>
                       </div>
                       {isExpanded ? <ChevronUp size={14} className="text-gray-400 shrink-0" /> : <ChevronDown size={14} className="text-gray-400 shrink-0" />}

@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { UserPlus, Search, Info, Mail, Phone, Users, Calendar, Shield, ShieldOff, X } from 'lucide-react';
+import { UserPlus, Search, Info, Mail, Phone, Users, Calendar, Shield, ShieldOff, X, Briefcase } from 'lucide-react';
+
+const DEPT_CONFIG = {
+  MARKETING: { label: 'Marketing', bg: 'bg-blue-50', text: 'text-blue-700', ring: 'ring-blue-200' },
+  PROXY: { label: 'Proxy', bg: 'bg-violet-50', text: 'text-violet-700', ring: 'ring-violet-200' },
+  HR: { label: 'HR', bg: 'bg-emerald-50', text: 'text-emerald-700', ring: 'ring-emerald-200' },
+};
 
 const ManageAdmins = () => {
   const [admins, setAdmins] = useState([]);
@@ -9,8 +15,10 @@ const ManageAdmins = () => {
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', phone: '' });
+  const [form, setForm] = useState({ fullName: '', email: '', password: '', phone: '', department: '' });
   const [selectedAdmin, setSelectedAdmin] = useState(null);
+  const [editingDept, setEditingDept] = useState(null); // adminId being edited
+  const [deptValue, setDeptValue] = useState('');
 
   useEffect(() => { fetchAdmins(); }, []);
 
@@ -38,7 +46,7 @@ const ManageAdmins = () => {
       await api.post('/admin/admins', form);
       toast.success('Admin created successfully');
       setShowForm(false);
-      setForm({ fullName: '', email: '', password: '', phone: '' });
+      setForm({ fullName: '', email: '', password: '', phone: '', department: '' });
       fetchAdmins();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to create admin');
@@ -57,6 +65,20 @@ const ManageAdmins = () => {
       }
     } catch (error) {
       toast.error('Failed to update admin status');
+    }
+  };
+
+  const updateDepartment = async (adminId, department) => {
+    try {
+      await api.patch(`/admin/admins/${adminId}/department`, { department });
+      toast.success('Department updated');
+      setEditingDept(null);
+      fetchAdmins();
+      if (selectedAdmin?.id === adminId) {
+        setSelectedAdmin(prev => prev ? { ...prev, department } : null);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update department');
     }
   };
 
@@ -106,6 +128,15 @@ const ManageAdmins = () => {
               <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
               <input type="text" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input-field text-sm" />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Department *</label>
+              <select value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} className="input-field text-sm" required>
+                <option value="">Select Department</option>
+                <option value="MARKETING">Marketing</option>
+                <option value="PROXY">Proxy</option>
+                <option value="HR">HR</option>
+              </select>
+            </div>
           </div>
           <div className="flex gap-2">
             <button type="submit" disabled={creating} className="btn-primary text-sm">{creating ? 'Creating...' : 'Create Admin'}</button>
@@ -136,6 +167,7 @@ const ManageAdmins = () => {
                 <thead>
                   <tr className="bg-gray-50/80">
                     <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Department</th>
                     <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Students</th>
                     <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
@@ -152,6 +184,36 @@ const ManageAdmins = () => {
                           </div>
                           <span className="font-medium text-gray-800 text-[13px]">{admin.fullName}</span>
                         </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                        {editingDept === admin.id ? (
+                          <select
+                            autoFocus
+                            value={deptValue}
+                            onChange={(e) => { setDeptValue(e.target.value); updateDepartment(admin.id, e.target.value); }}
+                            onBlur={() => setEditingDept(null)}
+                            className="text-[11px] border border-primary-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                          >
+                            <option value="MARKETING">Marketing</option>
+                            <option value="PROXY">Proxy</option>
+                            <option value="HR">HR</option>
+                          </select>
+                        ) : admin.department && DEPT_CONFIG[admin.department] ? (
+                          <span
+                            onClick={() => { setEditingDept(admin.id); setDeptValue(admin.department); }}
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ring-1 cursor-pointer hover:opacity-80 ${DEPT_CONFIG[admin.department].bg} ${DEPT_CONFIG[admin.department].text} ${DEPT_CONFIG[admin.department].ring}`}
+                            title="Click to change department"
+                          >
+                            {DEPT_CONFIG[admin.department].label}
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => { setEditingDept(admin.id); setDeptValue('MARKETING'); }}
+                            className="text-[11px] text-primary-600 hover:text-primary-700 font-medium hover:underline"
+                          >
+                            + Assign
+                          </button>
+                        )}
                       </td>
                       <td className="px-4 py-2.5 text-center">
                         <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold">
@@ -200,7 +262,11 @@ const ManageAdmins = () => {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-gray-800">{selectedAdmin.fullName}</h3>
-                  <span className="text-[11px] text-gray-400">Admin / Mentor</span>
+                  <span className="text-[11px] text-gray-400">
+                    {selectedAdmin.department && DEPT_CONFIG[selectedAdmin.department]
+                      ? DEPT_CONFIG[selectedAdmin.department].label + ' Admin'
+                      : 'Admin / Mentor'}
+                  </span>
                 </div>
               </div>
               <button onClick={() => setSelectedAdmin(null)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
@@ -229,6 +295,24 @@ const ManageAdmins = () => {
 
               {/* Info Cards */}
               <div className="space-y-2.5">
+                <div className="flex items-center gap-3 p-3 bg-gray-50/80 rounded-lg">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                    <Briefcase size={14} className="text-indigo-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Department</p>
+                    <select
+                      value={selectedAdmin.department || ''}
+                      onChange={(e) => updateDepartment(selectedAdmin.id, e.target.value)}
+                      className="text-[13px] text-gray-800 font-medium bg-transparent border-0 p-0 focus:outline-none focus:ring-0 cursor-pointer hover:text-primary-700"
+                    >
+                      <option value="" disabled>Select Department</option>
+                      <option value="MARKETING">Marketing</option>
+                      <option value="PROXY">Proxy</option>
+                      <option value="HR">HR</option>
+                    </select>
+                  </div>
+                </div>
                 <div className="flex items-center gap-3 p-3 bg-gray-50/80 rounded-lg">
                   <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                     <Mail size={14} className="text-blue-600" />

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { MessageSquareMore, Search, Clock, CheckCircle2, XCircle, AlertCircle, User } from 'lucide-react';
+import { MessageSquareMore, Search, Clock, CheckCircle2, XCircle, AlertCircle, User, UserCheck, ArrowRightLeft } from 'lucide-react';
 
 const STATUS_OPTIONS = ['OPEN', 'IN_PROGRESS', 'CLOSED'];
 
@@ -19,15 +19,29 @@ const QueriesPage = () => {
   const [expandedId, setExpandedId] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [staffList, setStaffList] = useState([]);
 
   useEffect(() => {
     fetchQueries();
+    fetchStaff();
   }, []);
+
+  const fetchStaff = async () => {
+    try {
+      const { data } = await api.get('/queries/staff-admin');
+      setStaffList(data);
+    } catch {}
+  };
 
   const fetchQueries = async () => {
     try {
-      const { data } = await api.get('/queries/all');
-      setQueries(data);
+      const [queriesRes, staffRes] = await Promise.allSettled([
+        api.get('/queries/all'),
+        api.get('/queries/staff-admin'),
+      ]);
+      if (queriesRes.status === 'fulfilled') setQueries(queriesRes.value.data);
+      else toast.error('Failed to fetch queries');
+      if (staffRes.status === 'fulfilled') setStaffList(staffRes.value.data);
     } catch (error) {
       toast.error('Failed to fetch queries');
     } finally {
@@ -44,6 +58,19 @@ const QueriesPage = () => {
       setReplyText('');
     } catch (error) {
       toast.error('Failed to update query');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleReassign = async (queryId, newAssigneeId) => {
+    setUpdating(true);
+    try {
+      const { data } = await api.patch(`/queries/${queryId}`, { assignedToId: newAssigneeId || null });
+      setQueries((prev) => prev.map((q) => (q.id === queryId ? data : q)));
+      toast.success(newAssigneeId ? 'Query reassigned' : 'Assignment removed');
+    } catch (error) {
+      toast.error('Failed to reassign query');
     } finally {
       setUpdating(false);
     }
@@ -176,6 +203,12 @@ const QueriesPage = () => {
                   <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-400">
                     <span>{dateStr} · {timeStr}</span>
                     <span className="px-1.5 py-0.5 rounded bg-gray-100 text-[10px] font-medium text-gray-500">{query.category}</span>
+                    {query.assignedTo && (
+                      <span className="flex items-center gap-1 text-violet-600">
+                        <UserCheck size={10} />
+                        {query.assignedTo.fullName}
+                      </span>
+                    )}
                   </div>
                   {query.adminReply && (
                     <div className="mt-2.5 pt-2.5 border-t border-gray-100">
@@ -218,6 +251,12 @@ const QueriesPage = () => {
                       <span>{query.user?.email}</span>
                       <span>{dateStr} · {timeStr}</span>
                       <span className="px-1.5 py-0.5 rounded bg-gray-100 text-[10px] font-medium text-gray-500">{query.category}</span>
+                      {query.assignedTo && (
+                        <span className="flex items-center gap-1 text-violet-600 font-medium">
+                          <UserCheck size={10} />
+                          Assigned to: {query.assignedTo.fullName}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <button onClick={() => setExpandedId(null)} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors shrink-0 mt-0.5">
@@ -227,6 +266,26 @@ const QueriesPage = () => {
 
                 {/* Modal Body */}
                 <div className="px-5 py-4 space-y-4">
+                  {/* Reassign */}
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                      <ArrowRightLeft size={10} /> Assign To
+                    </p>
+                    <select
+                      value={query.assignedToId || ''}
+                      onChange={(e) => handleReassign(query.id, e.target.value)}
+                      disabled={updating}
+                      className="w-full text-[12px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-300 transition-all disabled:opacity-40"
+                    >
+                      <option value="">Unassigned</option>
+                      {staffList.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.fullName} ({s.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Description */}
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Description</p>

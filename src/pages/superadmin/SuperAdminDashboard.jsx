@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   Users, UserCog, GraduationCap, BarChart3,
   CheckCircle2, Calendar, FileText,
-  TrendingUp
+  TrendingUp, HelpCircle, AlertCircle, Clock, MessageSquareMore
 } from 'lucide-react';
 
 // Mini donut chart component
@@ -27,20 +27,25 @@ const SuperAdminDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [analytics, setAnalytics] = useState(null);
+  const [queryStats, setQueryStats] = useState({ open: 0, inProgress: 0, closed: 0, total: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAnalytics = async () => {
+    const fetchData = async () => {
       try {
-        const res = await api.get('/admin/analytics');
-        setAnalytics(res.data);
+        const [analyticsRes, queryStatsRes] = await Promise.all([
+          api.get('/admin/analytics'),
+          api.get('/queries/stats'),
+        ]);
+        setAnalytics(analyticsRes.data);
+        setQueryStats(queryStatsRes.data);
       } catch (error) {
-        console.error('Failed to load analytics:', error);
+        console.error('Failed to load dashboard data:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchAnalytics();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -78,6 +83,7 @@ const SuperAdminDashboard = () => {
     { to: '/superadmin/admins', icon: UserCog, label: 'Manage Mentors', iconBg: 'bg-gradient-to-br from-violet-500 to-violet-600' },
     { to: '/superadmin/students', icon: Users, label: 'Manage Students', iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600' },
     { to: '/superadmin/training', icon: GraduationCap, label: 'Training Materials', iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600' },
+    { to: '/superadmin/queries', icon: HelpCircle, label: 'Queries', iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600' },
     { to: '/superadmin/analytics', icon: BarChart3, label: 'Analytics', iconBg: 'bg-gradient-to-br from-rose-500 to-rose-600' },
   ];
 
@@ -242,6 +248,43 @@ const SuperAdminDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Query Status Breakdown */}
+      <div className="bg-white rounded-xl border border-gray-200/60 overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-gray-800">Query Status Overview</h2>
+          <Link to="/superadmin/queries" className="text-xs text-blue-600 hover:text-blue-700 font-medium">View All &rarr;</Link>
+        </div>
+        <div className="px-6 py-5">
+          {/* Progress bar */}
+          {queryStats.total > 0 && (
+            <div className="flex h-2.5 rounded-full overflow-hidden bg-gray-100 mb-5">
+              <div className="bg-amber-500 transition-all duration-500" style={{ width: `${(queryStats.open / queryStats.total) * 100}%` }} />
+              <div className="bg-blue-500 transition-all duration-500" style={{ width: `${(queryStats.inProgress / queryStats.total) * 100}%` }} />
+              <div className="bg-emerald-500 transition-all duration-500" style={{ width: `${(queryStats.closed / queryStats.total) * 100}%` }} />
+            </div>
+          )}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: 'Total', value: queryStats.total, icon: MessageSquareMore, dot: 'bg-gray-500', bg: 'bg-gray-50', text: 'text-gray-600' },
+              { label: 'Open', value: queryStats.open, icon: AlertCircle, dot: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-600' },
+              { label: 'In Progress', value: queryStats.inProgress, icon: Clock, dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-600' },
+              { label: 'Closed', value: queryStats.closed, icon: CheckCircle2, dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-600' },
+            ].map((s) => (
+              <div key={s.label} className={`${s.bg} px-4 py-4 rounded-lg text-center hover:opacity-90 transition-opacity`}>
+                <div className="flex items-center justify-center gap-2 mb-1.5">
+                  <s.icon size={14} className={s.text} />
+                  <p className="text-xl font-extrabold text-gray-900">{s.value}</p>
+                </div>
+                <div className="flex items-center justify-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+                  <p className="text-[11px] text-gray-500 font-medium">{s.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Quick Actions */}
       <div>

@@ -5,9 +5,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import {
   Send, MessageSquare, Search, Paperclip, FileText, Image,
-  File, X, Download, CheckCheck, ChevronUp, ChevronDown, FolderOpen
+  File, X, Download, CheckCheck, ChevronUp, ChevronDown, FolderOpen, ArrowLeft, Users
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
+import GroupChatPanel from '../../components/chat/GroupChatPanel';
 
 const ChatPage = () => {
   const { user } = useAuth();
@@ -21,9 +22,16 @@ const ChatPage = () => {
   const [chatSearch, setChatSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchMatchIdx, setSearchMatchIdx] = useState(0);
+  const [contactSearch, setContactSearch] = useState('');
+  const [showMobileSidebar, setShowMobileSidebar] = useState(true);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionIdx, setMentionIdx] = useState(0);
+  const [chatMode, setChatMode] = useState('direct');
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const matchRefs = useRef({});
+  const inputRef = useRef(null);
 
   useEffect(() => {
     const newSocket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
@@ -43,13 +51,6 @@ const ChatPage = () => {
   }, [activeContact]);
 
   useEffect(() => { fetchContacts(); }, []);
-
-  // Auto-select first contact (the assigned mentor)
-  useEffect(() => {
-    if (contacts.length > 0 && !activeContact) {
-      selectContact(contacts[0]);
-    }
-  }, [contacts]);
 
   useEffect(() => {
     if (!searchOpen) {
@@ -95,6 +96,7 @@ const ChatPage = () => {
 
   const selectContact = async (contact) => {
     setActiveContact(contact);
+    setShowMobileSidebar(false);
     setLoadingMessages(true);
     try {
       const res = await api.get(`/chat/messages/${contact.id}`);
@@ -207,20 +209,217 @@ const ChatPage = () => {
       .filter((p) => p.isFile);
   }, [messages, user.id]);
 
+  const getRoleLabel = (role, department) => {
+    if (role === 'SUPER_ADMIN') return 'Super Admin';
+    if (role === 'ADMIN') {
+      if (department === 'MARKETING') return 'Marketing';
+      if (department === 'PROXY') return 'Proxy';
+      if (department === 'HR') return 'HR';
+      return 'Admin';
+    }
+    if (role === 'STUDENT') return 'Student';
+    return role;
+  };
+
+  const getRoleBadge = (role, department) => {
+    if (role === 'SUPER_ADMIN') return { text: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-200' };
+    if (role === 'ADMIN') {
+      if (department === 'MARKETING') return { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' };
+      if (department === 'PROXY') return { text: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' };
+      if (department === 'HR') return { text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' };
+      return { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' };
+    }
+    return { text: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' };
+  };
+
+  const filteredContacts = contacts.filter(c =>
+    c.fullName?.toLowerCase().includes(contactSearch.toLowerCase()) ||
+    c.email?.toLowerCase().includes(contactSearch.toLowerCase())
+  );
+
+  const totalUnread = contacts.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+
+  // @mention logic
+  const mentionSuggestions = useMemo(() => {
+    if (!showMentions) return [];
+    return contacts.filter(c =>
+      c.fullName?.toLowerCase().includes(mentionQuery.toLowerCase())
+    ).slice(0, 8);
+  }, [contacts, mentionQuery, showMentions]);
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setNewMessage(val);
+    const cursorPos = e.target.selectionStart;
+    const textBeforeCursor = val.slice(0, cursorPos);
+    const atMatch = textBeforeCursor.match(/@([^@\[\]]*)$/);
+    if (atMatch !== null) {
+      setMentionQuery(atMatch[1]);
+      setShowMentions(true);
+      setMentionIdx(0);
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  const insertMention = (contact) => {
+    const input = inputRef.current;
+    if (!input) return;
+    const cursorPos = input.selectionStart;
+    const textBeforeCursor = newMessage.slice(0, cursorPos);
+    const atIdx = textBeforeCursor.lastIndexOf('@');
+    const before = newMessage.slice(0, atIdx);
+    const after = newMessage.slice(cursorPos);
+    const updated = `${before}@[${contact.fullName}] ${after}`;
+    setNewMessage(updated);
+    setShowMentions(false);
+    setTimeout(() => {
+      const newPos = atIdx + contact.fullName.length + 4;
+      input.focus();
+      input.setSelectionRange(newPos, newPos);
+    }, 0);
+  };
+
+  const handleMentionKeyDown = (e) => {
+    if (!showMentions || mentionSuggestions.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setMentionIdx(prev => (prev + 1) % mentionSuggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setMentionIdx(prev => (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length);
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      insertMention(mentionSuggestions[mentionIdx]);
+    } else if (e.key === 'Escape') {
+      setShowMentions(false);
+    }
+  };
+
+  const renderMessageText = (text, isMine = false) => {
+    if (!text) return text;
+    const parts = text.split(/(@\[[^\]]+\])/g);
+    return parts.map((part, i) => {
+      const mentionMatch = part.match(/^@\[([^\]]+)\]$/);
+      if (mentionMatch) {
+        return (
+          <span key={i} className={`px-1 rounded font-semibold text-[12px] ${isMine ? 'bg-blue-500/40 text-white' : 'bg-blue-100 text-blue-700'}`}>
+            @{mentionMatch[1]}
+          </span>
+        );
+      }
+      return chatSearch ? highlightText(part) : part;
+    });
+  };
+
   return (
-    <div className="flex h-[calc(100vh-7rem)] gap-3">
+    <div className="flex flex-col h-[calc(100vh-7rem)] gap-2">
+      {/* Tab Toggle */}
+      <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1 self-start">
+        <button
+          onClick={() => setChatMode('direct')}
+          className={`px-4 py-1.5 rounded-md text-[12px] font-semibold transition-all ${chatMode === 'direct' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+        >
+          <span className="flex items-center gap-1.5"><MessageSquare size={13} /> Direct</span>
+        </button>
+        <button
+          onClick={() => setChatMode('group')}
+          className={`px-4 py-1.5 rounded-md text-[12px] font-semibold transition-all ${chatMode === 'group' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+        >
+          <span className="flex items-center gap-1.5"><Users size={13} /> Group</span>
+        </button>
+      </div>
+
+      {chatMode === 'group' ? (
+        <div className="flex-1 flex flex-col min-h-0 bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <GroupChatPanel socket={socket} />
+        </div>
+      ) : (
+    <div className="flex flex-1 gap-3 min-h-0">
+      {/* ─── Contacts Sidebar ─── */}
+      <div className={`${showMobileSidebar ? 'flex' : 'hidden'} md:flex w-full md:w-72 flex-col bg-white rounded-lg border border-gray-200 overflow-hidden flex-shrink-0`}>
+        <div className="p-3 border-b border-gray-100">
+          <div className="flex items-center justify-between mb-2.5">
+            <h2 className="text-[14px] font-bold text-gray-900">Messages</h2>
+            {totalUnread > 0 && (
+              <span className="px-2 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded-full">{totalUnread}</span>
+            )}
+          </div>
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search contacts..."
+              value={contactSearch}
+              onChange={(e) => setContactSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 text-[12px] bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {filteredContacts.length === 0 ? (
+            <div className="text-center py-10">
+              <MessageSquare size={24} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-[12px] text-gray-400">{contactSearch ? 'No contacts found' : 'No contacts yet'}</p>
+            </div>
+          ) : (
+            filteredContacts.map((contact) => {
+              const isActive = activeContact?.id === contact.id;
+              const badge = getRoleBadge(contact.role, contact.department);
+              return (
+                <button
+                  key={contact.id}
+                  onClick={() => selectContact(contact)}
+                  className={`w-full px-3 py-2.5 flex items-center gap-2.5 text-left transition-all border-b border-gray-50 ${isActive ? 'bg-blue-50/70 border-l-2 border-l-blue-600' : 'hover:bg-gray-50'}`}
+                >
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${isActive ? 'bg-blue-600 text-white' : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600'}`}>
+                    {getInitials(contact.fullName)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-[12px] font-semibold truncate ${isActive ? 'text-blue-900' : 'text-gray-900'}`}>{contact.fullName}</p>
+                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${badge.text} ${badge.bg} ${badge.border}`}>
+                        {getRoleLabel(contact.role, contact.department)}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 truncate mt-0.5">{contact.email}</p>
+                  </div>
+                  {contact.unreadCount > 0 && (
+                    <span className="w-5 h-5 bg-blue-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center flex-shrink-0">
+                      {contact.unreadCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+
       {/* Main Chat Card */}
-      <div className="flex flex-col flex-1 bg-white rounded-lg border border-gray-200 overflow-hidden min-w-0">
+      <div className={`${!showMobileSidebar ? 'flex' : 'hidden'} md:flex flex-col flex-1 bg-white rounded-lg border border-gray-200 overflow-hidden min-w-0`}>
       {activeContact ? (
         <>
           {/* Chat Header */}
           <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 bg-white shrink-0">
+            <button
+              onClick={() => { setShowMobileSidebar(true); setActiveContact(null); }}
+              className="md:hidden p-1 text-gray-400 hover:text-gray-600"
+            >
+              <ArrowLeft size={18} />
+            </button>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-[13px] font-bold text-gray-900">{activeContact.fullName}</p>
-                <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                  Mentor
-                </span>
+                {(() => {
+                  const badge = getRoleBadge(activeContact.role, activeContact.department);
+                  return (
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${badge.text} ${badge.bg} ${badge.border}`}>
+                      {getRoleLabel(activeContact.role, activeContact.department)}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
             <button
@@ -326,7 +525,7 @@ const ChatPage = () => {
                               <div className={`px-3.5 py-2.5 ${isMine
                                 ? 'bg-blue-600 text-white rounded-2xl rounded-br-md'
                                 : 'bg-white text-gray-800 border border-gray-100 rounded-2xl rounded-bl-md shadow-sm'}`}>
-                                <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{chatSearch ? highlightText(parsed.textContent) : parsed.textContent}</p>
+                                <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{renderMessageText(parsed.textContent, isMine)}</p>
                               </div>
                             )}
                             <div className={`flex items-center gap-1 mt-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
@@ -363,7 +562,39 @@ const ChatPage = () => {
           )}
 
           {/* Message Input */}
-          <form onSubmit={sendMessage} className="px-4 py-3 border-t border-gray-100 bg-white shrink-0">
+          <form onSubmit={sendMessage} className="px-4 py-3 border-t border-gray-100 bg-white shrink-0 relative">
+            {/* @Mention Popup */}
+            {showMentions && mentionSuggestions.length > 0 && (
+              <div className="absolute bottom-full left-4 right-4 mb-1 bg-white rounded-lg border border-gray-200 shadow-lg max-h-48 overflow-y-auto z-50">
+                <div className="px-3 py-1.5 border-b border-gray-100">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Mention someone</p>
+                </div>
+                {mentionSuggestions.map((contact, idx) => {
+                  const badge = getRoleBadge(contact.role, contact.department);
+                  return (
+                    <button
+                      key={contact.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => insertMention(contact)}
+                      className={`w-full px-3 py-2 flex items-center gap-2.5 text-left transition-colors ${idx === mentionIdx ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                    >
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold ${idx === mentionIdx ? 'bg-blue-600 text-white' : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600'}`}>
+                        {getInitials(contact.fullName)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[12px] font-semibold text-gray-900 truncate">{contact.fullName}</span>
+                          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border ${badge.text} ${badge.bg} ${badge.border}`}>
+                            {getRoleLabel(contact.role, contact.department)}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <div className="flex items-end gap-2">
               <input
                 type="file"
@@ -381,10 +612,13 @@ const ChatPage = () => {
                 <Paperclip size={16} />
               </button>
               <input
+                ref={inputRef}
                 type="text"
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type a message..."
+                onChange={handleInputChange}
+                onKeyDown={handleMentionKeyDown}
+                onBlur={() => setTimeout(() => setShowMentions(false), 200)}
+                placeholder="Type @ to mention someone..."
                 className="flex-1 px-3.5 py-2 text-[12px] bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 focus:bg-white transition-all"
               />
               <button
@@ -402,15 +636,15 @@ const ChatPage = () => {
           <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mb-3">
             <MessageSquare size={20} className="text-gray-300" />
           </div>
-          <p className="text-[13px] font-semibold text-gray-600">Loading chat...</p>
-          <p className="text-[11px] text-gray-400 mt-1">Connecting to your mentor</p>
+          <p className="text-[13px] font-semibold text-gray-600">Select a conversation</p>
+          <p className="text-[11px] text-gray-400 mt-1">Choose a contact to start chatting</p>
         </div>
       )}
       </div>
 
       {/* Shared Files Side Panel */}
       {activeContact && (
-        <div className="w-[260px] flex-shrink-0 bg-white rounded-lg border border-gray-200 flex flex-col overflow-hidden">
+        <div className="hidden lg:flex w-[260px] flex-shrink-0 bg-white rounded-lg border border-gray-200 flex-col overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 shrink-0">
             <div className="flex items-center gap-2">
               <FolderOpen size={14} className="text-blue-600" />
@@ -429,7 +663,7 @@ const ChatPage = () => {
                   <FileText size={18} className="text-gray-300" />
                 </div>
                 <p className="text-[12px] font-medium text-gray-400">No files shared yet</p>
-                <p className="text-[10px] text-gray-300 mt-0.5">Files from your mentor will appear here</p>
+                <p className="text-[10px] text-gray-300 mt-0.5">Shared files will appear here</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -456,6 +690,8 @@ const ChatPage = () => {
             )}
           </div>
         </div>
+      )}
+    </div>
       )}
     </div>
   );

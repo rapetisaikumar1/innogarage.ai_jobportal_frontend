@@ -357,7 +357,7 @@ const AchieversPage = () => {
             <h3 className="text-[15px] font-extrabold text-gray-900 leading-snug">
               Transform Your Career With{' '}
               <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                get.hired
+                INNOGARAGE.ai
               </span>
             </h3>
             <p className="text-[11px] text-gray-500 mt-1.5 leading-relaxed">

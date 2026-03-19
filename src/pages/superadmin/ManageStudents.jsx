@@ -8,6 +8,12 @@ const AVATAR_COLORS = [
   'bg-rose-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-teal-500',
 ];
 
+const DEPT_COLORS = {
+  MARKETING: { bg: 'bg-blue-50', text: 'text-blue-700', ring: 'ring-blue-200', label: 'Marketing' },
+  PROXY: { bg: 'bg-violet-50', text: 'text-violet-700', ring: 'ring-violet-200', label: 'Proxy' },
+  HR: { bg: 'bg-emerald-50', text: 'text-emerald-700', ring: 'ring-emerald-200', label: 'HR' },
+};
+
 const avatarStyle = (name) => {
   const idx = (name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length;
   return AVATAR_COLORS[idx];
@@ -126,16 +132,30 @@ const ManageStudents = () => {
     }
   };
 
-  const changeMentor = async (studentId, mentorId) => {
+  const addAdmin = async (studentId, mentorId) => {
     try {
-      await api.post('/admin/assign-mentor', {
-        mentorId: mentorId || null,
+      const res = await api.post('/admin/assign-mentor', {
+        mentorId,
         studentIds: [studentId],
       });
-      toast.success(mentorId ? 'Mentor assigned' : 'Mentor unassigned');
+      const r = res.data?.results?.[0];
+      if (r?.status === 'already_assigned') toast('Already assigned', { icon: '⚠️' });
+      else if (r?.status === 'limit_reached') toast.error('Max 5 admins per student');
+      else if (r?.status === 'marketing_first') toast.error('First admin must be from Marketing department');
+      else toast.success('Admin assigned');
       fetchStudents();
     } catch (error) {
-      toast.error('Failed to update mentor');
+      toast.error(error.response?.data?.message || 'Failed to assign admin');
+    }
+  };
+
+  const removeAdmin = async (studentId, adminId) => {
+    try {
+      await api.post('/admin/unassign-admin', { studentId, adminId });
+      toast.success('Admin removed');
+      fetchStudents();
+    } catch (error) {
+      toast.error('Failed to remove admin');
     }
   };
 
@@ -164,8 +184,11 @@ const ManageStudents = () => {
       const matchesStatus = statusFilter === 'all' ||
         (statusFilter === 'active' && s.status === 'ACTIVE') ||
         (statusFilter === 'inactive' && s.status === 'INACTIVE');
+      const assignedAdminIds = (s.adminAssignments || []).map(a => a.admin?.id).filter(Boolean);
+      const hasAdmins = assignedAdminIds.length > 0 || s.assignedMentorId;
       const matchesMentor = mentorFilter === 'all' ||
-        (mentorFilter === 'unassigned' && !s.assignedMentorId) ||
+        (mentorFilter === 'unassigned' && !hasAdmins) ||
+        assignedAdminIds.includes(mentorFilter) ||
         s.assignedMentorId === mentorFilter;
       const matchesPlan = planFilter === 'all' ||
         (planFilter === 'none' && !s.subscriptionPlan) ||
@@ -366,17 +389,42 @@ const ManageStudents = () => {
               </div>
             </div>
 
-            {/* Mentor Card */}
+            {/* Assigned Admins Card */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
               <h3 className="text-sm font-bold text-gray-900 mb-5 flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center">
-                  <User size={14} className="text-violet-600" />
+                  <Users size={14} className="text-violet-600" />
                 </div>
-                Assigned Mentor
+                Assigned Admins
+                <span className="text-[11px] font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full ml-auto">{detail.adminAssignments?.length || 0}/5</span>
               </h3>
-              {detail.assignedMentor ? (
-                <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow ${avatarStyle(detail.assignedMentor.fullName)}`}>
+              {detail.adminAssignments?.length > 0 ? (
+                <div className="space-y-2">
+                  {detail.adminAssignments.map(a => {
+                    const dept = a.department || a.admin?.department;
+                    const dc = dept && DEPT_COLORS[dept];
+                    return (
+                      <div key={a.id} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow ${avatarStyle(a.admin?.fullName)}`}>
+                          {a.admin?.fullName?.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{a.admin?.fullName}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-xs text-gray-500 truncate">{a.admin?.email}</p>
+                            {dc && <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${dc.bg} ${dc.text}`}>{dc.label}</span>}
+                          </div>
+                        </div>
+                        <button onClick={() => removeAdmin(detail.id, a.admin?.id)} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="Remove admin">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : detail.assignedMentor ? (
+                <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow ${avatarStyle(detail.assignedMentor.fullName)}`}>
                     {detail.assignedMentor.fullName?.charAt(0)}
                   </div>
                   <div>
@@ -386,10 +434,10 @@ const ManageStudents = () => {
                 </div>
               ) : (
                 <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-4 border border-gray-100 text-gray-400">
-                  <div className="w-12 h-12 rounded-xl bg-gray-200 flex items-center justify-center">
-                    <User size={18} className="text-gray-400" />
+                  <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
+                    <User size={16} className="text-gray-400" />
                   </div>
-                  <p className="text-sm font-medium">No mentor assigned</p>
+                  <p className="text-sm font-medium">No admins assigned</p>
                 </div>
               )}
             </div>
@@ -679,7 +727,7 @@ const ManageStudents = () => {
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Plan</th>
-                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Mentor</th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Admins</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Joined</th>
                   <th className="px-5 py-3.5 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -732,38 +780,71 @@ const ManageStudents = () => {
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="relative" ref={openMentorDropdown === student.id ? dropdownRef : null}>
-                        <button
-                          onClick={() => setOpenMentorDropdown(openMentorDropdown === student.id ? null : student.id)}
-                          className="inline-flex items-center justify-between gap-2 text-[13px] border border-gray-200 rounded-lg px-3 py-1.5 bg-white hover:border-gray-300 hover:bg-gray-50 transition-colors w-[160px] text-left"
-                        >
-                          <span className={student.assignedMentorId ? 'text-gray-800 font-medium' : 'text-gray-400'}>
-                            {student.assignedMentorId ? mentors.find(m => m.id === student.assignedMentorId)?.fullName || 'Unassigned' : 'Unassigned'}
-                          </span>
-                          <ChevronDown size={13} className={`text-gray-400 transition-transform ${openMentorDropdown === student.id ? 'rotate-180' : ''}`} />
-                        </button>
-                        {openMentorDropdown === student.id && (
-                          <div className="absolute z-50 mt-1.5 w-[190px] bg-white rounded-xl border border-gray-200 shadow-lg py-1.5 max-h-[200px] overflow-y-auto">
+                        <div className="flex flex-wrap items-center gap-1 max-w-[260px]">
+                          {(student.adminAssignments || []).map(a => {
+                            const dept = a.department || a.admin?.department;
+                            const dc = dept && DEPT_COLORS[dept];
+                            return (
+                              <span key={a.id} className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ring-1 ${dc ? `${dc.bg} ${dc.text} ${dc.ring}` : 'bg-gray-50 text-gray-600 ring-gray-200'}`}>
+                                {a.admin?.fullName?.split(' ')[0]}
+                                {dc && <span className={`text-[9px] opacity-70`}>({dc.label})</span>}
+                                <button onClick={() => removeAdmin(student.id, a.admin?.id)} className="ml-0.5 opacity-60 hover:opacity-100 hover:text-red-500 transition-colors"><X size={10} /></button>
+                              </span>
+                            );
+                          })}
+                          {(student.adminAssignments || []).length < 5 && (
                             <button
-                              onClick={() => { changeMentor(student.id, ''); setOpenMentorDropdown(null); }}
-                              className={`w-full flex items-center justify-between px-3.5 py-2 text-[13px] hover:bg-gray-50 transition-colors ${
-                                !student.assignedMentorId ? 'text-blue-600 font-semibold bg-blue-50/50' : 'text-gray-600'
-                              }`}
+                              onClick={() => setOpenMentorDropdown(openMentorDropdown === student.id ? null : student.id)}
+                              className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-blue-600 border border-dashed border-gray-300 hover:border-blue-400 rounded-full px-2 py-0.5 transition-colors"
                             >
-                              Unassigned
-                              {!student.assignedMentorId && <Check size={13} className="text-blue-500" />}
+                              <Plus size={10} /> Add
                             </button>
-                            {mentors.map(m => (
-                              <button
-                                key={m.id}
-                                onClick={() => { changeMentor(student.id, m.id); setOpenMentorDropdown(null); }}
-                                className={`w-full flex items-center justify-between px-3.5 py-2 text-[13px] hover:bg-gray-50 transition-colors ${
-                                  student.assignedMentorId === m.id ? 'text-blue-600 font-semibold bg-blue-50/50' : 'text-gray-700'
-                                }`}
-                              >
-                                {m.fullName}
-                                {student.assignedMentorId === m.id && <Check size={13} className="text-blue-500" />}
-                              </button>
-                            ))}
+                          )}
+                        </div>
+                        {openMentorDropdown === student.id && (
+                          <div className="absolute z-50 mt-1.5 w-[220px] bg-white rounded-xl border border-gray-200 shadow-lg py-1.5 max-h-[240px] overflow-y-auto">
+                            {(() => {
+                              const hasAny = (student.adminAssignments || []).length > 0;
+                              const available = mentors.filter(m => {
+                                if ((student.adminAssignments || []).some(a => a.admin?.id === m.id)) return false;
+                                if (!hasAny && m.department !== 'MARKETING') return false;
+                                return true;
+                              });
+                              if (!hasAny) {
+                                return (
+                                  <>
+                                    <p className="px-3.5 py-1.5 text-[10px] font-semibold text-blue-600 uppercase tracking-wider border-b border-gray-100">Marketing Admin First</p>
+                                    {available.length === 0 ? (
+                                      <p className="px-3.5 py-2 text-[12px] text-gray-400">No Marketing admins available</p>
+                                    ) : (
+                                      available.map(m => (
+                                        <button key={m.id} onClick={() => { addAdmin(student.id, m.id); setOpenMentorDropdown(null); }}
+                                          className="w-full flex items-center gap-2 px-3.5 py-2 text-[13px] text-gray-700 hover:bg-blue-50 transition-colors">
+                                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold ${avatarStyle(m.fullName)}`}>{m.fullName?.charAt(0)}</div>
+                                          <span className="flex-1 text-left">{m.fullName}</span>
+                                          <span className="text-[9px] text-blue-500 font-medium">Marketing</span>
+                                        </button>
+                                      ))
+                                    )}
+                                  </>
+                                );
+                              }
+                              return available.length === 0 ? (
+                                <p className="px-3.5 py-2 text-[12px] text-gray-400">All admins assigned</p>
+                              ) : (
+                                available.map(m => {
+                                  const dc = m.department && DEPT_COLORS[m.department];
+                                  return (
+                                    <button key={m.id} onClick={() => { addAdmin(student.id, m.id); setOpenMentorDropdown(null); }}
+                                      className="w-full flex items-center gap-2 px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors">
+                                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold ${avatarStyle(m.fullName)}`}>{m.fullName?.charAt(0)}</div>
+                                      <span className="flex-1 text-left">{m.fullName}</span>
+                                      {dc && <span className={`text-[9px] font-medium ${dc.text}`}>{dc.label}</span>}
+                                    </button>
+                                  );
+                                })
+                              );
+                            })()}
                           </div>
                         )}
                       </div>

@@ -136,7 +136,7 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
           </div>
           <h2 className="text-[28px] font-extrabold text-gray-900 tracking-tight leading-tight">
             Unlock Your Full Potential with{' '}
-            <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">get.hired</span>
+            <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">INNOGARAGE.ai</span>
           </h2>
           <p className="text-[13px] text-gray-500 max-w-xl mx-auto leading-relaxed mt-2">
             Choose the plan that accelerates your career — from smart job matching to personal mentorship, we've got you covered.
