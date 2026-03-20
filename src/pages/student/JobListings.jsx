@@ -454,6 +454,21 @@ const JobListings = () => {
       toast.success(data.message || 'Job search triggered!');
       // Update usage count locally
       setUsage(prev => ({ ...prev, used: prev.used + 1 }));
+
+      // JS mode returns jobs directly — no polling needed
+      if (data.mode === 'js' && data.jobs) {
+        setJobs(prev => {
+          const existingKeys = new Set(prev.map(j => `${j.employer_name}|${j.job_title}`.toLowerCase()));
+          const newOnes = data.jobs.filter(j => !existingKeys.has(`${j.employer_name}|${j.job_title}`.toLowerCase()));
+          return [...newOnes, ...prev];
+        });
+        setTriggeringN8n(false);
+        await fetchAppliedStatus();
+        await fetchUsage();
+        return;
+      }
+
+      // N8N mode — poll for results
       setWaitingForJobs(true);
       // Start polling every 10s for new jobs
       if (pollRef.current) clearInterval(pollRef.current);

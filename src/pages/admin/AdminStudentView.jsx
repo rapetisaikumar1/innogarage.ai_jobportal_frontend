@@ -307,6 +307,20 @@ const AdminStudentView = () => {
     try {
       const { data } = await api.post(`/admin/students/${studentId}/trigger-job-search`, { days: String(days) });
       toast.success(data.message || 'Job search triggered!');
+
+      // JS mode returns jobs directly — no polling needed
+      if (data.mode === 'js' && data.jobs) {
+        setSheetJobs(prev => {
+          const existingKeys = new Set(prev.map(j => `${j.employer_name}|${j.job_title}`.toLowerCase()));
+          const newOnes = data.jobs.filter(j => !existingKeys.has(`${j.employer_name}|${j.job_title}`.toLowerCase()));
+          return [...newOnes, ...prev];
+        });
+        setTriggeringSearch(false);
+        await fetchAppliedStatus();
+        return;
+      }
+
+      // N8N mode — poll for results
       setWaitingForJobs(true);
       // Poll every 10s for new jobs
       if (pollRef.current) clearInterval(pollRef.current);
