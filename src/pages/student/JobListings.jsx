@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -9,6 +10,16 @@ import {
   Clock, Sparkles, MapPin, Building2, Bookmark, ChevronLeft, ChevronRight, Info, CheckCircle2,
   Eye, Download, Crown, Lock
 } from 'lucide-react';
+
+/* ── Section accent colors (cycle through) ── */
+const SECTION_COLORS = [
+  { border: '#1e40af', bg: '#eff6ff', text: '#1e40af' },
+  { border: '#7c3aed', bg: '#f5f3ff', text: '#7c3aed' },
+  { border: '#059669', bg: '#ecfdf5', text: '#059669' },
+  { border: '#dc2626', bg: '#fef2f2', text: '#dc2626' },
+  { border: '#d97706', bg: '#fffbeb', text: '#d97706' },
+  { border: '#0891b2', bg: '#ecfeff', text: '#0891b2' },
+];
 
 /* ── avatar bg palette ── */
 const AVATAR_BG = [
@@ -128,10 +139,16 @@ const extractSkillsFromJD = (jdText) => {
 /* ── parseTags helper ── */
 const parseTags = (str) => {
   if (!str) return [];
-  return str.split(/[,;]+/).map((s) => s.replace(/^[\s\-•]+/, '').trim()).filter(Boolean).slice(0, 5);
+  // Handle JSON arrays (from JS search mode)
+  try {
+    const parsed = JSON.parse(str);
+    if (Array.isArray(parsed)) return parsed.map(s => String(s).trim()).filter(Boolean).slice(0, 10);
+  } catch {}
+  // Fallback: comma/semicolon separated
+  return str.split(/[,;]+/).map((s) => s.replace(/^[\s\-•]+/, '').trim()).filter(Boolean).slice(0, 10);
 };
 
-const PAGE_SIZE = 7;
+const PAGE_SIZE = 8;
 
 /* ── parse resume text into structured sections ── */
 const parseResumeSections = (text, candidateName, sheetCandidateName) => {
@@ -209,15 +226,23 @@ const parseResumeSections = (text, candidateName, sheetCandidateName) => {
       const withoutContact = l
         .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi, '')
         .replace(/\(?\+?\d[\d\s\-().]{6,}\d/g, '')
+        .replace(/https?:\/\/\S+/gi, '')
         .replace(/[|,;\s]/g, '')
         .trim();
       if (withoutContact.length < 5) return true;
+      // Remaining text is just a city/state location — still a contact header line
+      if (/^[A-Za-z\s]+,?\s*[A-Z]{2}$/.test(withoutContact) || /^[A-Za-z\s]+$/.test(withoutContact) && withoutContact.length < 20) return true;
     }
     return false;
   };
 
-  // Detect location-only header lines to skip (e.g. "Remote (Arizona, USA)")
-  const isLocationLine = (line) => /^\s*(remote|on-?site|hybrid)?\s*\(?.*(usa|india|uk|canada|germany|australia|arizona|california|texas|new york|florida|illinois|ohio|georgia|north carolina|virginia|washington|massachusetts|colorado|oregon|utah|nevada|michigan|minnesota|maryland|wisconsin|tennessee|missouri|connecticut|iowa|kansas|arkansas|nebraska|idaho|hawaii|alabama|louisiana|oklahoma|kentucky|south carolina|mississippi|pennsylvania|new jersey)[^a-z]*\)?\s*$/i.test(line);
+  // Detect location-only header lines to skip (e.g. "Remote (Arizona, USA)" or "Phoenix, AZ")
+  const isLocationLine = (line) => {
+    if (/^\s*(remote|on-?site|hybrid)?\s*\(?.*(usa|india|uk|canada|germany|australia|arizona|california|texas|new york|florida|illinois|ohio|georgia|north carolina|virginia|washington|massachusetts|colorado|oregon|utah|nevada|michigan|minnesota|maryland|wisconsin|tennessee|missouri|connecticut|iowa|kansas|arkansas|nebraska|idaho|hawaii|alabama|louisiana|oklahoma|kentucky|south carolina|mississippi|pennsylvania|new jersey)[^a-z]*\)?\s*$/i.test(line)) return true;
+    // City, ST (2-letter US state abbreviation)
+    if (/^\s*[A-Z][a-zA-Z\s]+,\s*[A-Z]{2}\s*$/.test(line.trim())) return true;
+    return false;
+  };
 
   for (const line of lines) {
     let trimmed = line.trim();
@@ -225,6 +250,8 @@ const parseResumeSections = (text, candidateName, sheetCandidateName) => {
       if (currentSection) currentSection.lines.push('');
       continue;
     }
+    // Skip decorative divider lines (─, ━, ═, -, etc.)
+    if (/^[─━═\-_~]{3,}$/.test(trimmed)) continue;
     // Skip lines that are exactly the candidate name
     if (isNameLine(trimmed)) continue;
     // Skip lines that look like a person name (1-3 capitalized words, no job keywords)
@@ -262,11 +289,49 @@ const parseResumeSections = (text, candidateName, sheetCandidateName) => {
   }
   if (currentSection) sections.push(currentSection);
 
-  // Remove all notes sections (notes, additional notes, notes on addressed gaps, etc.)
+  // Post-process: strip leading header-like lines from each section's content
+  // (AI sometimes duplicates name/contact/location right after section headings)
+  for (const section of sections) {
+    let cut = 0;
+    for (let i = 0; i < Math.min(section.lines.length, 8); i++) {
+      const t = section.lines[i].trim();
+      if (!t) { cut = i + 1; continue; }
+      if (isNameLine(t) || looksLikePersonName(t) || isContactInfoLine(t) || isLocationLine(t)) { cut = i + 1; continue; }
+      // City, XX (2-letter US state abbreviation) pattern
+      if (/^[A-Z][a-zA-Z\s]+,\s*[A-Z]{2}$/.test(t)) { cut = i + 1; continue; }
+      // Exact duplicate of captured roleTitle
+      if (roleTitle && t.toLowerCase() === roleTitle.toLowerCase()) { cut = i + 1; continue; }
+      // Lines containing phone numbers (name + phone combos like "Vinay 512-766-1239")
+      if (/(\+?\(?\d[\d\s\-().]{6,}\d)/.test(t) && t.split(/\s+/).length <= 8) { cut = i + 1; continue; }
+      // Lines containing email addresses mixed with other short text
+      if (/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(t) && t.split(/\s+/).length <= 8) { cut = i + 1; continue; }
+      // Standalone job role/title line (short, has job-title keywords, no dates/years, no sentence ending)
+      if (t.length <= 100 && !/[.!?]$/.test(t) && t.split(/\s+/).length <= 12 && !/\b\d{4}\b/.test(t) && /\b(engineer|developer|manager|analyst|designer|architect|consultant|specialist|coordinator|director|lead|administrator|officer|scientist|intern|assistant|associate|programmer|advisor|strategist|optimizer)\b/i.test(t)) { cut = i + 1; continue; }
+      // URL-only lines (LinkedIn, GitHub, portfolio, chatgpt, etc.)
+      if (/^(https?:\/\/|www\.|linkedin\.com|github\.com)/i.test(t)) { cut = i + 1; continue; }
+      // Pipe-separated header line (e.g. "Phoenix, AZ | 512-766-1239 | email@test.com")
+      if (/\|/.test(t)) {
+        const hasPhoneInLine = /(\+?\(?\d[\d\s\-().]{6,}\d)/.test(t);
+        const hasEmailInLine = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(t);
+        if (hasPhoneInLine || hasEmailInLine) { cut = i + 1; continue; }
+        const parts = t.split(/\s*\|\s*/);
+        const allHeader = parts.every(p => {
+          const pt = p.trim();
+          return !pt || /^[A-Z][a-zA-Z\s]+,?\s*[A-Z]{2}$/.test(pt) || /linkedin|github|http/i.test(pt) || pt.length < 3;
+        });
+        if (allHeader) { cut = i + 1; continue; }
+      }
+      break;
+    }
+    if (cut > 0) section.lines = section.lines.slice(cut);
+  }
+
+  // Remove notes sections and CONTACT INFORMATION sections (header already shows contact)
   const filteredSections = sections.filter(s =>
     !/^NOTES?/i.test(s.heading) &&
     !/^ADDITIONAL\s*NOTES?/i.test(s.heading) &&
-    !/^ADDRESSED\s*GAPS?/i.test(s.heading)
+    !/^ADDRESSED\s*GAPS?/i.test(s.heading) &&
+    !/^CONTACT\s*INFORMATION$/i.test(s.heading)
   );
 
   return { contact: contactLines.join('\n'), roleTitle, sections: filteredSections };
@@ -360,11 +425,13 @@ const extractResumeRoleTitle = (resumeText, candidateName, sheetCandidateName) =
 
 const JobListings = () => {
   const { user: authUser } = useAuth();
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [triggeringN8n, setTriggeringN8n] = useState(false);
   const [appliedLinks, setAppliedLinks] = useState(new Set());
+  const [adminAppliedLinks, setAdminAppliedLinks] = useState(new Set());
   const [showDaysPopup, setShowDaysPopup] = useState(false);
   const [daysInput, setDaysInput] = useState('1');
   const [search, setSearch] = useState('');
@@ -381,20 +448,31 @@ const JobListings = () => {
   const jobCountBeforeTrigger = useRef(0);
 
   const handleMarkApplied = async (job) => {
-    if (!job.job_apply_link) return;
+    const link = job.job_apply_link;
+    if (!link || (!link.startsWith('http://') && !link.startsWith('https://'))) return;
+    // Open the apply link FIRST (synchronous — avoids popup blocker)
+    const win = window.open(link, '_blank', 'noopener,noreferrer');
+    if (!win) {
+      // Popup blocked — fallback to direct navigation
+      const a = document.createElement('a');
+      a.href = link;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
     // Optimistically mark as applied
     setAppliedLinks(prev => {
       const next = new Set(prev);
-      next.add(job.job_apply_link);
+      next.add(link);
       return next;
     });
-    // Open the apply link
-    window.open(job.job_apply_link, '_blank', 'noopener,noreferrer');
-    // Save to backend
+    // Save to backend (fire-and-forget)
     try {
       const resumeRole = extractResumeRoleTitle(job.resume_text, authUser?.fullName, job.candidate_name);
       await api.post('/jobs/sheet/mark-applied', {
-        jobLink: job.job_apply_link,
+        jobLink: link,
         employerName: job.employer_name,
         matchScore: job.match_score,
         jobTitle: resumeRole || extractRole(job),
@@ -405,7 +483,9 @@ const JobListings = () => {
   const fetchAppliedStatus = async () => {
     try {
       const { data } = await api.get('/jobs/sheet/applied-status');
-      setAppliedLinks(new Set((data.applications || []).map(a => a.jobLink)));
+      const apps = data.applications || [];
+      setAppliedLinks(new Set(apps.map(a => a.jobLink)));
+      setAdminAppliedLinks(new Set(apps.filter(a => a.appliedById).map(a => a.jobLink)));
     } catch { /* ignore */ }
   };
 
@@ -419,10 +499,11 @@ const JobListings = () => {
   const fetchSheetJobs = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/jobs/sheet');
-      setJobs(data.jobs || []);
+      // Fetch only Google Sheet jobs (populated by n8n)
+      const sheetRes = await api.get('/jobs/sheet');
+      const sheetJobs = sheetRes.data.jobs || [];
+      setJobs(sheetJobs);
     } catch (error) {
-      console.error('Failed to fetch jobs:', error);
       toast.error('Failed to load job listings');
     } finally {
       setLoading(false);
@@ -448,6 +529,7 @@ const JobListings = () => {
     }
 
     setTriggeringN8n(true);
+    setWaitingForJobs(true);
     jobCountBeforeTrigger.current = jobs.length;
     try {
       const { data } = await api.post('/jobs/trigger-n8n', { days: String(days) });
@@ -455,51 +537,46 @@ const JobListings = () => {
       // Update usage count locally
       setUsage(prev => ({ ...prev, used: prev.used + 1 }));
 
-      // JS mode returns jobs directly — no polling needed
-      if (data.mode === 'js' && data.jobs) {
-        setJobs(prev => {
-          const existingKeys = new Set(prev.map(j => `${j.employer_name}|${j.job_title}`.toLowerCase()));
-          const newOnes = data.jobs.filter(j => !existingKeys.has(`${j.employer_name}|${j.job_title}`.toLowerCase()));
-          return [...newOnes, ...prev];
-        });
-        setTriggeringN8n(false);
-        await fetchAppliedStatus();
-        await fetchUsage();
-        return;
-      }
-
-      // N8N mode — poll for results
-      setWaitingForJobs(true);
-      // Start polling every 10s for new jobs
-      if (pollRef.current) clearInterval(pollRef.current);
-      pollRef.current = setInterval(async () => {
-        try {
-          const res = await api.get('/jobs/sheet');
-          const newJobs = res.data.jobs || [];
-          if (newJobs.length > jobCountBeforeTrigger.current) {
-            setJobs(newJobs);
-            setWaitingForJobs(false);
-            setTriggeringN8n(false);
+      // n8n mode: poll Google Sheet for new jobs
+      if (data.n8nTriggered) {
+        // Keep waitingForJobs true to show subtle indicator
+        if (pollRef.current) clearInterval(pollRef.current);
+        let pollCount = 0;
+        const baseCount = jobs.length;
+        const doPoll = async () => {
+          pollCount++;
+          try {
+            const res = await api.get('/jobs/sheet');
+            const sheetJobs = res.data.jobs || [];
+            if (sheetJobs.length > baseCount) {
+              setJobs(sheetJobs);
+              setWaitingForJobs(false);
+              setTriggeringN8n(false);
+              clearInterval(pollRef.current);
+              pollRef.current = null;
+              await fetchAppliedStatus();
+              toast.success('New jobs found!');
+              return;
+            }
+          } catch { /* retry next interval */ }
+          // Stop after 18 polls (90s)
+          if (pollCount >= 18) {
             clearInterval(pollRef.current);
             pollRef.current = null;
-            await fetchAppliedStatus();
-            await fetchUsage();
-            toast.success('New jobs found!');
+            setWaitingForJobs(false);
+            setTriggeringN8n(false);
+            fetchSheetJobs();
           }
-        } catch { /* retry next interval */ }
-      }, 10000);
-      // Safety timeout: stop polling after 3 minutes
-      setTimeout(() => {
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-          setWaitingForJobs(false);
-          setTriggeringN8n(false);
-          fetchSheetJobs();
-        }
-      }, 180000);
+        };
+        setTimeout(doPoll, 10000);
+        pollRef.current = setInterval(doPoll, 5000);
+      } else {
+        setWaitingForJobs(false);
+        setTriggeringN8n(false);
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to trigger job search');
+      setWaitingForJobs(false);
       setTriggeringN8n(false);
     }
   };
@@ -517,15 +594,13 @@ const JobListings = () => {
       );
     }
     if (filterType === 'applied') filtered = filtered.filter((j) => !!(j.job_apply_link && appliedLinks.has(j.job_apply_link)));
-    if (filterType === 'bot') filtered = filtered.filter((j) => !!j.pdf_link);
-    if (filterType === 'quick') filtered = filtered.filter((j) => !!j.job_apply_link && !j.pdf_link);
-    if (filterType === 'manual') filtered = filtered.filter((j) => !j.job_apply_link && !j.pdf_link);
+    if (filterType === 'admin_apply') filtered = filtered.filter((j) => !!(j.job_apply_link && adminAppliedLinks.has(j.job_apply_link)));
     // Sort by score (highest first), then push applied jobs to the bottom
     const sorted = [...filtered].sort((a, b) => (parseInt(b.match_score) || 0) - (parseInt(a.match_score) || 0));
     const notApplied = sorted.filter(j => !(j.job_apply_link && appliedLinks.has(j.job_apply_link)));
     const applied = sorted.filter(j => !!(j.job_apply_link && appliedLinks.has(j.job_apply_link)));
     return [...notApplied, ...applied];
-  }, [jobs, search, filterType, appliedLinks]);
+  }, [jobs, search, filterType, appliedLinks, adminAppliedLinks]);
 
   const totalPages = Math.max(1, Math.ceil(filteredJobs.length / PAGE_SIZE));
   const paginatedJobs = filteredJobs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -577,14 +652,14 @@ const JobListings = () => {
       {resumeJob && (() => {
         const resumeText = resumeJob.resume_text || '';
         const candidateName = resumeJob.candidate_name || '';
-        const { contact, roleTitle, sections } = parseResumeSections(resumeText, candidateName, resumeJob.candidate_name);
+        const { contact, roleTitle, sections } = parseResumeSections(resumeText, authUser?.fullName || candidateName, resumeJob.candidate_name);
 
         const handleDownloadPDF = () => {
           const el = resumeRef.current;
           if (!el) return;
           html2pdf().set({
             margin: [10, 10, 10, 10],
-            filename: `${candidateName.replace(/\s+/g, '_')}_Resume.pdf`,
+            filename: `${(authUser?.fullName || candidateName).replace(/\s+/g, '_')}_Resume.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -604,7 +679,15 @@ p,li{font-size:12px;line-height:1.6}
 ul{margin:4px 0;padding-left:20px}
 </style></head><body>${el.innerHTML}</body></html>`;
           const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-          saveAs(blob, `${candidateName.replace(/\s+/g, '_')}_Resume.doc`);
+          saveAs(blob, `${(authUser?.fullName || candidateName).replace(/\s+/g, '_')}_Resume.doc`);
+        };
+
+        const handleViewFullPage = () => {
+          setResumeJob(null);
+          setResumeViewMode(false);
+          navigate('/dashboard/resume-view', {
+            state: { sections, candidateName: authUser?.fullName || candidateName },
+          });
         };
 
         return (
@@ -620,80 +703,59 @@ ul{margin:4px 0;padding-left:20px}
               {/* Resume Document */}
               <div className="overflow-y-auto flex-1 px-8 pb-4">
                 {resumeText ? (
-                  <div ref={resumeRef} className="border border-gray-200 rounded-xl bg-white shadow-sm">
-                    <div className="px-10 py-8" style={{ fontFamily: 'Georgia, serif' }}>
-                      {/* Name from profile */}
-                      <h1 className="text-2xl font-bold text-center" style={{ color: '#1e3a5f', textTransform: 'capitalize' }}>
+                  <div ref={resumeRef} className="border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
+                    {/* Gradient Header */}
+                    <div style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)', padding: '28px 40px 24px' }}>
+                      <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#ffffff', textAlign: 'center', textTransform: 'capitalize', fontFamily: 'Georgia, serif', margin: 0 }}>
                         {authUser?.fullName || 'Resume'}
                       </h1>
 
-                      {/* Role from resume text */}
-                      {(roleTitle || (resumeJob && extractRole(resumeJob) !== 'View Details' && extractRole(resumeJob))) && (
-                        <p className="text-center text-sm font-medium mt-1" style={{ color: '#2d3748' }}>
-                          {roleTitle || extractRole(resumeJob)}
+                      {(authUser?.phone || authUser?.email || authUser?.linkedinProfile) && (
+                        <p style={{ textAlign: 'center', fontSize: '11px', color: '#93c5fd', marginTop: '8px', lineHeight: '1.6' }}>
+                          {[authUser?.phone, authUser?.email].filter(Boolean).join('  •  ')}
+                          {authUser?.linkedinProfile && (<><br />{authUser.linkedinProfile}</>)}
                         </p>
                       )}
+                    </div>
 
-                      {/* Contact line — profile phone & email */}
-                      {(authUser?.phone || authUser?.email) && (
-                        <p className="text-center text-xs mt-2 leading-relaxed" style={{ color: '#4a5568' }}>
-                          {[authUser?.phone, authUser?.email].filter(Boolean).join(' | ')}
-                        </p>
-                      )}
-                      {/* LinkedIn URL on its own line */}
-                      {authUser?.linkedinProfile && (
-                        <p className="text-center text-xs mt-1" style={{ color: '#4a5568' }}>
-                          {authUser.linkedinProfile}
-                        </p>
-                      )}
-
-                      {/* Divider after header */}
-                      <div className="mt-5 mb-4" style={{ borderBottom: '2px solid #cbd5e0' }} />
-
-                      {/* Resume Sections */}
-                      {sections.map((section, si) => (
-                        <div key={si} className="mb-4">
-                          {/* Section heading */}
-                          <h2 className="text-sm font-bold tracking-wider pb-1 mb-2"
-                            style={{ color: '#1e3a5f', borderBottom: '1.5px solid #1e3a5f', letterSpacing: '0.08em' }}>
-                            {section.heading}
-                          </h2>
-                          {/* Section content */}
-                          <div className="text-sm leading-relaxed" style={{ color: '#333', fontSize: '12.5px', lineHeight: '1.7' }}>
-                            {section.lines.map((line, li) => {
-                              const trimmed = line.trim();
-                              if (!trimmed) return <div key={li} className="h-2" />;
-
-                              const isBullet = /^[-•*○◦▪●]/.test(trimmed) || /^(\d+[\.\)])/.test(trimmed);
-                              if (isBullet) {
-                                const text = trimmed.replace(/^[-•*○◦▪●]\s*/, '').replace(/^(\d+[\.\)])\s*/, '');
-                                return (
-                                  <div key={li} className="flex gap-2 pl-3 py-0.5">
-                                    <span className="shrink-0 mt-[7px]" style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#1e3a5f', display: 'inline-block' }} />
-                                    <span>{text}</span>
-                                  </div>
-                                );
-                              }
-
-                              // Bold lines (company names, dates, titles)
-                              const isBoldLine = /^[A-Z].*\d{4}/.test(trimmed) ||
-                                /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s/i.test(trimmed) ||
-                                /–\s*(Present|Current)/i.test(trimmed);
-                              if (isBoldLine) {
-                                return <p key={li} className="font-semibold mt-1" style={{ color: '#1e3a5f' }}>{trimmed}</p>;
-                              }
-
-                              return <p key={li} className="py-0.5">{trimmed}</p>;
-                            })}
+                    {/* Content with colored sections */}
+                    <div style={{ padding: '20px 40px 32px', fontFamily: 'Georgia, serif' }}>
+                      {sections.map((section, si) => {
+                        const color = SECTION_COLORS[si % SECTION_COLORS.length];
+                        return (
+                          <div key={si} style={{ marginBottom: '16px' }}>
+                            <div style={{ borderLeft: `4px solid ${color.border}`, background: color.bg, padding: '6px 12px', marginBottom: '8px', borderRadius: '0 5px 5px 0' }}>
+                              <h2 style={{ fontSize: '12px', fontWeight: '700', letterSpacing: '0.1em', color: color.text, margin: 0, textTransform: 'uppercase' }}>
+                                {section.heading}
+                              </h2>
+                            </div>
+                            <div style={{ color: '#333', fontSize: '12px', lineHeight: '1.7', paddingLeft: '4px' }}>
+                              {section.lines.map((line, li) => {
+                                const trimmed = line.trim();
+                                if (!trimmed) return <div key={li} style={{ height: '6px' }} />;
+                                const isBullet = /^[-•*○◦▪●]/.test(trimmed) || /^(\d+[.)])/.test(trimmed);
+                                if (isBullet) {
+                                  const text = trimmed.replace(/^[-•*○◦▪●]\s*/, '').replace(/^(\d+[.)])\s*/, '');
+                                  return (
+                                    <div key={li} style={{ display: 'flex', gap: '8px', paddingLeft: '12px', paddingTop: '2px', paddingBottom: '2px' }}>
+                                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: color.border, display: 'inline-block', flexShrink: 0, marginTop: '7px' }} />
+                                      <span>{text}</span>
+                                    </div>
+                                  );
+                                }
+                                const isBoldLine = /^[A-Z].*\d{4}/.test(trimmed) || /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s/i.test(trimmed) || /–\s*(Present|Current)/i.test(trimmed);
+                                if (isBoldLine) return <p key={li} style={{ fontWeight: '600', marginTop: '4px', color: '#1e3a5f', margin: 0 }}>{trimmed}</p>;
+                                return <p key={li} style={{ paddingTop: '1px', paddingBottom: '1px', margin: 0 }}>{trimmed}</p>;
+                              })}
+                            </div>
+                            {si < sections.length - 1 && (
+                              <div style={{ borderBottom: '1px solid #e5e7eb', marginTop: '12px' }} />
+                            )}
                           </div>
-                        </div>
-                      ))}
-
-                      {/* If no sections parsed, show raw text */}
+                        );
+                      })}
                       {sections.length === 0 && (
-                        <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: '#333', lineHeight: '1.7' }}>
-                          {resumeText}
-                        </div>
+                        <div style={{ fontSize: '12px', lineHeight: '1.7', color: '#333', whiteSpace: 'pre-line' }}>{resumeText}</div>
                       )}
                     </div>
                   </div>
@@ -709,17 +771,10 @@ ul{margin:4px 0;padding-left:20px}
               {/* Bottom Action Buttons — View / PDF / Word */}
               {resumeText && (
                 <div className="flex items-center justify-center gap-3 px-8 py-4 border-t border-gray-100 shrink-0 bg-gray-50/50">
-                  {resumeJob.pdf_link ? (
-                    <a href={resumeJob.pdf_link} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-gray-800 hover:bg-gray-900 text-white transition-colors shadow-sm">
-                      <Eye size={15} /> View
-                    </a>
-                  ) : (
-                    <button onClick={() => { setResumeViewMode(true); if (resumeRef.current) resumeRef.current.scrollIntoView({ behavior: 'smooth' }); }}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-gray-800 hover:bg-gray-900 text-white transition-colors shadow-sm">
-                      <Eye size={15} /> View
-                    </button>
-                  )}
+                  <button onClick={handleViewFullPage}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-gray-800 hover:bg-gray-900 text-white transition-colors shadow-sm">
+                    <Eye size={15} /> View
+                  </button>
                   <button onClick={handleDownloadPDF}
                     className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg text-white transition-colors shadow-sm"
                     style={{ background: '#dc2626' }}
@@ -778,7 +833,7 @@ ul{margin:4px 0;padding-left:20px}
               {/* Match Score */}
               <div className="mb-5">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Match Score</h3>
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Resume Match Score</h3>
                   <span className={`text-sm font-bold ${parseInt(detailJob.match_score) >= 80 ? 'text-emerald-600' : parseInt(detailJob.match_score) >= 60 ? 'text-blue-600' : parseInt(detailJob.match_score) > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
                     {parseInt(detailJob.match_score) > 0 ? `${detailJob.match_score}%` : '—'}
                   </span>
@@ -787,15 +842,18 @@ ul{margin:4px 0;padding-left:20px}
                   <div className={`h-full rounded-full ${parseInt(detailJob.match_score) >= 80 ? 'bg-emerald-500' : parseInt(detailJob.match_score) >= 60 ? 'bg-blue-500' : parseInt(detailJob.match_score) > 0 ? 'bg-amber-500' : 'bg-gray-200'}`}
                     style={{ width: `${Math.min(parseInt(detailJob.match_score) || 0, 100)}%` }} />
                 </div>
+                <p className="text-[11px] text-gray-400 mt-1.5 italic">Based on your resume, skills &amp; experience provided in the portal</p>
               </div>
 
               {/* Strong Matches */}
               <div className="mb-5">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Strong Matches</h3>
+                <h3 className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />Strong Matches
+                </h3>
                 {parseTags(detailJob.strong_matches).length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {parseTags(detailJob.strong_matches).map((t, i) => (
-                      <span key={i} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded border border-emerald-200">{t}</span>
+                      <span key={i} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[11px] font-semibold rounded-lg border border-emerald-200">{t}</span>
                     ))}
                   </div>
                 ) : (
@@ -803,17 +861,33 @@ ul{margin:4px 0;padding-left:20px}
                 )}
               </div>
 
+              {/* Partial Matches */}
+              {parseTags(detailJob.partial_matches).length > 0 && (
+                <div className="mb-5">
+                  <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />Related / Partial Matches
+                  </h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {parseTags(detailJob.partial_matches).map((t, i) => (
+                      <span key={i} className="px-2.5 py-1 bg-blue-50 text-blue-700 text-[11px] font-semibold rounded-lg border border-blue-200">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Missing Skills */}
               <div className="mb-5">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Missing Skills</h3>
+                <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-500" />Missing Skills
+                </h3>
                 {parseTags(detailJob.missing_skills).length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {parseTags(detailJob.missing_skills).map((t, i) => (
-                      <span key={i} className="px-2 py-0.5 bg-red-50 text-red-600 text-[11px] font-medium rounded border border-red-200">{t}</span>
+                      <span key={i} className="px-2.5 py-1 bg-red-50 text-red-600 text-[11px] font-semibold rounded-lg border border-red-200">{t}</span>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 italic">None — great match!</p>
+                  <p className="text-sm text-emerald-600 font-medium">None — great match!</p>
                 )}
               </div>
 
@@ -872,7 +946,7 @@ ul{margin:4px 0;padding-left:20px}
                 <FileText size={15} />
                 Resume
               </button>
-              {detailJob.job_apply_link && (
+              {detailJob.job_apply_link?.startsWith('http') && (
                 <button
                   onClick={() => { handleMarkApplied(detailJob); setDetailJob(null); }}
                   disabled={detailJob.job_apply_link && appliedLinks.has(detailJob.job_apply_link)}
@@ -993,9 +1067,7 @@ ul{margin:4px 0;padding-left:20px}
         >
           <option value="all">All Jobs</option>
           <option value="applied">Applied</option>
-          <option value="bot">Bot Applied</option>
-          <option value="quick">Quick Apply</option>
-          <option value="manual">Manual Apply</option>
+          <option value="admin_apply">Admin Apply</option>
         </select>
       </div>
 
@@ -1041,16 +1113,16 @@ ul{margin:4px 0;padding-left:20px}
                         </td>
                         {/* Avatar + Info */}
                         <td className="px-3 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl ${avatarBg(job.employer_name)} text-white flex items-center justify-center font-bold text-sm shrink-0`}>
+                          <div className="flex items-center gap-3.5">
+                            <div className={`w-10 h-10 rounded-xl ${avatarBg(job.employer_name)} text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm`}>
                               {job.employer_name?.charAt(0)?.toUpperCase() || '?'}
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-sm text-gray-900 truncate">{job.employer_name}</h3>
-                                {dateLabel && <span className="text-xs text-gray-400 shrink-0">{dateLabel}</span>}
+                                <h3 className="font-semibold text-[13px] text-gray-900 truncate leading-snug">{job.employer_name}</h3>
+                                {dateLabel && <span className="text-[11px] text-gray-400 shrink-0">{dateLabel}</span>}
                               </div>
-                              <p className="text-xs text-violet-600 truncate mt-0.5 max-w-md">{role}</p>
+                              <p className="text-[12px] text-gray-500 truncate mt-0.5 max-w-md font-medium">{role}</p>
                             </div>
                           </div>
                         </td>
@@ -1061,7 +1133,7 @@ ul{margin:4px 0;padding-left:20px}
                               <span className={`text-lg font-bold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-violet-600' : score >= 40 ? 'text-amber-600' : 'text-gray-400'}`}>
                                 {score}%
                               </span>
-                              <p className="text-[10px] text-gray-400 leading-none mt-0.5">Score</p>
+                              <p className="text-[10px] text-gray-400 leading-none mt-0.5">Resume Match</p>
                             </div>
                           )}
                         </td>
@@ -1070,22 +1142,22 @@ ul{margin:4px 0;padding-left:20px}
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => setResumeJob(job)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 transition-colors">
+                              className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
                               <FileText size={13} /> Resume
                             </button>
                             <button
                               onClick={() => setDetailJob(job)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
+                              className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
                               <Info size={13} /> Details
                             </button>
                             {isApplied ? (
-                              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-violet-200 text-violet-700 bg-violet-50">
+                              <span className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50">
                                 <CheckCircle2 size={13} /> Applied
                               </span>
-                            ) : job.job_apply_link ? (
+                            ) : job.job_apply_link?.startsWith('http') ? (
                               <button
                                 onClick={() => handleMarkApplied(job)}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors">
+                                className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors shadow-sm">
                                 <ExternalLink size={13} /> Apply
                               </button>
                             ) : null}
@@ -1141,6 +1213,21 @@ ul{margin:4px 0;padding-left:20px}
                 >
                   Next <ChevronRight size={16} />
                 </button>
+              </div>
+            )}
+
+            {/* Thank You Message */}
+            {filteredJobs.length > 0 && (
+              <div className="mx-4 my-4 p-4 rounded-xl bg-gradient-to-r from-violet-50 to-blue-50 border border-violet-200 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
+                    <CheckCircle2 size={20} className="text-violet-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-800">Thank you for your patience! 🌟</p>
+                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">Job match scores are calculated based on the <span className="font-semibold text-violet-700">resume &amp; skills</span> you provided in the portal. Keep your profile updated for the best matches!</p>
+                  </div>
+                </div>
               </div>
             )}
           </>

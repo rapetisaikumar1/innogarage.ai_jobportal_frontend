@@ -23,8 +23,8 @@ const TrainingPage = () => {
       try {
         const { data } = await api.get('/training/materials');
         setMaterials(data);
-      } catch (err) {
-        console.error('Failed to fetch materials:', err);
+      } catch {
+        // fetch failed silently
       } finally {
         setLoading(false);
       }

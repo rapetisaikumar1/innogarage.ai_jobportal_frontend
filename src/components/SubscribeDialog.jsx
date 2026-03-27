@@ -110,12 +110,12 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center py-8 px-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-md" onClick={onClose} />
 
       {/* Dialog */}
-      <div className="relative z-10 w-full max-w-[1120px] bg-gradient-to-br from-white via-slate-50/80 to-indigo-50/40 rounded-3xl shadow-2xl overflow-hidden border border-white/60">
+      <div className="relative z-10 w-full max-w-[1120px] max-h-[calc(100vh-4rem)] bg-gradient-to-br from-white via-slate-50/80 to-indigo-50/40 rounded-3xl shadow-2xl overflow-y-auto border border-white/60">
         {/* Decorative blobs */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-violet-200/30 to-transparent rounded-full -translate-y-1/2 translate-x-1/3 pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-blue-200/20 to-transparent rounded-full translate-y-1/2 -translate-x-1/4 pointer-events-none" />

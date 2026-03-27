@@ -143,11 +143,10 @@ const MyApplications = () => {
         title: app.job?.title || 'Untitled',
         company: app.job?.company || '—',
         status: app.status,
-        isAutoApplied: app.isAutoApplied,
         appliedAt: app.appliedAt,
         jobLink: null,
         source: 'db',
-        applicant: app.user || null,
+        appliedBy: app.appliedBy || null,
       }));
       const sheetApps = (sheetRes.data.applications || []).map(app => {
         const fullJob = jobsMap[app.jobLink];
@@ -156,12 +155,12 @@ const MyApplications = () => {
           title: app.jobTitle || app.employerName || 'Job Application',
           company: app.employerName || '—',
           status: app.status || 'APPLIED',
-          isAutoApplied: app.appliedMethod === 'BOT',
           appliedAt: app.createdAt,
           matchScore: app.matchScore,
           jobLink: app.jobLink,
           source: 'sheet',
           fullJob,
+          appliedBy: null,
         };
       });
       const seenLinks = new Set(dbApps.map(a => a.jobLink).filter(Boolean));
@@ -188,8 +187,8 @@ const MyApplications = () => {
     const total = applications.length;
     const interviews = applications.filter(a => a.status === 'INTERVIEW_SCHEDULED').length;
     const offers = applications.filter(a => a.status === 'OFFER_RECEIVED').length;
-    const auto = applications.filter(a => a.isAutoApplied).length;
-    return { total, interviews, offers, auto };
+    const adminApplied = applications.filter(a => a.appliedBy && (a.appliedBy.role === 'ADMIN' || a.appliedBy.role === 'SUPER_ADMIN')).length;
+    return { total, interviews, offers, adminApplied };
   }, [applications]);
 
   if (loading) {
@@ -215,7 +214,7 @@ const MyApplications = () => {
             { label: 'Total Applied', value: stats.total, icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Interviews', value: stats.interviews, icon: Calendar, color: 'text-violet-600', bg: 'bg-violet-50' },
             { label: 'Offers', value: stats.offers, icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-            { label: 'Auto Applied', value: stats.auto, icon: Bot, color: 'text-amber-600', bg: 'bg-amber-50' },
+            { label: 'Applied by Mentor', value: stats.adminApplied, icon: Bot, color: 'text-amber-600', bg: 'bg-amber-50' },
           ].map((stat, i) => (
             <div key={i} className="bg-white/50 backdrop-blur-xl border border-white/50 rounded-lg px-4 py-3 flex items-center gap-3 shadow-sm shadow-blue-100/20">
               <div className={`w-8 h-8 ${stat.bg} rounded-lg flex items-center justify-center`}>
@@ -292,14 +291,10 @@ const MyApplications = () => {
                         </span>
                       )}
                     </div>
-                    {app.applicant && (
-                      <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-400">
-                        <span className="font-medium text-gray-500">Applied by:</span>
-                        <span>{app.applicant.fullName}</span>
-                        <span>·</span>
-                        <span>{app.applicant.email}</span>
-                        {app.applicant.phone && <><span>·</span><span>{app.applicant.phone}</span></>}
-                      </div>
+                    {app.appliedBy && (app.appliedBy.role === 'ADMIN' || app.appliedBy.role === 'SUPER_ADMIN') && (
+                      <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                        <Bot size={10} /> Applied by Mentor
+                      </span>
                     )}
                   </div>
 

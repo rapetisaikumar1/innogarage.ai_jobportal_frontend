@@ -119,7 +119,7 @@ const parseResumeSections = (text, candidateName, sheetCandidateName) => {
   };
   const looksLikePersonName = (line) => {
     const t = line.trim();
-    if (!/^[A-Z][a-zA-Z\-']+(\ s+[A-Z][a-zA-Z\-']+){0,3}$/.test(t) && !/^[A-Z\-']+(\ s+[A-Z\-']+){0,3}$/.test(t)) return false;
+    if (!/^[A-Z][a-zA-Z\-']+(\s+[A-Z][a-zA-Z\-']+){0,3}$/.test(t) && !/^[A-Z\-']+(\s+[A-Z\-']+){0,3}$/.test(t)) return false;
     if (/\b(engineer|developer|manager|analyst|designer|architect|consultant|specialist|coordinator|director|lead|admin|officer|scientist|intern|assistant|associate|senior|junior|staff|principal|head|chief|vp|cto|ceo|cfo|coo)\b/i.test(t)) return false;
     return true;
   };
@@ -137,12 +137,17 @@ const parseResumeSections = (text, candidateName, sheetCandidateName) => {
     const hasEmail = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i.test(l);
     const hasPhone = /(\+?\(?\d[\d\s\-().]{6,}\d)/i.test(l);
     if (hasEmail || hasPhone) {
-      const rest = l.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi, '').replace(/\(?\+?\d[\d\s\-().]{6,}\d/g, '').replace(/[|,;\s]/g, '').trim();
+      const rest = l.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi, '').replace(/\(?\+?\d[\d\s\-().]{6,}\d/g, '').replace(/https?:\/\/\S+/gi, '').replace(/[|,;\s]/g, '').trim();
       if (rest.length < 5) return true;
+      if (/^[A-Za-z\s]+,?\s*[A-Z]{2}$/.test(rest) || /^[A-Za-z\s]+$/.test(rest) && rest.length < 20) return true;
     }
     return false;
   };
-  const isLocationLine = (line) => /^\s*(remote|on-?site|hybrid)?\s*\(?.*(usa|india|uk|canada|germany|australia|arizona|california|texas|new york|florida)[^a-z]*\)?\s*$/i.test(line);
+  const isLocationLine = (line) => {
+    if (/^\s*(remote|on-?site|hybrid)?\s*\(?.*(usa|india|uk|canada|germany|australia|arizona|california|texas|new york|florida|illinois|ohio|georgia|north carolina|virginia|washington|massachusetts|colorado|oregon|utah|nevada|michigan|minnesota|maryland|wisconsin|tennessee|missouri|connecticut|iowa|kansas|arkansas|nebraska|idaho|hawaii|alabama|louisiana|oklahoma|kentucky|south carolina|mississippi|pennsylvania|new jersey)[^a-z]*\)?\s*$/i.test(line)) return true;
+    if (/^\s*[A-Z][a-zA-Z\s]+,\s*[A-Z]{2}\s*$/.test(line.trim())) return true;
+    return false;
+  };
 
   const lines = text.split('\n');
   const sectionHeaders = /^\s*(PROFESSIONAL\s*SUMMARY|SUMMARY|OBJECTIVE|PROFESSIONAL\s*EXPERIENCE|EXPERIENCE|WORK\s*EXPERIENCE|EDUCATION|SKILLS|KEY\s*SKILLS|TECHNICAL\s*SKILLS|CERTIFICATIONS|PROJECTS|ACHIEVEMENTS|AWARDS|LANGUAGES|INTERESTS|REFERENCES|CONTACT\s*INFORMATION|PROFESSIONAL\s*PROFILE|PROFILE|QUALIFICATIONS|CORE\s*COMPETENCIES)\s*:?\s*$/i;
@@ -178,7 +183,39 @@ const parseResumeSections = (text, candidateName, sheetCandidateName) => {
     }
   }
   if (currentSection) sections.push(currentSection);
-  const filteredSections = sections.filter(s => !/^NOTES?/i.test(s.heading) && !/^ADDITIONAL\s*NOTES?/i.test(s.heading) && !/^ADDRESSED\s*GAPS?/i.test(s.heading));
+
+  // Post-process: strip leading header-like lines from section content
+  for (const section of sections) {
+    let cut = 0;
+    for (let i = 0; i < Math.min(section.lines.length, 8); i++) {
+      const t = section.lines[i].trim();
+      if (!t) { cut = i + 1; continue; }
+      if (isNameLine(t) || looksLikePersonName(t) || isContactInfoLine(t) || isLocationLine(t)) { cut = i + 1; continue; }
+      if (/^[A-Z][a-zA-Z\s]+,\s*[A-Z]{2}$/.test(t)) { cut = i + 1; continue; }
+      if (roleTitle && t.toLowerCase() === roleTitle.toLowerCase()) { cut = i + 1; continue; }
+      if (/(\+?\(?\d[\d\s\-().]{6,}\d)/.test(t) && t.split(/\s+/).length <= 8) { cut = i + 1; continue; }
+      if (/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(t) && t.split(/\s+/).length <= 8) { cut = i + 1; continue; }
+      // Standalone job role/title line
+      if (t.length <= 100 && !/[.!?]$/.test(t) && t.split(/\s+/).length <= 12 && !/\b\d{4}\b/.test(t) && /\b(engineer|developer|manager|analyst|designer|architect|consultant|specialist|coordinator|director|lead|administrator|officer|scientist|intern|assistant|associate|programmer|advisor|strategist|optimizer)\b/i.test(t)) { cut = i + 1; continue; }
+      if (/^(https?:\/\/|www\.|linkedin\.com|github\.com)/i.test(t)) { cut = i + 1; continue; }
+      // Pipe-separated header line
+      if (/\|/.test(t)) {
+        const hasPhoneInLine = /(\+?\(?\d[\d\s\-().]{6,}\d)/.test(t);
+        const hasEmailInLine = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(t);
+        if (hasPhoneInLine || hasEmailInLine) { cut = i + 1; continue; }
+        const parts = t.split(/\s*\|\s*/);
+        const allHeader = parts.every(p => {
+          const pt = p.trim();
+          return !pt || /^[A-Z][a-zA-Z\s]+,?\s*[A-Z]{2}$/.test(pt) || /linkedin|github|http/i.test(pt) || pt.length < 3;
+        });
+        if (allHeader) { cut = i + 1; continue; }
+      }
+      break;
+    }
+    if (cut > 0) section.lines = section.lines.slice(cut);
+  }
+
+  const filteredSections = sections.filter(s => !/^NOTES?/i.test(s.heading) && !/^ADDITIONAL\s*NOTES?/i.test(s.heading) && !/^ADDRESSED\s*GAPS?/i.test(s.heading) && !/^CONTACT\s*INFORMATION$/i.test(s.heading));
   return { contact: contactLines.join('\n'), roleTitle, sections: filteredSections };
 };
 
@@ -386,6 +423,36 @@ const AdminStudentView = () => {
     toast.success('Job listings refreshed!');
   };
 
+  // Update application status (interview/offer/rejection)
+  const handleStatusChange = async (app, newStatus) => {
+    if (app.status === newStatus) return;
+    const prevStatus = app.status;
+    // Optimistic update
+    if (app.source === 'sheet') {
+      setSheetApps(prev => prev.map(a => a.jobLink === app.id ? { ...a, status: newStatus } : a));
+    } else {
+      setApplications(prev => prev.map(a => a.id === app.id ? { ...a, status: newStatus } : a));
+    }
+    try {
+      await api.patch(`/admin/students/${studentId}/application-status`, {
+        applicationId: app.id,
+        status: newStatus,
+        source: app.source,
+      });
+      toast.success(`Status updated to ${newStatus.replace(/_/g, ' ')}`);
+      // Refresh dashboard data if on dashboard tab
+      fetchDashboard();
+    } catch (error) {
+      // Revert on failure
+      if (app.source === 'sheet') {
+        setSheetApps(prev => prev.map(a => a.jobLink === app.id ? { ...a, status: prevStatus } : a));
+      } else {
+        setApplications(prev => prev.map(a => a.id === app.id ? { ...a, status: prevStatus } : a));
+      }
+      toast.error(error.response?.data?.message || 'Failed to update status');
+    }
+  };
+
   // Jobs filtering/pagination
   const filteredJobs = useMemo(() => {
     let filtered = sheetJobs;
@@ -427,7 +494,7 @@ const AdminStudentView = () => {
       status: app.status,
       appliedAt: app.appliedAt,
       source: 'db',
-      isAutoApplied: app.isAutoApplied,
+      appliedByAdmin: !!(app.appliedById || (app.notes && app.notes.includes('admin'))),
       jobLink: null,
       notes: app.notes || '',
     }));
@@ -439,7 +506,7 @@ const AdminStudentView = () => {
       status: app.status || 'APPLIED',
       appliedAt: app.createdAt,
       source: 'sheet',
-      isAutoApplied: app.appliedMethod === 'BOT',
+      appliedByAdmin: false,
       jobLink: app.jobLink,
       matchScore: app.matchScore,
       notes: '',
@@ -566,6 +633,14 @@ const AdminStudentView = () => {
         const resumeText = resumeJob.resume_text || '';
         const candidateName = student?.fullName || resumeJob.candidate_name || '';
         const { roleTitle, sections } = parseResumeSections(resumeText, candidateName, resumeJob.candidate_name);
+        const SECTION_COLORS = [
+          { border: '#1e40af', bg: '#eff6ff', text: '#1e40af' },
+          { border: '#7c3aed', bg: '#f5f3ff', text: '#7c3aed' },
+          { border: '#059669', bg: '#ecfdf5', text: '#059669' },
+          { border: '#dc2626', bg: '#fef2f2', text: '#dc2626' },
+          { border: '#d97706', bg: '#fffbeb', text: '#d97706' },
+          { border: '#0891b2', bg: '#ecfeff', text: '#0891b2' },
+        ];
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setResumeJob(null)}>
             <div className="bg-white rounded-2xl shadow-2xl border w-[660px] max-h-[88vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -577,48 +652,57 @@ const AdminStudentView = () => {
               </div>
               <div className="overflow-y-auto flex-1 px-8 pb-6">
                 {resumeText ? (
-                  <div ref={resumeRef} className="border border-gray-200 rounded-xl bg-white shadow-sm">
-                    <div className="px-10 py-8" style={{ fontFamily: 'Georgia, serif' }}>
-                      <h1 className="text-2xl font-bold text-center" style={{ color: '#1e3a5f', textTransform: 'capitalize' }}>
+                  <div ref={resumeRef} className="border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
+                    {/* Gradient Header */}
+                    <div style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)', padding: '28px 40px 24px' }}>
+                      <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#ffffff', textAlign: 'center', textTransform: 'capitalize', fontFamily: 'Georgia, serif', margin: 0 }}>
                         {candidateName || 'Resume'}
                       </h1>
-                      {roleTitle && (
-                        <p className="text-center text-sm font-medium mt-1" style={{ color: '#2d3748' }}>{roleTitle}</p>
-                      )}
+
                       {(student?.phone || student?.email) && (
-                        <p className="text-center text-xs mt-2 leading-relaxed" style={{ color: '#4a5568' }}>
-                          {[student?.phone, student?.email].filter(Boolean).join(' | ')}
+                        <p style={{ textAlign: 'center', fontSize: '11px', color: '#93c5fd', marginTop: '8px', lineHeight: '1.6' }}>
+                          {[student?.phone, student?.email].filter(Boolean).join('  •  ')}
                         </p>
                       )}
-                      <div className="mt-5 mb-4" style={{ borderBottom: '2px solid #cbd5e0' }} />
-                      {sections.map((section, si) => (
-                        <div key={si} className="mb-4">
-                          <h2 className="text-sm font-bold tracking-wider pb-1 mb-2" style={{ color: '#1e3a5f', borderBottom: '1.5px solid #1e3a5f', letterSpacing: '0.08em' }}>
-                            {section.heading}
-                          </h2>
-                          <div className="text-sm leading-relaxed" style={{ color: '#333', fontSize: '12.5px', lineHeight: '1.7' }}>
-                            {section.lines.map((line, li) => {
-                              const t = line.trim();
-                              if (!t) return <div key={li} className="h-2" />;
-                              const isBullet = /^[-•*○◦▪●]/.test(t) || /^(\d+[.)])/.test(t);
-                              if (isBullet) {
-                                const text = t.replace(/^[-•*○◦▪●]\s*/, '').replace(/^(\d+[.)])\s*/, '');
-                                return (
-                                  <div key={li} className="flex gap-2 pl-3 py-0.5">
-                                    <span className="shrink-0 mt-[7px]" style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#1e3a5f', display: 'inline-block' }} />
-                                    <span>{text}</span>
-                                  </div>
-                                );
-                              }
-                              const isBoldLine = /^[A-Z].*\d{4}/.test(t) || /–\s*(Present|Current)/i.test(t);
-                              if (isBoldLine) return <p key={li} className="font-semibold mt-1" style={{ color: '#1e3a5f' }}>{t}</p>;
-                              return <p key={li} className="py-0.5">{t}</p>;
-                            })}
+                    </div>
+                    {/* Content with colored sections */}
+                    <div style={{ padding: '20px 40px 32px', fontFamily: 'Georgia, serif' }}>
+                      {sections.map((section, si) => {
+                        const color = SECTION_COLORS[si % SECTION_COLORS.length];
+                        return (
+                          <div key={si} style={{ marginBottom: '16px' }}>
+                            <div style={{ borderLeft: `4px solid ${color.border}`, background: color.bg, padding: '6px 12px', marginBottom: '8px', borderRadius: '0 5px 5px 0' }}>
+                              <h2 style={{ fontSize: '12px', fontWeight: '700', letterSpacing: '0.1em', color: color.text, margin: 0, textTransform: 'uppercase' }}>
+                                {section.heading}
+                              </h2>
+                            </div>
+                            <div style={{ color: '#333', fontSize: '12px', lineHeight: '1.7', paddingLeft: '4px' }}>
+                              {section.lines.map((line, li) => {
+                                const t = line.trim();
+                                if (!t) return <div key={li} style={{ height: '6px' }} />;
+                                const isBullet = /^[-•*○◦▪●]/.test(t) || /^(\d+[.)])/.test(t);
+                                if (isBullet) {
+                                  const text = t.replace(/^[-•*○◦▪●]\s*/, '').replace(/^(\d+[.)])\s*/, '');
+                                  return (
+                                    <div key={li} style={{ display: 'flex', gap: '8px', paddingLeft: '12px', paddingTop: '2px', paddingBottom: '2px' }}>
+                                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: color.border, display: 'inline-block', flexShrink: 0, marginTop: '7px' }} />
+                                      <span>{text}</span>
+                                    </div>
+                                  );
+                                }
+                                const isBoldLine = /^[A-Z].*\d{4}/.test(t) || /–\s*(Present|Current)/i.test(t);
+                                if (isBoldLine) return <p key={li} style={{ fontWeight: '600', marginTop: '4px', color: '#1e3a5f', margin: 0 }}>{t}</p>;
+                                return <p key={li} style={{ paddingTop: '1px', paddingBottom: '1px', margin: 0 }}>{t}</p>;
+                              })}
+                            </div>
+                            {si < sections.length - 1 && (
+                              <div style={{ borderBottom: '1px solid #e5e7eb', marginTop: '12px' }} />
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                       {sections.length === 0 && (
-                        <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: '#333', lineHeight: '1.7' }}>{resumeText}</div>
+                        <div style={{ fontSize: '12px', lineHeight: '1.7', color: '#333', whiteSpace: 'pre-line' }}>{resumeText}</div>
                       )}
                     </div>
                   </div>
@@ -795,6 +879,7 @@ const AdminStudentView = () => {
           loading={appsLoading}
           search={appSearch}
           onSearch={setAppSearch}
+          onStatusChange={handleStatusChange}
         />
       )}
     </div>
@@ -812,15 +897,39 @@ const DashboardTab = ({ data, loading }) => {
   }
 
   const { stats, recentApplications, sheetApplications } = data;
+  const sheetAppliedCount = stats.sheetAppliedCount || 0;
+  const totalApplied = (stats.totalApplied || 0) + sheetAppliedCount;
+  const interviewCount = stats.interviewScheduled || 0;
+  const rejectedCount = stats.rejected || 0;
+  const offerCount = stats.offerReceived || 0;
+  const adminApplyCount = stats.adminApplyCount || 0;
+  const candidateApplyCount = stats.candidateApplyCount || 0;
+  const totalSheetJobs = stats.totalJobs || 0;
+  const jobsToApply = Math.max(totalSheetJobs - sheetAppliedCount, 0);
 
   const statCards = [
-    { label: 'Total Jobs', value: stats.totalJobs, color: 'bg-blue-50 text-blue-700 ring-blue-200', icon: <Briefcase size={18} className="text-blue-600" /> },
-    { label: 'Total Applied', value: stats.totalApplied, color: 'bg-emerald-50 text-emerald-700 ring-emerald-200', icon: <FileText size={18} className="text-emerald-600" /> },
-    { label: 'Interviews', value: stats.interviewScheduled, color: 'bg-amber-50 text-amber-700 ring-amber-200', icon: <Calendar size={18} className="text-amber-600" /> },
-    { label: 'Offers', value: stats.offerReceived, color: 'bg-violet-50 text-violet-700 ring-violet-200', icon: <CheckCircle2 size={18} className="text-violet-600" /> },
-    { label: 'Rejected', value: stats.rejected, color: 'bg-red-50 text-red-700 ring-red-200', icon: <XCircle size={18} className="text-red-600" /> },
-    { label: 'Sheet Apps', value: sheetApplications?.length || 0, color: 'bg-cyan-50 text-cyan-700 ring-cyan-200', icon: <Zap size={18} className="text-cyan-600" /> },
+    { label: 'Applied', value: totalApplied, color: 'bg-blue-50 text-blue-700 ring-blue-200', icon: <FileText size={18} className="text-blue-600" /> },
+    { label: 'Interviews', value: interviewCount, color: 'bg-amber-50 text-amber-700 ring-amber-200', icon: <Calendar size={18} className="text-amber-600" /> },
+    { label: 'Offers', value: offerCount, color: 'bg-violet-50 text-violet-700 ring-violet-200', icon: <CheckCircle2 size={18} className="text-violet-600" /> },
+    { label: 'Rejected', value: rejectedCount, color: 'bg-red-50 text-red-700 ring-red-200', icon: <XCircle size={18} className="text-red-600" /> },
+    { label: 'Jobs to Apply', value: jobsToApply, color: 'bg-emerald-50 text-emerald-700 ring-emerald-200', icon: <Briefcase size={18} className="text-emerald-600" /> },
+    { label: 'Sheet Apps', value: sheetAppliedCount, color: 'bg-cyan-50 text-cyan-700 ring-cyan-200', icon: <Zap size={18} className="text-cyan-600" /> },
   ];
+
+  /* Donut chart helper */
+  const Donut = ({ value, max, color = '#1e40af', size = 80 }) => {
+    const pct = max > 0 ? Math.min(value / max, 1) : 0;
+    const r = 30, c = 2 * Math.PI * r;
+    return (
+      <div className="flex flex-col items-center">
+        <svg width={size} height={size} viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r={r} fill="none" stroke="#e5e7eb" strokeWidth="8" />
+          <circle cx="40" cy="40" r={r} fill="none" stroke={color} strokeWidth="8" strokeDasharray={c} strokeDashoffset={c * (1 - pct)} strokeLinecap="round" transform="rotate(-90 40 40)" />
+          <text x="40" y="44" textAnchor="middle" className="text-[14px] font-bold" fill="#111827">{value}</text>
+        </svg>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-5">
@@ -833,6 +942,57 @@ const DashboardTab = ({ data, loading }) => {
             <p className="text-[11px] mt-0.5 opacity-70">{s.label}</p>
           </div>
         ))}
+      </div>
+
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Applications Overview */}
+        <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-5">
+          <h3 className="text-[13px] font-bold text-gray-800 mb-4">Applications Overview</h3>
+          <div className="flex items-center gap-5">
+            <Donut value={totalApplied} max={totalSheetJobs || 1} color="#1e40af" />
+            <div className="space-y-2 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-600">Applied</span>
+                <span className="text-[13px] font-bold text-gray-900">{totalApplied}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-600">Candidate Apply</span>
+                <span className="text-[13px] font-bold text-gray-900">{candidateApplyCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-600">Admin Apply</span>
+                <span className="text-[13px] font-bold text-gray-900">{adminApplyCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-600">Jobs to Apply</span>
+                <span className="text-[13px] font-bold text-gray-900">{jobsToApply}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Progress */}
+        <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-5">
+          <h3 className="text-[13px] font-bold text-gray-800 mb-4">Progress</h3>
+          <div className="flex items-center gap-5">
+            <Donut value={interviewCount} max={(totalApplied + interviewCount + rejectedCount) || 1} color="#7c3aed" />
+            <div className="space-y-2 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-600">Interviews</span>
+                <span className="text-[13px] font-bold text-gray-900">{interviewCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-600">Offers</span>
+                <span className="text-[13px] font-bold text-gray-900">{offerCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-600">Rejected</span>
+                <span className="text-[13px] font-bold text-gray-900">{rejectedCount}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Recent Applications */}
@@ -1103,7 +1263,7 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
 };
 
 /* ═══ Applications Tab ═══ */
-const ApplicationsTab = ({ apps, loading, search, onSearch }) => {
+const ApplicationsTab = ({ apps, loading, search, onSearch, onStatusChange }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48">
@@ -1116,14 +1276,15 @@ const ApplicationsTab = ({ apps, loading, search, onSearch }) => {
     const total = apps.length;
     const interviews = apps.filter(a => a.status === 'INTERVIEW_SCHEDULED').length;
     const offers = apps.filter(a => a.status === 'OFFER_RECEIVED').length;
-    const auto = apps.filter(a => a.isAutoApplied).length;
-    return { total, interviews, offers, auto };
+    const rejected = apps.filter(a => a.status === 'REJECTED').length;
+    const mentorApplied = apps.filter(a => a.appliedByAdmin).length;
+    return { total, interviews, offers, rejected, mentorApplied };
   }, [apps]);
 
   return (
     <div className="space-y-4">
       {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="bg-white rounded-xl border p-4">
           <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
           <p className="text-[11px] text-gray-500">Total Applied</p>
@@ -1137,8 +1298,12 @@ const ApplicationsTab = ({ apps, loading, search, onSearch }) => {
           <p className="text-[11px] text-gray-500">Offers</p>
         </div>
         <div className="bg-white rounded-xl border p-4">
-          <p className="text-2xl font-bold text-violet-600">{stats.auto}</p>
-          <p className="text-[11px] text-gray-500">Auto Applied</p>
+          <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
+          <p className="text-[11px] text-gray-500">Rejected</p>
+        </div>
+        <div className="bg-white rounded-xl border p-4">
+          <p className="text-2xl font-bold text-violet-600">{stats.mentorApplied}</p>
+          <p className="text-[11px] text-gray-500">Applied by Mentor</p>
         </div>
       </div>
 
@@ -1180,8 +1345,8 @@ const ApplicationsTab = ({ apps, loading, search, onSearch }) => {
                         {app.source === 'sheet' && (
                           <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">Sheet</span>
                         )}
-                        {app.isAutoApplied && (
-                          <span className="text-[10px] font-medium text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-full">Auto</span>
+                        {app.appliedByAdmin && (
+                          <span className="text-[10px] font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full">Mentor Applied</span>
                         )}
                         {app.matchScore != null && (
                           <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
@@ -1192,7 +1357,16 @@ const ApplicationsTab = ({ apps, loading, search, onSearch }) => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    {statusBadge(app.status)}
+                    <select
+                      value={app.status}
+                      onChange={(e) => onStatusChange(app, e.target.value)}
+                      className="text-[11px] font-medium rounded-lg border border-gray-200 px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                    >
+                      <option value="APPLIED">Applied</option>
+                      <option value="INTERVIEW_SCHEDULED">Interview</option>
+                      <option value="OFFER_RECEIVED">Offer</option>
+                      <option value="REJECTED">Rejected</option>
+                    </select>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 mt-1.5 ml-12">

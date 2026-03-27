@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   Users, UserCog, GraduationCap, BarChart3,
   CheckCircle2, Calendar, FileText,
-  TrendingUp, HelpCircle, AlertCircle, Clock, MessageSquareMore
+  TrendingUp, HelpCircle, AlertCircle, Clock, MessageSquareMore, Code2
 } from 'lucide-react';
 
 // Mini donut chart component
@@ -72,7 +72,7 @@ const SuperAdminDashboard = () => {
     { label: 'Jobs Applied', value: totalApplications, icon: FileText, gradient: 'from-emerald-500 to-emerald-600', light: 'bg-emerald-50', text: 'text-emerald-600' },
     { label: 'Mentoring Sessions', value: completedBookings, icon: Calendar, gradient: 'from-orange-500 to-orange-600', light: 'bg-orange-50', text: 'text-orange-600' },
     { label: 'Students Placed', value: offersReceived, icon: CheckCircle2, gradient: 'from-teal-500 to-teal-600', light: 'bg-teal-50', text: 'text-teal-600' },
-    { label: 'Issues', value: totalBookings, icon: TrendingUp, gradient: 'from-cyan-500 to-cyan-600', light: 'bg-cyan-50', text: 'text-cyan-600' },
+    { label: 'Total Bookings', value: totalBookings, icon: TrendingUp, gradient: 'from-cyan-500 to-cyan-600', light: 'bg-cyan-50', text: 'text-cyan-600' },
   ];
 
   // Summary data for donut sections
@@ -165,34 +165,33 @@ const SuperAdminDashboard = () => {
             </div>
           </div>
 
-          {/* Activity */}
+          {/* Technology-wise Candidates */}
           <div className="bg-white rounded-xl border border-gray-200/60 px-5 py-4 hover:shadow-md transition-shadow duration-300">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Activity</h3>
-            <div className="flex items-center gap-4">
-              <div className="relative flex-shrink-0">
-                <DonutChart value={completedBookings} max={totalBookings || 1} color="#c2410c" trackColor="#1e40af" size={90} strokeWidth={9} />
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-lg font-extrabold text-gray-900 leading-none">{totalBookings}</span>
-                  <span className="text-[10px] text-gray-400 font-medium">Total</span>
-                </div>
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Technology / Role</h3>
+            {analytics?.technologyBreakdown && Object.keys(analytics.technologyBreakdown).length > 0 ? (
+              <div className="space-y-2 max-h-[110px] overflow-y-auto pr-1">
+                {Object.entries(analytics.technologyBreakdown)
+                  .sort((a, b) => b[1] - a[1])
+                  .slice(0, 8)
+                  .map(([role, count], i) => {
+                    const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500', 'bg-amber-500', 'bg-teal-500'];
+                    const pct = totalStudents > 0 ? Math.round((count / totalStudents) * 100) : 0;
+                    return (
+                      <div key={role} className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${colors[i % colors.length]}`} />
+                        <span className="text-xs text-gray-600 truncate flex-1">{role}</span>
+                        <span className="text-xs font-bold text-gray-900">{count}</span>
+                        <span className="text-[10px] text-gray-400 w-8 text-right">{pct}%</span>
+                      </div>
+                    );
+                  })}
               </div>
-              <div className="space-y-2.5 flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-orange-700" />
-                    <span className="text-xs text-gray-600">Sessions</span>
-                  </div>
-                  <span className="text-sm font-bold text-gray-900">{completedBookings}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-blue-800" />
-                    <span className="text-xs text-gray-600">Issues</span>
-                  </div>
-                  <span className="text-sm font-bold text-gray-900">{totalBookings}</span>
-                </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[80px] text-gray-400">
+                <Code2 size={20} className="mb-1" />
+                <span className="text-xs">No role data yet</span>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -241,6 +240,41 @@ const SuperAdminDashboard = () => {
                       <p className="text-lg font-extrabold text-gray-900">{count}</p>
                     </div>
                     <p className="text-[11px] text-gray-400 capitalize font-medium">{status.replace(/_/g, ' ').toLowerCase()}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Technology / Role-wise Candidates */}
+      {analytics?.technologyBreakdown && Object.keys(analytics.technologyBreakdown).length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200/60 overflow-hidden hover:shadow-lg transition-shadow duration-300">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-800">Technology / Role-wise Candidates</h2>
+            <span className="text-xs text-gray-400 font-medium">{Object.values(analytics.technologyBreakdown).reduce((a, b) => a + b, 0)} with roles</span>
+          </div>
+          <div className="px-6 py-5">
+            {/* Progress bar */}
+            <div className="flex h-2.5 rounded-full overflow-hidden bg-gray-100 mb-5">
+              {Object.entries(analytics.technologyBreakdown).sort((a, b) => b[1] - a[1]).map(([role, count], i) => {
+                const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500', 'bg-amber-500', 'bg-teal-500', 'bg-rose-500', 'bg-indigo-500'];
+                const total = Object.values(analytics.technologyBreakdown).reduce((a, b) => a + b, 0);
+                const pct = total > 0 ? (count / total) * 100 : 0;
+                return <div key={role} className={`${colors[i % colors.length]} transition-all duration-500`} style={{ width: `${pct}%` }} />;
+              })}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              {Object.entries(analytics.technologyBreakdown).sort((a, b) => b[1] - a[1]).map(([role, count], i) => {
+                const dotColors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500', 'bg-amber-500', 'bg-teal-500', 'bg-rose-500', 'bg-indigo-500'];
+                return (
+                  <div key={role} className="bg-gray-50/80 px-3 py-3.5 rounded-lg text-center hover:bg-gray-100/80 transition-colors">
+                    <div className="flex items-center justify-center gap-1.5 mb-1.5">
+                      <span className={`w-2 h-2 rounded-full ${dotColors[i % dotColors.length]}`} />
+                      <p className="text-lg font-extrabold text-gray-900">{count}</p>
+                    </div>
+                    <p className="text-[11px] text-gray-400 font-medium truncate" title={role}>{role}</p>
                   </div>
                 );
               })}

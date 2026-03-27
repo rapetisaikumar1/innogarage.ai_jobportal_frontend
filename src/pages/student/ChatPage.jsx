@@ -28,6 +28,7 @@ const ChatPage = () => {
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionIdx, setMentionIdx] = useState(0);
   const [chatMode, setChatMode] = useState('direct');
+  const [groupUnread, setGroupUnread] = useState(0);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const matchRefs = useRef({});
@@ -50,7 +51,15 @@ const ChatPage = () => {
     return () => newSocket.disconnect();
   }, [activeContact]);
 
-  useEffect(() => { fetchContacts(); }, []);
+  useEffect(() => { fetchContacts(); fetchGroupUnread(); }, []);
+
+  const fetchGroupUnread = async () => {
+    try {
+      const res = await api.get('/group-chat/my-groups');
+      const total = (res.data || []).reduce((sum, g) => sum + (g.unreadCount || 0), 0);
+      setGroupUnread(total);
+    } catch {}
+  };
 
   useEffect(() => {
     if (!searchOpen) {
@@ -318,15 +327,15 @@ const ChatPage = () => {
       <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1 self-start">
         <button
           onClick={() => setChatMode('direct')}
-          className={`px-4 py-1.5 rounded-md text-[12px] font-semibold transition-all ${chatMode === 'direct' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+          className={`px-4 py-1.5 rounded-md text-[12px] font-semibold transition-all ${chatMode === 'direct' ? 'bg-blue-600 text-white shadow-sm' : totalUnread > 0 ? 'bg-blue-100 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
         >
-          <span className="flex items-center gap-1.5"><MessageSquare size={13} /> Direct</span>
+          <span className="flex items-center gap-1.5"><MessageSquare size={13} /> Direct{totalUnread > 0 && <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-blue-600 text-white rounded-full leading-none">{totalUnread}</span>}</span>
         </button>
         <button
-          onClick={() => setChatMode('group')}
-          className={`px-4 py-1.5 rounded-md text-[12px] font-semibold transition-all ${chatMode === 'group' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+          onClick={() => { setChatMode('group'); fetchGroupUnread(); }}
+          className={`px-4 py-1.5 rounded-md text-[12px] font-semibold transition-all ${chatMode === 'group' ? 'bg-violet-600 text-white shadow-sm' : groupUnread > 0 ? 'bg-blue-100 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
         >
-          <span className="flex items-center gap-1.5"><Users size={13} /> Group</span>
+          <span className="flex items-center gap-1.5"><Users size={13} /> Group{groupUnread > 0 && <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-violet-600 text-white rounded-full leading-none">{groupUnread}</span>}</span>
         </button>
       </div>
 

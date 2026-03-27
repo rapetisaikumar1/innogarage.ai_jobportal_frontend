@@ -7,7 +7,7 @@ import api from '../../services/api';
 import {
   LayoutDashboard, Briefcase, FileText, GraduationCap, Users, MessageSquare,
   UserCog, BarChart3, BookOpen, Calendar, LogOut, Menu, X, Bell, ChevronDown,
-  Settings, StickyNote, UserPlus, Contact, Hash, Trophy, Crown, Megaphone, HelpCircle, Zap, Lock
+  Settings, StickyNote, UserPlus, Contact, Hash, Trophy, Crown, Megaphone, HelpCircle, Zap
 } from 'lucide-react';
 
 const DashboardLayout = () => {
@@ -17,30 +17,26 @@ const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileDropdown, setProfileDropdown] = useState(false);
   const [showSubscribe, setShowSubscribe] = useState(false);
-  const [queryNotifCount, setQueryNotifCount] = useState(0);
+  const [notifCount, setNotifCount] = useState(0);
+  const [notifications, setNotifications] = useState([]);
   const [notifDropdown, setNotifDropdown] = useState(false);
 
-  const fetchQueryCount = useCallback(async () => {
-    if (user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') {
-      try {
-        const lastSeen = localStorage.getItem('adminQueryLastSeen') || new Date(0).toISOString();
-        const { data } = await api.get(`/queries/count?since=${encodeURIComponent(lastSeen)}`);
-        setQueryNotifCount(data.count);
-      } catch {}
-    } else if (user?.role === 'STUDENT') {
-      try {
-        const lastSeen = localStorage.getItem('studentQueryLastSeen') || new Date(0).toISOString();
-        const { data } = await api.get(`/queries/student-notifications?since=${encodeURIComponent(lastSeen)}`);
-        setQueryNotifCount(data.count);
-      } catch {}
-    }
-  }, [user?.role]);
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const [countRes, listRes] = await Promise.all([
+        api.get('/notifications/unread-count'),
+        api.get('/notifications?limit=10'),
+      ]);
+      setNotifCount(countRes.data.count);
+      setNotifications(listRes.data.notifications || []);
+    } catch {}
+  }, []);
 
   useEffect(() => {
-    fetchQueryCount();
-    const interval = setInterval(fetchQueryCount, 30000);
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [fetchQueryCount]);
+  }, [fetchNotifications]);
 
   useEffect(() => {
     if (location.state?.showSubscribe) {
@@ -101,8 +97,6 @@ const DashboardLayout = () => {
         return [
           { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
           { to: '/admin/students', icon: Users, label: 'My Students' },
-          { to: '/admin/jobs', icon: Briefcase, label: 'Job Listings' },
-          { to: '/admin/applications', icon: FileText, label: 'Applications' },
           { to: '/admin/training', icon: GraduationCap, label: 'Training' },
           { to: '/admin/slots', icon: Calendar, label: 'Time Slots' },
           { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
@@ -133,7 +127,7 @@ const DashboardLayout = () => {
   const roleLabel = isSuperAdmin ? 'Super Admin' : isAdmin ? 'Mentor' : 'Student';
 
   return (
-    <div className={`h-screen bg-gradient-to-br from-slate-50 via-blue-50/60 to-violet-50/40 ${useHorizontalNav ? 'flex flex-col' : 'flex'} overflow-hidden`}>
+    <div className={`h-screen bg-gradient-to-br from-slate-100 via-blue-50/80 to-indigo-100/60 ${useHorizontalNav ? 'flex flex-col' : 'flex'} overflow-hidden`}>
       {/* Mobile Overlay — sidebar roles only */}
       {!useHorizontalNav && sidebarOpen && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -154,7 +148,6 @@ const DashboardLayout = () => {
         <nav className="flex-1 px-3 pt-4 pb-2 overflow-y-auto sidebar-nav-scroll">
           {(() => {
             const isStudent = user?.role === 'STUDENT';
-            const hasPremiumAccess = ['pro', 'ultra'].includes(user?.subscriptionPlan);
             const mainItems = isStudent
               ? navItems.filter(i => ['Dashboard', 'Job Listings', 'My Applications'].includes(i.label))
               : navItems.filter(i => i.label !== 'Profile');
@@ -166,24 +159,12 @@ const DashboardLayout = () => {
               : [];
             const profileItem = navItems.find(i => i.label === 'Profile');
 
-            const renderItem = ({ to, icon: Icon, label, end, disabled }, { locked } = {}) => (
+            const renderItem = ({ to, icon: Icon, label, end, disabled }) => (
               disabled ? (
                 <div key={to} className="sidebar-link opacity-40 cursor-not-allowed pointer-events-none">
                   <Icon size={17} strokeWidth={1.8} />
                   <span>{label}</span>
                 </div>
-              ) : locked ? (
-                <button
-                  key={to}
-                  onClick={() => { setShowSubscribe(true); setSidebarOpen(false); }}
-                  className="sidebar-link opacity-50 hover:opacity-70 w-full justify-between"
-                >
-                  <span className="flex items-center gap-3">
-                    <Icon size={17} strokeWidth={1.8} />
-                    <span>{label}</span>
-                  </span>
-                  <Lock size={13} strokeWidth={2} className="text-gray-400" />
-                </button>
               ) : (
                 <NavLink
                   key={to}
@@ -210,14 +191,14 @@ const DashboardLayout = () => {
                 {learnItems.length > 0 && (
                   <>
                     <SectionLabel>Learning</SectionLabel>
-                    <div className="space-y-0.5">{learnItems.map(item => renderItem(item, { locked: isStudent && !hasPremiumAccess }))}</div>
+                    <div className="space-y-0.5">{learnItems.map(renderItem)}</div>
                   </>
                 )}
 
                 {communityItems.length > 0 && (
                   <>
                     <SectionLabel>Community</SectionLabel>
-                    <div className="space-y-0.5">{communityItems.map(item => renderItem(item, { locked: isStudent && !hasPremiumAccess }))}</div>
+                    <div className="space-y-0.5">{communityItems.map(renderItem)}</div>
                   </>
                 )}
 
@@ -226,7 +207,7 @@ const DashboardLayout = () => {
                   <div className="mt-5">
                     <button
                       onClick={() => { setShowSubscribe(true); setSidebarOpen(false); }}
-                      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-gradient-to-r from-blue-600 via-violet-600 to-purple-600 hover:from-blue-700 hover:via-violet-700 hover:to-purple-700 shadow-md shadow-violet-200 transition-all duration-200"
+                      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-md shadow-violet-200 transition-all duration-200"
                     >
                       <Crown size={17} strokeWidth={1.8} className="text-violet-200" />
                       <span>Upgrade Plan</span>
@@ -309,71 +290,87 @@ const DashboardLayout = () => {
               <button
                 className="relative text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-xl hover:bg-gray-100"
                 onClick={() => {
-                  if (user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || user?.role === 'STUDENT') {
-                    setNotifDropdown(!notifDropdown);
-                    setProfileDropdown(false);
-                  }
+                  setNotifDropdown(!notifDropdown);
+                  setProfileDropdown(false);
                 }}
               >
                 <Bell size={20} strokeWidth={1.8} />
-                {queryNotifCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">{queryNotifCount}</span>
+                {notifCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">{notifCount > 9 ? '9+' : notifCount}</span>
                 )}
               </button>
 
               {notifDropdown && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setNotifDropdown(false)} />
-                  <div className="absolute right-0 mt-2 w-72 bg-white/80 backdrop-blur-2xl rounded-xl shadow-[0_8px_30px_-8px_rgba(0,0,0,0.18)] border border-white/50 z-50 overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-80 bg-white/80 backdrop-blur-2xl rounded-xl shadow-[0_8px_30px_-8px_rgba(0,0,0,0.18)] border border-white/50 z-50 overflow-hidden">
                     <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
                       <p className="text-[13px] font-bold text-gray-800">Notifications</p>
-                      {queryNotifCount > 0 && (
-                        <span className="text-[10px] font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">{queryNotifCount} new</span>
+                      {notifCount > 0 && (
+                        <button
+                          onClick={async () => {
+                            try { await api.put('/notifications/read-all'); setNotifCount(0); setNotifications(prev => prev.map(n => ({ ...n, isRead: true }))); } catch {}
+                          }}
+                          className="text-[10px] font-semibold text-blue-600 hover:text-blue-700"
+                        >
+                          Mark all read
+                        </button>
                       )}
                     </div>
-                    {queryNotifCount > 0 ? (
-                      <button
-                        className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-blue-50/50 transition-colors text-left"
-                        onClick={() => {
-                          if (user?.role === 'SUPER_ADMIN') {
-                            localStorage.setItem('adminQueryLastSeen', new Date().toISOString());
-                            setQueryNotifCount(0);
-                            setNotifDropdown(false);
-                            navigate('/superadmin/queries');
-                          } else if (user?.role === 'ADMIN') {
-                            localStorage.setItem('adminQueryLastSeen', new Date().toISOString());
-                            setQueryNotifCount(0);
-                            setNotifDropdown(false);
-                            navigate('/admin/queries');
-                          } else if (user?.role === 'STUDENT') {
-                            localStorage.setItem('studentQueryLastSeen', new Date().toISOString());
-                            setQueryNotifCount(0);
-                            setNotifDropdown(false);
-                            navigate('/dashboard/help-support');
-                          }
-                        }}
-                      >
-                        <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center shrink-0">
-                          <HelpCircle size={15} className="text-violet-600" />
+                    <div className="max-h-72 overflow-y-auto">
+                      {notifications.length > 0 ? (
+                        notifications.map((n) => {
+                          const timeAgo = (() => {
+                            const diff = (Date.now() - new Date(n.createdAt).getTime()) / 1000;
+                            if (diff < 60) return 'just now';
+                            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+                            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+                            return `${Math.floor(diff / 86400)}d ago`;
+                          })();
+                          const iconConfig = n.type === 'CHAT_MESSAGE' || n.type === 'message' || n.type === 'mention'
+                            ? { bg: 'bg-blue-100', icon: <MessageSquare size={14} className="text-blue-600" /> }
+                            : n.type === 'JOB_APPLIED_BY_ADMIN' || n.type === 'application'
+                            ? { bg: 'bg-emerald-100', icon: <Briefcase size={14} className="text-emerald-600" /> }
+                            : n.type?.startsWith('BOOKING_')
+                            ? { bg: 'bg-orange-100', icon: <Calendar size={14} className="text-orange-600" /> }
+                            : n.type === 'query'
+                            ? { bg: 'bg-amber-100', icon: <HelpCircle size={14} className="text-amber-600" /> }
+                            : { bg: 'bg-violet-100', icon: <Bell size={14} className="text-violet-600" /> };
+                          return (
+                            <button
+                              key={n.id}
+                              className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-blue-50/50 transition-colors text-left border-b border-gray-50 last:border-0 ${!n.isRead ? 'bg-blue-50/30' : ''}`}
+                              onClick={async () => {
+                                if (!n.isRead) {
+                                  try { await api.put(`/notifications/${n.id}/read`); setNotifCount(prev => Math.max(0, prev - 1)); setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, isRead: true } : x)); } catch {}
+                                }
+                                setNotifDropdown(false);
+                                if (n.link) navigate(n.link);
+                                else if (n.type === 'CHAT_MESSAGE' || n.type === 'message' || n.type === 'mention') navigate(user?.role === 'STUDENT' ? '/dashboard/chat' : user?.role === 'ADMIN' ? '/admin/chat' : '/superadmin/chat');
+                                else if (n.type === 'JOB_APPLIED_BY_ADMIN' || n.type === 'application') navigate(user?.role === 'STUDENT' ? '/dashboard/applications' : user?.role === 'ADMIN' ? '/admin/students' : '/superadmin');
+                                else if (n.type === 'query') navigate(user?.role === 'STUDENT' ? '/dashboard/help' : user?.role === 'ADMIN' ? '/admin/queries' : '/superadmin/queries');
+                                else if (n.type?.startsWith('BOOKING_')) navigate(user?.role === 'STUDENT' ? '/dashboard/mentoring' : '/admin/bookings');
+                              }}
+                            >
+                              <div className={`w-8 h-8 ${iconConfig.bg} rounded-lg flex items-center justify-center shrink-0 mt-0.5`}>
+                                {iconConfig.icon}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-[12px] ${!n.isRead ? 'font-semibold text-gray-800' : 'font-medium text-gray-600'} leading-snug`}>{n.title}</p>
+                                <p className="text-[11px] text-gray-400 mt-0.5 truncate">{n.message}</p>
+                                <p className="text-[10px] text-gray-300 mt-1">{timeAgo}</p>
+                              </div>
+                              {!n.isRead && <span className="w-2 h-2 bg-blue-500 rounded-full shrink-0 mt-2" />}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="px-4 py-8 text-center">
+                          <Bell size={24} className="text-gray-200 mx-auto mb-2" />
+                          <p className="text-[12px] text-gray-400">No notifications yet</p>
                         </div>
-                        <div>
-                          <p className="text-[12px] font-semibold text-gray-800">
-                            {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN')
-                              ? `You have ${queryNotifCount} new ${queryNotifCount === 1 ? 'query' : 'queries'}`
-                              : `You have ${queryNotifCount} ${queryNotifCount === 1 ? 'update' : 'updates'} on your queries`
-                            }
-                          </p>
-                          <p className="text-[11px] text-gray-400 mt-0.5">
-                            {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') ? 'Click to view and respond' : 'Click to view in Help & Support'}
-                          </p>
-                        </div>
-                      </button>
-                    ) : (
-                      <div className="px-4 py-8 text-center">
-                        <Bell size={24} className="text-gray-200 mx-auto mb-2" />
-                        <p className="text-[12px] text-gray-400">No new notifications</p>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </>
               )}

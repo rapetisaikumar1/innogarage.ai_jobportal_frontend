@@ -26,6 +26,7 @@ import NotesPage from './pages/student/NotesPage';
 import AchieversPage from './pages/student/AchieversPage';
 import ShoutboardPage from './pages/student/ShoutboardPage';
 import HelpSupportPage from './pages/student/HelpSupportPage';
+import ResumeViewPage from './pages/student/ResumeViewPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -34,7 +35,6 @@ import AdminSlots from './pages/admin/AdminSlots';
 import AdminBookings from './pages/admin/AdminBookings';
 import AdminChat from './pages/admin/AdminChat';
 import AdminProfile from './pages/admin/AdminProfile';
-import AdminApplications from './pages/admin/AdminApplications';
 import AdminStudentView from './pages/admin/AdminStudentView';
 import AdminTraining from './pages/admin/AdminTraining';
 
@@ -76,16 +76,6 @@ const ProtectedRoute = ({ children, roles, allowIncomplete }) => {
   return children;
 };
 
-const PremiumRoute = ({ children }) => {
-  const { user, loading } = useAuth();
-  if (loading) return <LoadingScreen />;
-  if (!user) return <Navigate to="/login" replace />;
-  if (user.role === 'STUDENT' && !['pro', 'ultra'].includes(user.subscriptionPlan)) {
-    return <Navigate to="/dashboard" replace state={{ showSubscribe: true }} />;
-  }
-  return children;
-};
-
 const PublicRoute = ({ children }) => {
   const { loading } = useAuth();
   
@@ -111,13 +101,14 @@ function App() {
         <Route path="jobs/:id" element={<JobDetail />} />
         <Route path="applications" element={<MyApplications />} />
         <Route path="profile" element={<ProfilePage />} />
-        <Route path="training" element={<PremiumRoute><TrainingPage /></PremiumRoute>} />
-        <Route path="notes" element={<PremiumRoute><NotesPage /></PremiumRoute>} />
-        <Route path="mentoring" element={<PremiumRoute><MentoringPage /></PremiumRoute>} />
-        <Route path="chat" element={<PremiumRoute><ChatPage /></PremiumRoute>} />
+        <Route path="training" element={<TrainingPage />} />
+        <Route path="notes" element={<NotesPage />} />
+        <Route path="mentoring" element={<MentoringPage />} />
+        <Route path="chat" element={<ChatPage />} />
         <Route path="achievers" element={<AchieversPage />} />
-        <Route path="shoutboard" element={<PremiumRoute><ShoutboardPage /></PremiumRoute>} />
-        <Route path="help-support" element={<PremiumRoute><HelpSupportPage /></PremiumRoute>} />
+        <Route path="shoutboard" element={<ShoutboardPage />} />
+        <Route path="help-support" element={<HelpSupportPage />} />
+        <Route path="resume-view" element={<ResumeViewPage />} />
       </Route>
 
       {/* Admin/Mentor Routes */}
@@ -125,9 +116,6 @@ function App() {
         <Route index element={<AdminDashboard />} />
         <Route path="students" element={<AdminStudents />} />
         <Route path="students/:studentId/view" element={<AdminStudentView />} />
-        <Route path="jobs" element={<JobListings />} />
-        <Route path="jobs/:id" element={<JobDetail />} />
-        <Route path="applications" element={<AdminApplications />} />
         <Route path="training" element={<AdminTraining />} />
         <Route path="slots" element={<AdminSlots />} />
         <Route path="bookings" element={<AdminBookings />} />

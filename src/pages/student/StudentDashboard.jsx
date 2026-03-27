@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import {
@@ -144,15 +144,15 @@ const extractResumeRoleTitle = (resumeText, candidateName, sheetCandidateName) =
 const StudentDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [stats, setStats] = useState(null);
   const [recentApps, setRecentApps] = useState([]);
   const [recentJobs, setRecentJobs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [statsRes, appsRes, jobsRes, sheetAppliedRes] = await Promise.all([
+  const fetchData = useCallback(async () => {
+    try {
+      const [statsRes, appsRes, jobsRes, sheetAppliedRes] = await Promise.all([
           api.get('/jobs/stats'),
           api.get('/jobs/applications/mine?limit=5'),
           api.get('/jobs/sheet'),
@@ -204,9 +204,11 @@ const StudentDashboard = () => {
       } finally {
         setLoading(false);
       }
-    };
-    fetchData();
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, location.key]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>;
@@ -221,11 +223,15 @@ const StudentDashboard = () => {
 
   const firstName = user?.fullName?.split(' ')[0] || 'User';
   const sheetAppliedCount = stats?.sheetAppliedCount || 0;
-  const totalApplied = sheetAppliedCount || stats?.totalApplied || 0;
+  const dbAppliedCount = stats?.totalApplied || 0;
+  const totalApplied = sheetAppliedCount + dbAppliedCount;
   const interviewCount = stats?.interviewScheduled || 0;
   const rejectedCount = stats?.rejected || 0;
   const totalSheetJobs = stats?.totalSheetJobs || 0;
   const jobsToApply = Math.max(totalSheetJobs - sheetAppliedCount, 0);
+  const adminApplyCount = stats?.adminApplyCount || 0;
+  const candidateApplyCount = stats?.candidateApplyCount || 0;
+  const totalCount = totalApplied;
 
   const statCards = [
     { label: 'Applied', value: totalApplied, icon: FileText, light: 'bg-blue-50', text: 'text-blue-600' },
@@ -278,22 +284,36 @@ const StudentDashboard = () => {
             <div className="relative">
               <DonutChart value={totalApplied} max={totalSheetJobs || 1} color="#1e40af" trackColor="#d1fae5" size={90} strokeWidth={10} />
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[18px] font-extrabold text-gray-900 leading-none">{totalSheetJobs}</span>
+                <span className="text-[18px] font-extrabold text-gray-900 leading-none">{totalCount}</span>
                 <span className="text-[9px] text-gray-400 font-medium mt-0.5">Total</span>
               </div>
             </div>
-            <div className="space-y-3 flex-1">
+            <div className="space-y-2 flex-1">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-blue-800" />
-                  <span className="text-[12px] text-gray-600">Applied</span>
+                  <span className="text-[11px] text-gray-600">Applied</span>
                 </div>
                 <span className="text-[13px] font-bold text-gray-900">{totalApplied}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
+                  <span className="text-[11px] text-gray-600">Candidate Apply</span>
+                </div>
+                <span className="text-[13px] font-bold text-gray-900">{candidateApplyCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                  <span className="text-[11px] text-gray-600">Admin Apply</span>
+                </div>
+                <span className="text-[13px] font-bold text-gray-900">{adminApplyCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                  <span className="text-[12px] text-gray-600">Jobs to Apply</span>
+                  <span className="text-[11px] text-gray-600">Jobs to Apply</span>
                 </div>
                 <span className="text-[13px] font-bold text-gray-900">{jobsToApply}</span>
               </div>
