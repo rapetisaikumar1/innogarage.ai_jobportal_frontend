@@ -125,11 +125,16 @@ const MyApplications = () => {
 
   const fetchApplications = async () => {
     try {
-      const [dbRes, sheetRes, sheetJobsRes] = await Promise.all([
+      // Use allSettled so a single slow/failed endpoint (e.g. Google Sheet fetch)
+      // does not break the entire My Applications page.
+      const results = await Promise.allSettled([
         api.get('/jobs/applications/mine?status=APPLIED'),
         api.get('/jobs/sheet/applied-status'),
         api.get('/jobs/sheet'),
       ]);
+      const dbRes = results[0].status === 'fulfilled' ? results[0].value : { data: { applications: [] } };
+      const sheetRes = results[1].status === 'fulfilled' ? results[1].value : { data: { applications: [] } };
+      const sheetJobsRes = results[2].status === 'fulfilled' ? results[2].value : { data: { jobs: [] } };
 
       // Build a map of jobLink -> full sheet job object
       const jobsMap = {};
