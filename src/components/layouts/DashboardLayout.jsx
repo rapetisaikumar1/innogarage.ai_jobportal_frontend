@@ -54,7 +54,8 @@ const DashboardLayout = () => {
       window.history.replaceState({}, '', window.location.pathname);
     }
     // Verify session if just upgraded OR if user plan is still free/null (self-healing)
-    if (isUpgraded || !user?.subscriptionPlan || user?.subscriptionPlan === 'free') {
+    const currentPlan = String(user?.subscriptionPlan || 'free').toLowerCase();
+    if (isUpgraded || !user?.subscriptionPlan || currentPlan === 'free') {
       (async () => {
         try {
           const { data: verifyResult } = await api.post('/stripe/verify-session');
@@ -110,7 +111,7 @@ const DashboardLayout = () => {
           { to: '/superadmin/admins', icon: UserCog, label: 'Manage Mentors' },
           { to: '/superadmin/students', icon: Users, label: 'Manage Students' },
           { to: '/superadmin/training', icon: GraduationCap, label: 'Training Materials' },
-          { to: '/superadmin/analytics', icon: BarChart3, label: 'Analytics', disabled: true },
+          { to: '/superadmin/analytics', icon: BarChart3, label: 'Analytics' },
           { to: '/superadmin/queries', icon: HelpCircle, label: 'Queries' },
           { to: '/superadmin/chat', icon: MessageSquare, label: 'Chat' },
           { to: '/superadmin/profile', icon: Settings, label: 'Profile' },
@@ -135,7 +136,7 @@ const DashboardLayout = () => {
 
       {/* Sidebar — hidden for Super Admin and Admin */}
       {!useHorizontalNav && (
-      <aside className={`fixed inset-y-0 left-0 z-50 w-56 bg-white/60 backdrop-blur-2xl border-r border-white/40 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} flex flex-col`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-56 bg-white border-r border-gray-100 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} flex flex-col`}>
         {/* Logo */}
         <div className="h-14 flex items-center justify-between px-4 border-b border-gray-50">
           <Logo size="sm" />
@@ -242,7 +243,7 @@ const DashboardLayout = () => {
       {/* Main Content */}
       <div className={`flex-1 flex flex-col min-w-0 min-h-0 ${useHorizontalNav ? '' : 'lg:ml-56'}`}>
         {/* Top Header */}
-        <header className="h-14 bg-white/60 backdrop-blur-2xl border-b border-white/40 flex items-center justify-between px-4 lg:px-6 shrink-0 z-30">
+        <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 lg:px-6 shrink-0 z-30">
           {!useHorizontalNav && (
             <button className="lg:hidden text-gray-500" onClick={() => setSidebarOpen(true)}>
               <Menu size={20} />
@@ -261,7 +262,7 @@ const DashboardLayout = () => {
           <div className="flex items-center gap-5">
             {/* Plan Badge */}
             {user?.role === 'STUDENT' && (() => {
-              const plan = user?.subscriptionPlan;
+              const plan = String(user?.subscriptionPlan || 'free').toLowerCase();
               const config = plan === 'basic' ? { label: 'Basic', gradient: 'from-blue-500 to-cyan-400', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', Icon: Zap }
                 : plan === 'pro' ? { label: 'Pro', gradient: 'from-violet-600 to-indigo-500', bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', Icon: Crown }
                 : plan === 'ultra' ? { label: 'Ultra', gradient: 'from-amber-500 to-orange-500', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', Icon: Zap }
@@ -345,10 +346,11 @@ const DashboardLayout = () => {
                                   try { await api.put(`/notifications/${n.id}/read`); setNotifCount(prev => Math.max(0, prev - 1)); setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, isRead: true } : x)); } catch {}
                                 }
                                 setNotifDropdown(false);
-                                if (n.link) navigate(n.link);
+                                const targetLink = n.link === '/dashboard/help' ? '/dashboard/help-support' : n.link;
+                                if (targetLink) navigate(targetLink);
                                 else if (n.type === 'CHAT_MESSAGE' || n.type === 'message' || n.type === 'mention') navigate(user?.role === 'STUDENT' ? '/dashboard/chat' : user?.role === 'ADMIN' ? '/admin/chat' : '/superadmin/chat');
                                 else if (n.type === 'JOB_APPLIED_BY_ADMIN' || n.type === 'application') navigate(user?.role === 'STUDENT' ? '/dashboard/applications' : user?.role === 'ADMIN' ? '/admin/students' : '/superadmin');
-                                else if (n.type === 'query') navigate(user?.role === 'STUDENT' ? '/dashboard/help' : user?.role === 'ADMIN' ? '/admin/queries' : '/superadmin/queries');
+                                else if (n.type === 'query') navigate(user?.role === 'STUDENT' ? '/dashboard/help-support' : user?.role === 'ADMIN' ? '/admin/queries' : '/superadmin/queries');
                                 else if (n.type?.startsWith('BOOKING_')) navigate(user?.role === 'STUDENT' ? '/dashboard/mentoring' : '/admin/bookings');
                               }}
                             >

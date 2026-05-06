@@ -118,6 +118,7 @@ const ManageStudents = () => {
     PRO: 'bg-violet-50 text-violet-700 ring-violet-200',
     ULTRA: 'bg-amber-50 text-amber-700 ring-amber-200',
   };
+  const normalizePlanKey = (plan) => String(plan || '').toUpperCase();
 
   const changePlan = async (studentId, plan) => {
     try {
@@ -192,7 +193,7 @@ const ManageStudents = () => {
         s.assignedMentorId === mentorFilter;
       const matchesPlan = planFilter === 'all' ||
         (planFilter === 'none' && !s.subscriptionPlan) ||
-        s.subscriptionPlan === planFilter;
+        normalizePlanKey(s.subscriptionPlan) === planFilter;
       return matchesSearch && matchesStatus && matchesMentor && matchesPlan;
     });
   }, [students, search, statusFilter, mentorFilter, planFilter]);
@@ -284,9 +285,9 @@ const ManageStudents = () => {
                   <Shield size={11} />
                   {detail.isEmailVerified ? 'Verified' : 'Unverified'}
                 </span>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${PLAN_COLORS[detail.subscriptionPlan] || 'bg-gray-100 text-gray-500 ring-gray-200'}`}>
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${PLAN_COLORS[normalizePlanKey(detail.subscriptionPlan)] || 'bg-gray-100 text-gray-500 ring-gray-200'}`}>
                   <Crown size={11} />
-                  {detail.subscriptionPlan || 'No Plan'}
+                  {normalizePlanKey(detail.subscriptionPlan) || 'No Plan'}
                 </span>
               </div>
               <div className="flex items-center gap-2.5 mt-3 flex-wrap text-sm font-medium text-white">
@@ -454,7 +455,7 @@ const ManageStudents = () => {
                 {[
                   { label: 'Account Status', value: detail.isActive ? 'Active' : 'Inactive', color: detail.isActive ? 'text-emerald-600' : 'text-red-600' },
                   { label: 'Email Verified', value: detail.isEmailVerified ? 'Yes' : 'No', color: detail.isEmailVerified ? 'text-blue-600' : 'text-gray-400' },
-                  { label: 'Subscription Plan', value: detail.subscriptionPlan || 'None', color: detail.subscriptionPlan === 'ULTRA' ? 'text-amber-600' : detail.subscriptionPlan === 'PRO' ? 'text-violet-600' : detail.subscriptionPlan === 'BASIC' ? 'text-blue-600' : 'text-gray-500' },
+                  { label: 'Subscription Plan', value: normalizePlanKey(detail.subscriptionPlan) || 'None', color: normalizePlanKey(detail.subscriptionPlan) === 'ULTRA' ? 'text-amber-600' : normalizePlanKey(detail.subscriptionPlan) === 'PRO' ? 'text-violet-600' : normalizePlanKey(detail.subscriptionPlan) === 'BASIC' ? 'text-blue-600' : 'text-gray-500' },
                   { label: 'Registration No.', value: detail.registrationNumber || '—', mono: true },
                   { label: 'Member Since', value: new Date(detail.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) },
                   { label: 'Last Updated', value: detail.updatedAt ? new Date(detail.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' },
@@ -754,10 +755,10 @@ const ManageStudents = () => {
                       <div className="relative" ref={openPlanDropdown === student.id ? planDropdownRef : null}>
                         <button
                           onClick={() => setOpenPlanDropdown(openPlanDropdown === student.id ? null : student.id)}
-                          className={`inline-flex items-center justify-between gap-2 text-[12px] font-semibold ring-1 rounded-full px-3 py-1 cursor-pointer transition-colors ${PLAN_COLORS[student.subscriptionPlan] || 'bg-gray-50 text-gray-500 ring-gray-200'}`}
+                          className={`inline-flex items-center justify-between gap-2 text-[12px] font-semibold ring-1 rounded-full px-3 py-1 cursor-pointer transition-colors ${PLAN_COLORS[normalizePlanKey(student.subscriptionPlan)] || 'bg-gray-50 text-gray-500 ring-gray-200'}`}
                         >
                           <Crown size={11} />
-                          {student.subscriptionPlan || 'None'}
+                          {normalizePlanKey(student.subscriptionPlan) || 'None'}
                           <ChevronDown size={11} className={`transition-transform ${openPlanDropdown === student.id ? 'rotate-180' : ''}`} />
                         </button>
                         {openPlanDropdown === student.id && (
@@ -767,11 +768,11 @@ const ManageStudents = () => {
                                 key={plan}
                                 onClick={() => { changePlan(student.id, plan); setOpenPlanDropdown(null); }}
                                 className={`w-full flex items-center justify-between px-3.5 py-2 text-[13px] hover:bg-gray-50 transition-colors ${
-                                  student.subscriptionPlan === plan ? 'text-blue-600 font-semibold bg-blue-50/50' : 'text-gray-700'
+                                  normalizePlanKey(student.subscriptionPlan) === plan ? 'text-blue-600 font-semibold bg-blue-50/50' : 'text-gray-700'
                                 }`}
                               >
                                 {plan}
-                                {student.subscriptionPlan === plan && <Check size={13} className="text-blue-500" />}
+                                {normalizePlanKey(student.subscriptionPlan) === plan && <Check size={13} className="text-blue-500" />}
                               </button>
                             ))}
                           </div>

@@ -153,14 +153,48 @@ const StudentDashboard = () => {
   const fetchData = useCallback(async () => {
     try {
       const [statsRes, appsRes, jobsRes, sheetAppliedRes] = await Promise.all([
-          api.get('/jobs/stats'),
+          api.get('/jobs/stats?refresh=1'),
           api.get('/jobs/applications/mine?limit=5'),
           api.get('/jobs/matched'),
           api.get('/jobs/external-applied-status'),
         ]);
         const allJobs = jobsRes.data.jobs || [];
         const sheetApplied = sheetAppliedRes.data.applications || [];
-        setStats({ ...statsRes.data, sheetAppliedCount: sheetApplied.length, totalSheetJobs: allJobs.length });
+
+        // Merge pending applies from sessionStorage (covers race condition: user
+        // navigated to Dashboard before the mark-applied API call completed)
+        const PENDING_TTL_MS = 10 * 60 * 1000; // 10 minutes
+        const now = Date.now();
+        const pendingApplied = (() => {
+          try { return JSON.parse(sessionStorage.getItem('pendingApplied') || '[]'); } catch { return []; }
+        })().filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
+        const apiJobLinks = new Set(sheetApplied.map(a => a.jobLink));
+        const stillPending = pendingApplied.filter(p => !apiJobLinks.has(p.jobLink));
+        if (stillPending.length !== pendingApplied.length) {
+          try { sessionStorage.setItem('pendingApplied', JSON.stringify(stillPending)); } catch { /* ignore */ }
+        }
+        const combinedSheetApplied = [
+          ...sheetApplied,
+          ...stillPending.map(p => ({
+            jobLink: p.jobLink,
+            employerName: p.employerName,
+            jobTitle: p.jobTitle,
+            status: 'APPLIED',
+            appliedMethod: 'MANUAL',
+            matchScore: p.matchScore,
+            createdAt: p.appliedAt,
+          })),
+        ];
+
+        // candidateApplyCount from backend only reflects saved DB records;
+        // add any still-pending (not yet confirmed) applies — they're always candidate-initiated
+        const updatedCandidateCount = (statsRes.data.candidateApplyCount || 0) + stillPending.length;
+        setStats({
+          ...statsRes.data,
+          sheetAppliedCount: combinedSheetApplied.length,
+          totalSheetJobs: allJobs.length,
+          candidateApplyCount: updatedCandidateCount,
+        });
 
         // Build jobLink -> full job map
         const jobsMap = {};
@@ -178,7 +212,7 @@ const StudentDashboard = () => {
           source: 'db',
           fullJob: null,
         }));
-        const sheetApps = sheetApplied.map(app => {
+        const sheetApps = combinedSheetApplied.map(app => {
           const fullJob = jobsMap[app.jobLink];
           return {
             id: app.jobLink,
@@ -209,6 +243,20 @@ const StudentDashboard = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData, location.key]);
+
+  // Silent re-fetch when user returns to this tab/window (handles race condition
+  // where Apply is clicked then the user quickly navigates to Dashboard)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchData();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', fetchData);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchData);
+    };
+  }, [fetchData]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>;
@@ -434,34 +482,6 @@ const StudentDashboard = () => {
                   { dot: 'bg-cyan-500',    label: 'Candidate',  val: candidateApplyCount },
                   { dot: 'bg-amber-500',   label: 'Admin',      val: adminApplyCount },
                   { dot: 'bg-emerald-400', label: 'To Apply',   val: jobsToApply },
-                ].map(r => (
-                  <div key={r.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className={`w-2 h-2 rounded-full ${r.dot} shrink-0`} />
-                      <span className="text-[12px] font-medium text-gray-600 truncate">{r.label}</span>
-                    </div>
-                    <span className="text-[13px] font-bold text-gray-800 ml-1">{r.val}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Progress */}
-          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-5 shadow shadow-violet-50/20">
-            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-4">Progress</h3>
-            <div className="flex items-center gap-4">
-              <div className="relative shrink-0">
-                <DonutChart value={interviewCount} max={(totalApplied + interviewCount + rejectedCount) || 1} color="#0e7490" trackColor="#be185d" size={88} strokeWidth={9} />
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[17px] font-extrabold text-gray-900 leading-none">{interviewCount + rejectedCount}</span>
-                  <span className="text-[9px] font-medium text-gray-500">Updates</span>
-                </div>
-              </div>
-              <div className="space-y-2 flex-1 min-w-0">
-                {[
-                  { dot: 'bg-cyan-700', label: 'Interviews', val: interviewCount },
-                  { dot: 'bg-pink-700', label: 'Rejected',   val: rejectedCount },
                 ].map(r => (
                   <div key={r.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 min-w-0">

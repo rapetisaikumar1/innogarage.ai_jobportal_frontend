@@ -210,7 +210,7 @@ const AdminDashboard = () => {
                     </span>
                   </span>
                   <span className="w-[20%] text-right">
-                    <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">{student._count?.jobApplications || 0} applications</span>
+                    <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">{(student._count?.jobApplications || 0) + (student._count?.sheetApplications || 0)} applications</span>
                   </span>
                 </div>
               ))}

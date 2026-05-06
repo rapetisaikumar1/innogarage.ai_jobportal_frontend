@@ -5,11 +5,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import html2pdf from 'html2pdf.js';
 import { saveAs } from 'file-saver';
-import ResumeDocument, { RESUME_WORD_STYLES } from '../../components/resume/ResumeDocument';
+import ResumeDocument, { RESUME_WORD_STYLES, RESUME_TEMPLATES } from '../../components/resume/ResumeDocument';
 import {
   Search, ExternalLink, Briefcase, RefreshCw, X, FileText, AlertTriangle,
   Clock, Sparkles, MapPin, Building2, Bookmark, ChevronLeft, ChevronRight, Info, CheckCircle2,
-  Eye, Download, Crown, Lock
+  Eye, Download, Crown, Lock, Palette, PenLine, Save, Sun, Moon, GripVertical, BarChart3, Zap
 } from 'lucide-react';
 
 /* ── avatar bg palette ── */
@@ -87,6 +87,47 @@ const hasCompleteGeneratedResume = (text) => {
   // Only require PROFESSIONAL SUMMARY + an EXPERIENCE section — skills section name varies by resume format
   return /PROFESSIONAL\s+SUMMARY/i.test(clean)
     && /(?:PROFESSIONAL\s+EXPERIENCE|WORK\s+EXPERIENCE|EXPERIENCE)/i.test(clean);
+};
+
+const parseListField = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === 'object') return Object.values(value).flat().filter(Boolean);
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    if (parsed && typeof parsed === 'object') return Object.values(parsed).flat().filter(Boolean);
+  } catch { /* plain string fallback */ }
+  return String(value).split(/[,|\n]/).map(item => item.trim()).filter(Boolean);
+};
+
+const buildLocalResumeInsights = (job, resumeText) => {
+  const strong = parseListField(job?.strong_matches);
+  const missing = parseListField(job?.missing_skills);
+  const jdWords = String(job?.jd || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9+#.\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 3 && !/^(with|that|this|from|will|your|have|role|team|work|job|and|the|for|are|our)$/.test(word));
+  const ranked = [...new Set([...strong, ...jdWords.map(word => word.replace(/\b\w/g, char => char.toUpperCase()))])].slice(0, 28);
+  const normalizedResume = String(resumeText || '').toLowerCase();
+  const matchedKeywords = ranked.filter(keyword => normalizedResume.includes(String(keyword).toLowerCase())).slice(0, 14);
+  const missingKeywords = missing.length ? missing.slice(0, 10) : ranked.filter(keyword => !matchedKeywords.includes(keyword)).slice(0, 10);
+  const baseScore = parseInt(job?.match_score, 10) || 0;
+
+  return {
+    score: baseScore,
+    coverage: ranked.length ? Math.round((matchedKeywords.length / ranked.length) * 100) : baseScore,
+    jdKeywords: ranked,
+    matchedKeywords,
+    missingKeywords,
+    actionVerbs: ['Architected', 'Delivered', 'Optimized', 'Led', 'Implemented', 'Integrated'],
+    suggestions: [
+      missingKeywords.length ? `Add genuine evidence for ${missingKeywords.slice(0, 3).join(', ')} where applicable.` : 'Keyword coverage looks strong.',
+      'Keep bullets concise, action-led, and tied to measurable delivery outcomes.',
+      'Use standard ATS headings and a single-column layout for clean parsing.',
+    ],
+  };
 };
 
 const formatDate = (ts) => {
@@ -444,13 +485,22 @@ const JobListings = () => {
   const [appliedLinks, setAppliedLinks] = useState(new Set());
   const [adminAppliedLinks, setAdminAppliedLinks] = useState(new Set());
   const [showDaysPopup, setShowDaysPopup] = useState(false);
-  const [daysInput, setDaysInput] = useState('1');
+  const [daysInput, setDaysInput] = useState('7');
   const [search, setSearch] = useState('');
   const [detailJob, setDetailJob] = useState(null);
   const [resumeJob, setResumeJob] = useState(null);
   const [resumeConfirmJob, setResumeConfirmJob] = useState(null);
   const [creatingResume, setCreatingResume] = useState(false);
   const [resumeViewMode, setResumeViewMode] = useState(false);
+  const [resumeTemplate, setResumeTemplate] = useState('modern');
+  const [resumeDarkMode, setResumeDarkMode] = useState(false);
+  const [resumeEditMode, setResumeEditMode] = useState(false);
+  const [resumeDraft, setResumeDraft] = useState('');
+  const [resumeSectionOrder, setResumeSectionOrder] = useState([]);
+  const [draggedSectionIndex, setDraggedSectionIndex] = useState(null);
+  const [resumeAnalysis, setResumeAnalysis] = useState(null);
+  const [analyzingResume, setAnalyzingResume] = useState(false);
+  const [savingResumeDraft, setSavingResumeDraft] = useState(false);
   const resumeRef = useRef(null);
   const [filterType, setFilterType] = useState('all');
   const [page, setPage] = useState(1);
@@ -479,7 +529,24 @@ const JobListings = () => {
       next.add(link);
       return next;
     });
-    // Save to backend (fire-and-forget)
+    // Store in sessionStorage immediately so Dashboard/MyApplications pick it up
+    // even if the user navigates before the API call completes (race condition fix)
+    try {
+      const entry = {
+        jobLink: link,
+        employerName: job.employer_name || '',
+        jobTitle: extractRole(job),
+        matchScore: job.match_score ? String(job.match_score) : null,
+        appliedAt: new Date().toISOString(),
+        status: 'APPLIED',
+        appliedMethod: 'MANUAL',
+      };
+      const pending = JSON.parse(sessionStorage.getItem('pendingApplied') || '[]');
+      if (!pending.find(p => p.jobLink === link)) {
+        sessionStorage.setItem('pendingApplied', JSON.stringify([entry, ...pending]));
+      }
+    } catch { /* ignore sessionStorage errors */ }
+    // Save to backend — if it fails, remove from sessionStorage so counts stay accurate
     try {
       await api.post('/jobs/external/mark-applied', {
         jobLink: link,
@@ -487,21 +554,42 @@ const JobListings = () => {
         matchScore: job.match_score,
         jobTitle: extractRole(job),
       });
-    } catch { /* best effort */ }
+    } catch {
+      // API failed — revert optimistic sessionStorage entry so counts don't stay inflated
+      try {
+        const pending = JSON.parse(sessionStorage.getItem('pendingApplied') || '[]');
+        sessionStorage.setItem('pendingApplied', JSON.stringify(pending.filter(p => p.jobLink !== link)));
+      } catch { /* ignore */ }
+      // Also revert the optimistic UI mark
+      setAppliedLinks(prev => { const next = new Set(prev); next.delete(link); return next; });
+    }
   };
 
   const fetchAppliedStatus = async () => {
     try {
-      const { data } = await api.get('/jobs/external-applied-status');
+      const { data } = await api.get('/jobs/external-applied-status', { params: { t: Date.now() } });
       const apps = data.applications || [];
-      setAppliedLinks(new Set(apps.map(a => a.jobLink)));
+      const apiLinks = new Set(apps.map(a => a.jobLink));
+      // Merge pendingApplied from sessionStorage — covers the case where the user
+      // navigated back before the mark-applied API call was confirmed by the server
+      const PENDING_TTL_MS = 10 * 60 * 1000; // 10 minutes
+      const now = Date.now();
+      const pending = (() => { try { return JSON.parse(sessionStorage.getItem('pendingApplied') || '[]'); } catch { return []; } })()
+        .filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
+      // Clean up any pending entries that the API now confirms
+      const stillPending = pending.filter(p => !apiLinks.has(p.jobLink));
+      if (stillPending.length !== pending.length) {
+        try { sessionStorage.setItem('pendingApplied', JSON.stringify(stillPending)); } catch { /* ignore */ }
+      }
+      const allAppliedLinks = new Set([...apiLinks, ...stillPending.map(p => p.jobLink)]);
+      setAppliedLinks(allAppliedLinks);
       setAdminAppliedLinks(new Set(apps.filter(a => a.appliedById).map(a => a.jobLink)));
     } catch { /* ignore */ }
   };
 
   const fetchUsage = async () => {
     try {
-      const { data } = await api.get('/jobs/usage');
+      const { data } = await api.get('/jobs/usage', { params: { t: Date.now() } });
       setUsage(data);
     } catch { /* ignore */ }
   };
@@ -509,8 +597,13 @@ const JobListings = () => {
   const fetchMatchedJobs = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/jobs/matched');
-      setJobs(data.jobs || []);
+      const { data } = await api.get('/jobs/matched', { params: { t: Date.now() } });
+      const fetchedJobs = data.jobs || [];
+      setJobs(fetchedJobs);
+      if (fetchedJobs.length > 0) {
+        setWaitingForJobs(false);
+        sessionStorage.removeItem('waitingForJobs');
+      }
     } catch (error) {
       toast.error('Failed to load job listings');
     } finally {
@@ -518,7 +611,41 @@ const JobListings = () => {
     }
   };
 
-  useEffect(() => { fetchMatchedJobs(); fetchAppliedStatus(); fetchUsage(); }, []);
+  useEffect(() => {
+    if (sessionStorage.getItem('waitingForJobs') === 'true') {
+      setWaitingForJobs(true);
+    }
+    fetchMatchedJobs();
+    fetchAppliedStatus();
+    fetchUsage();
+  }, []);
+
+  useEffect(() => {
+    setResumeDraft(resumeJob?.resume_text || '');
+    setResumeEditMode(false);
+    setResumeTemplate('modern');
+    setResumeDarkMode(false);
+    setResumeSectionOrder([]);
+    setDraggedSectionIndex(null);
+    setResumeAnalysis(null);
+  }, [resumeJob?.id, resumeJob?.resume_text]);
+
+  useEffect(() => {
+    if (!resumeJob?.jd || !resumeJob?.resume_text) return;
+    let active = true;
+    setAnalyzingResume(true);
+    api.post('/jobs/match-score', {
+      jd: resumeJob.jd,
+      resume_text: resumeJob.resume_text,
+      match_score: resumeJob.match_score,
+      skills: authUser?.keySkills || [],
+    })
+      .then(({ data }) => { if (active) setResumeAnalysis(data); })
+      .catch(() => { if (active) setResumeAnalysis(null); })
+      .finally(() => { if (active) setAnalyzingResume(false); });
+
+    return () => { active = false; };
+  }, [resumeJob?.id, resumeJob?.resume_text, resumeJob?.jd, resumeJob?.match_score, authUser?.keySkills]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -538,6 +665,7 @@ const JobListings = () => {
 
     setTriggeringSearch(true);
     setWaitingForJobs(true);
+    sessionStorage.setItem('waitingForJobs', 'true');
     try {
       const { data } = await api.post('/jobs/search', { days: String(days) });
       toast.success(data.message || 'Job search triggered!');
@@ -552,6 +680,7 @@ const JobListings = () => {
       toast.error(error.response?.data?.message || 'Failed to trigger job search');
     } finally {
       setWaitingForJobs(false);
+      sessionStorage.removeItem('waitingForJobs');
       setTriggeringSearch(false);
     }
   };
@@ -604,6 +733,28 @@ const JobListings = () => {
     } finally {
       setCreatingResume(false);
       setResumeConfirmJob(null);
+    }
+  };
+
+  const handleSaveResumeDraft = async () => {
+    if (!resumeJob || savingResumeDraft) return;
+    setSavingResumeDraft(true);
+    try {
+      const { data } = await api.post('/jobs/resume/save', {
+        id: resumeJob.id,
+        job_apply_link: resumeJob.job_apply_link,
+        resume_text: resumeDraft,
+      });
+      if (data.job) {
+        syncUpdatedJob(data.job);
+        setResumeJob(data.job);
+      }
+      setResumeEditMode(false);
+      toast.success(data.message || 'Resume edits saved');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to save resume edits');
+    } finally {
+      setSavingResumeDraft(false);
     }
   };
 
@@ -720,9 +871,28 @@ const JobListings = () => {
       {/* Resume Modal */}
       {resumeJob && (() => {
         const resumeText = resumeJob.resume_text || '';
+        const effectiveResumeText = resumeDraft || resumeText;
         const candidateName = resumeJob.candidate_name || '';
-        const { sections } = parseResumeSections(resumeText, authUser?.fullName || candidateName, resumeJob.candidate_name);
+        const { sections } = parseResumeSections(effectiveResumeText, authUser?.fullName || candidateName, resumeJob.candidate_name);
+        const orderedSections = resumeSectionOrder.length === sections.length
+          ? resumeSectionOrder.map(index => sections[index]).filter(Boolean)
+          : sections;
         const jdRole = extractRole(resumeJob);
+        const intelligence = resumeAnalysis || buildLocalResumeInsights(resumeJob, effectiveResumeText);
+        const jdKeywords = intelligence.jdKeywords || intelligence.keywords || [];
+        const matchedKeywords = intelligence.matchedKeywords || [];
+        const missingKeywords = intelligence.missingKeywords || intelligence.missingSkills || [];
+        const visualScore = Math.max(0, Math.min(100, parseInt(intelligence.score || resumeJob.match_score, 10) || 0));
+        const selectedTemplate = RESUME_TEMPLATES.find(template => template.id === resumeTemplate) || RESUME_TEMPLATES[0];
+
+        const handleSectionDrop = (targetIndex) => {
+          if (draggedSectionIndex == null || draggedSectionIndex === targetIndex) return;
+          const baseOrder = resumeSectionOrder.length === sections.length ? [...resumeSectionOrder] : sections.map((_, index) => index);
+          const [moved] = baseOrder.splice(draggedSectionIndex, 1);
+          baseOrder.splice(targetIndex, 0, moved);
+          setResumeSectionOrder(baseOrder);
+          setDraggedSectionIndex(null);
+        };
 
         const handleDownloadPDF = () => {
           const el = resumeRef.current;
@@ -752,70 +922,77 @@ ${RESUME_WORD_STYLES}
           setResumeViewMode(false);
           navigate('/dashboard/resume-view', {
             state: {
-              sections,
+              sections: orderedSections,
               candidateName: authUser?.fullName || candidateName,
               headline: jdRole,
-              resumeText,
+              resumeText: effectiveResumeText,
+              template: resumeTemplate,
+              highlightKeywords: jdKeywords,
             },
           });
         };
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setResumeJob(null); setResumeViewMode(false); }}>
-            <div className="bg-white/80 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 w-[660px] max-h-[88vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-              {/* Close button */}
-              <div className="flex justify-end px-4 pt-3 pb-0 shrink-0">
-                <button onClick={() => { setResumeJob(null); setResumeViewMode(false); }} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Resume Document */}
-              <div className="overflow-y-auto flex-1 px-8 pb-4">
-                {resumeText ? (
-                  <div className="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
-                    <ResumeDocument
-                      ref={resumeRef}
-                      displayName={authUser?.fullName || candidateName || 'Resume'}
-                      headline={jdRole}
-                      contactItems={[authUser?.phone, authUser?.email].filter(Boolean)}
-                      linkedinProfile={authUser?.linkedinProfile}
-                      sections={sections}
-                      rawText={resumeText}
-                    />
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4" onClick={() => { setResumeJob(null); setResumeViewMode(false); }}>
+            <div className={`${resumeDarkMode ? 'bg-slate-950 text-white border-white/10' : 'bg-white/90 text-slate-900 border-white/60'} backdrop-blur-2xl rounded-2xl shadow-2xl border w-[1120px] max-w-[96vw] max-h-[92vh] flex flex-col overflow-hidden`} onClick={e => e.stopPropagation()}>
+              <div className="px-5 py-4 border-b border-slate-200/70 flex items-center justify-between shrink-0">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-violet-600 text-white"><Sparkles size={16} /></span>
+                    <h3 className="text-base font-bold">AI Resume Builder</h3>
+                    <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-violet-100 text-violet-700">{selectedTemplate.name}</span>
                   </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <AlertTriangle className="text-gray-300 mb-3" size={32} />
-                    <h3 className="text-base font-semibold text-gray-600">No resume data available</h3>
-                    <p className="text-sm text-gray-400 mt-1">Resume data will appear after the job search workflow processes this listing</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Bottom Action Buttons — View / PDF / Word */}
-              {resumeText && (
-                <div className="flex items-center justify-center gap-3 px-8 py-4 border-t border-gray-100 shrink-0 bg-gray-50/50">
-                  <button onClick={handleViewFullPage}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-gray-800 hover:bg-gray-900 text-white transition-colors shadow-sm">
-                    <Eye size={15} /> View
+                  <p className={`text-xs mt-1 ${resumeDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{jdRole} {resumeJob.employer_name ? `at ${resumeJob.employer_name}` : ''}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setResumeDarkMode(prev => !prev)} className={`inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg border ${resumeDarkMode ? 'border-white/10 bg-white/10 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>
+                    {resumeDarkMode ? <Sun size={14} /> : <Moon size={14} />} {resumeDarkMode ? 'Light' : 'Dark'}
                   </button>
-                  <button onClick={handleDownloadPDF}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg text-white transition-colors shadow-sm"
-                    style={{ background: '#dc2626' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#b91c1c'}
-                    onMouseLeave={e => e.currentTarget.style.background = '#dc2626'}>
-                    <Download size={15} /> PDF
-                  </button>
-                  <button onClick={handleDownloadWord}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg text-white transition-colors shadow-sm"
-                    style={{ background: '#2563eb' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#1d4ed8'}
-                    onMouseLeave={e => e.currentTarget.style.background = '#2563eb'}>
-                    <Download size={15} /> Word
+                  <button onClick={() => { setResumeJob(null); setResumeViewMode(false); }} className={`p-2 rounded-lg transition-colors ${resumeDarkMode ? 'text-slate-300 hover:bg-white/10' : 'text-slate-400 hover:bg-slate-100'}`}>
+                    <X size={18} />
                   </button>
                 </div>
-              )}
+              </div>
+
+              <div className="min-h-0 flex-1 flex flex-col">
+
+                <main className={`flex-1 min-h-0 overflow-y-auto p-5 ${resumeDarkMode ? 'bg-slate-900' : 'bg-slate-100/80'}`}>
+                  {effectiveResumeText ? (
+                    <>
+                      <div className="mx-auto max-w-[800px] border border-slate-200 rounded-lg bg-white shadow-xl overflow-hidden">
+                        <ResumeDocument
+                          ref={resumeRef}
+                          displayName={authUser?.fullName || candidateName || 'Resume'}
+                          headline={jdRole}
+                          contactItems={[authUser?.phone, authUser?.email].filter(Boolean)}
+                          linkedinProfile={authUser?.linkedinProfile}
+                          sections={orderedSections}
+                          rawText={effectiveResumeText}
+                          template={resumeTemplate}
+                          highlightKeywords={jdKeywords}
+                        />
+                      </div>
+                      <div className="mx-auto max-w-[800px] mt-4 flex gap-3 justify-center">
+                        <button onClick={handleViewFullPage} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold rounded-lg bg-slate-800 hover:bg-slate-900 text-white transition-colors">
+                          <Eye size={15} /> View
+                        </button>
+                        <button onClick={handleDownloadPDF} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors">
+                          <Download size={15} /> Download PDF
+                        </button>
+                        <button onClick={handleDownloadWord} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors">
+                          <Download size={15} /> Download Word
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <AlertTriangle className="text-gray-300 mb-3" size={32} />
+                      <h3 className="text-base font-semibold text-gray-600">No resume data available</h3>
+                      <p className="text-sm text-gray-400 mt-1">Resume data will appear after the job search workflow processes this listing</p>
+                    </div>
+                  )}
+                </main>
+              </div>
             </div>
           </div>
         );
@@ -824,7 +1001,7 @@ ${RESUME_WORD_STYLES}
       {/* Detail Modal */}
       {detailJob && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setDetailJob(null)}>
-          <div className="bg-white/80 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 w-[700px] max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-[700px] max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between shrink-0">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">{extractRole(detailJob)}</h2>
@@ -995,8 +1172,8 @@ ${RESUME_WORD_STYLES}
 
       {/* Waiting for Jobs Card */}
       {waitingForJobs && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
-          <div className="bg-white/70 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 px-8 py-8 w-[420px] text-center space-y-4">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 px-8 py-8 w-[420px] text-center space-y-4">
             <div className="mx-auto w-14 h-14 rounded-2xl bg-violet-50 flex items-center justify-center">
               <Sparkles size={28} className="text-violet-500 animate-pulse" />
             </div>
@@ -1072,7 +1249,7 @@ ${RESUME_WORD_STYLES}
 
       {/* Search + Filter Row */}
       <div className="flex items-center gap-3 mb-4 shrink-0">
-        <div className="flex-1 bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 px-4 py-2.5 flex items-center gap-2 shadow-sm">
+        <div className="flex-1 bg-white rounded-xl border border-gray-100 px-4 py-2.5 flex items-center gap-2 shadow-sm">
           <Search size={16} className="text-gray-400 shrink-0" />
           <input
             type="text"
@@ -1088,7 +1265,7 @@ ${RESUME_WORD_STYLES}
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="bg-white/50 backdrop-blur-xl border border-white/50 rounded-xl px-4 py-2.5 text-sm text-gray-600 font-medium outline-none cursor-pointer hover:border-white/70 hover:bg-white/70 transition-all shadow-sm"
+          className="bg-white border border-gray-100 rounded-xl px-4 py-2.5 text-sm text-gray-600 font-medium outline-none cursor-pointer hover:border-gray-200 hover:bg-gray-50 transition-all shadow-sm"
         >
           <option value="all">All Jobs</option>
           <option value="applied">Applied</option>
@@ -1097,7 +1274,7 @@ ${RESUME_WORD_STYLES}
       </div>
 
       {/* Job Table */}
-      <div className="flex-1 overflow-hidden bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 shadow-md shadow-blue-100/20 flex flex-col">
+      <div className="flex-1 overflow-hidden bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col">
         {loading ? (
           <div className="flex items-center justify-center flex-1">
             <div className="w-7 h-7 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />

@@ -227,6 +227,13 @@ const TABS = [
 
 const PAGE_SIZE = 10;
 
+const hasCompleteGeneratedResume = (text) => {
+  if (!text || typeof text !== 'string') return false;
+  const clean = text.trim();
+  if (clean.length < 1200) return false;
+  return /PROFESSIONAL\s+SUMMARY/i.test(clean) && /(?:PROFESSIONAL\s+EXPERIENCE|WORK\s+EXPERIENCE|EXPERIENCE)/i.test(clean);
+};
+
 const AdminStudentView = () => {
   const { studentId } = useParams();
   const navigate = useNavigate();
@@ -252,6 +259,8 @@ const AdminStudentView = () => {
   const [applyingJob, setApplyingJob] = useState(null);
   const [detailJob, setDetailJob] = useState(null);
   const [resumeJob, setResumeJob] = useState(null);
+  const [resumeConfirmJob, setResumeConfirmJob] = useState(null);
+  const [generatingResume, setGeneratingResume] = useState(false);
   const resumeRef = useRef(null);
   const [filterType, setFilterType] = useState('all');
 
@@ -285,10 +294,23 @@ const AdminStudentView = () => {
     else if (activeTab === 'applications') fetchApplications();
   }, [activeTab, studentId]);
 
+  // Re-fetch when user returns to this browser tab (catches student applying in another tab)
+  useEffect(() => {
+    const onVisible = () => {
+      if (!studentId || document.visibilityState !== 'visible') return;
+      if (activeTab === 'dashboard') fetchDashboard();
+      else if (activeTab === 'applications') fetchApplications();
+      else if (activeTab === 'jobs') fetchAppliedStatus();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [activeTab, studentId]);
+
   const fetchDashboard = async () => {
     setDashLoading(true);
     try {
-      const res = await api.get(`/admin/students/${studentId}/dashboard-data`);
+      // Cache-bust with timestamp so browser never serves a stale 304
+      const res = await api.get(`/admin/students/${studentId}/dashboard-data?t=${Date.now()}`);
       setDashData(res.data);
     } catch {
       toast.error('Failed to load dashboard data');
@@ -311,7 +333,7 @@ const AdminStudentView = () => {
 
   const fetchAppliedStatus = async () => {
     try {
-      const { data } = await api.get(`/admin/students/${studentId}/external-applied-status`);
+      const { data } = await api.get(`/admin/students/${studentId}/external-applied-status?t=${Date.now()}`);
       setAppliedLinks(new Set((data.applications || []).map(a => a.jobLink)));
     } catch { /* ignore */ }
   };
@@ -319,7 +341,7 @@ const AdminStudentView = () => {
   const fetchApplications = async () => {
     setAppsLoading(true);
     try {
-      const res = await api.get(`/admin/students/${studentId}/applications`);
+      const res = await api.get(`/admin/students/${studentId}/applications?t=${Date.now()}`);
       setApplications(res.data.applications || []);
       setSheetApps(res.data.sheetApplications || []);
     } catch {
@@ -367,12 +389,50 @@ const AdminStudentView = () => {
         jobTitle: extractRole(job),
       });
       toast.success(`Applied on behalf of ${student?.fullName}`);
+      // Refresh applied links set AND dashboard counts
+      fetchAppliedStatus();
+      fetchDashboard();
     } catch (error) {
       // Revert on failure
       setAppliedLinks(prev => { const next = new Set(prev); next.delete(jobLink); return next; });
       toast.error(error.response?.data?.message || 'Failed to apply');
     } finally {
       setApplyingJob(null);
+    }
+  };
+
+  // Open resume: show existing if complete, else ask to generate
+  const handleResumeClick = (job, options = {}) => {
+    if (!job) return;
+    if (options.closeDetails) setDetailJob(null);
+    if (hasCompleteGeneratedResume(job.resume_text)) {
+      setResumeJob(job);
+    } else {
+      setResumeConfirmJob(job);
+    }
+  };
+
+  // Generate tailored resume for student via admin endpoint
+  const handleGenerateResume = async () => {
+    if (!resumeConfirmJob || generatingResume) return;
+    setGeneratingResume(true);
+    try {
+      const { data } = await api.post(`/admin/students/${studentId}/resume/generate`, resumeConfirmJob);
+      const updatedJob = data.job;
+      if (updatedJob) {
+        // Update the jobs list so the generated resume is reflected
+        setSheetJobs(prev => prev.map(j => {
+          const sameLink = updatedJob.job_apply_link && j.job_apply_link === updatedJob.job_apply_link;
+          return sameLink ? { ...j, ...updatedJob } : j;
+        }));
+        setResumeJob(updatedJob);
+      }
+      toast.success(data.message || 'Resume generated successfully.');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to generate resume');
+    } finally {
+      setGeneratingResume(false);
+      setResumeConfirmJob(null);
     }
   };
 
@@ -586,6 +646,44 @@ const AdminStudentView = () => {
         </div>
       )}
 
+      {/* Generate Resume Confirmation Modal */}
+      {resumeConfirmJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => !generatingResume && setResumeConfirmJob(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl border w-[380px] p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center">
+                <Sparkles size={20} className="text-violet-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Generate ATS Resume</h3>
+                <p className="text-[11px] text-gray-400 mt-0.5">For {student?.fullName}</p>
+              </div>
+            </div>
+            <p className="text-[13px] text-gray-600 leading-relaxed">
+              Create a tailored ATS resume for <strong>{extractRole(resumeConfirmJob)}</strong> at <strong>{resumeConfirmJob.employer_name}</strong>.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => setResumeConfirmJob(null)}
+                disabled={generatingResume}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >Cancel</button>
+              <button
+                onClick={handleGenerateResume}
+                disabled={generatingResume}
+                className="flex-1 px-4 py-2 text-sm font-semibold rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {generatingResume ? (
+                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generating...</>
+                ) : (
+                  <><Sparkles size={14} /> Generate</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Resume Modal */}
       {resumeJob && (() => {
         const resumeText = resumeJob.resume_text || '';
@@ -672,8 +770,8 @@ const AdminStudentView = () => {
                   </div>
                 )}
               </div>
-              {/* Footer with Apply */}
-              {resumeText && resumeJob.job_apply_link && (
+              {/* Footer with Apply + Regenerate */}
+              {resumeJob.job_apply_link && (
                 <div className="flex items-center justify-center gap-3 px-8 py-4 border-t border-gray-100 shrink-0 bg-gray-50/50">
                   {resumeJob.pdf_link ? (
                     <a href={resumeJob.pdf_link} target="_blank" rel="noopener noreferrer"
@@ -681,6 +779,11 @@ const AdminStudentView = () => {
                       <Eye size={15} /> View PDF
                     </a>
                   ) : null}
+                  <button
+                    onClick={() => { setResumeConfirmJob({ ...resumeJob, forceRegenerate: true }); setResumeJob(null); }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold rounded-lg border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 transition-colors">
+                    <Sparkles size={15} /> Regenerate
+                  </button>
                   {appliedLinks.has(resumeJob.job_apply_link) ? (
                     <span className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold rounded-lg border border-violet-200 text-violet-700 bg-violet-50">
                       <CheckCircle2 size={15} /> Applied
@@ -775,9 +878,17 @@ const AdminStudentView = () => {
             <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0 bg-gray-50">
               {detailJob.resume_text && (
                 <button
-                  onClick={() => { setResumeJob(detailJob); setDetailJob(null); }}
+                  onClick={() => handleResumeClick(detailJob, { closeDetails: true })}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-violet-700 bg-violet-50 border border-violet-200 hover:bg-violet-100 transition-colors">
                   <FileText size={15} /> Resume
+                </button>
+              )}
+              {/* When no resume yet, offer to generate */}
+              {!detailJob.resume_text && detailJob.jd && (
+                <button
+                  onClick={() => { setResumeConfirmJob(detailJob); setDetailJob(null); }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-violet-700 bg-violet-50 border border-violet-200 hover:bg-violet-100 transition-colors">
+                  <FileText size={15} /> Generate Resume
                 </button>
               )}
               {detailJob.job_apply_link && (
@@ -806,7 +917,7 @@ const AdminStudentView = () => {
       )}
 
       {/* Tab Content */}
-      {activeTab === 'dashboard' && <DashboardTab data={dashData} loading={dashLoading} />}
+      {activeTab === 'dashboard' && <DashboardTab data={dashData} loading={dashLoading} onRefresh={fetchDashboard} />}
       {activeTab === 'jobs' && (
         <JobsTab
           jobs={paginatedJobs}
@@ -828,7 +939,7 @@ const AdminStudentView = () => {
           filterType={filterType}
           onFilterChange={setFilterType}
           onViewDetail={setDetailJob}
-          onViewResume={setResumeJob}
+          onViewResume={handleResumeClick}
         />
       )}
       {activeTab === 'applications' && (
@@ -845,7 +956,7 @@ const AdminStudentView = () => {
 };
 
 /* ═══ Dashboard Tab ═══ */
-const DashboardTab = ({ data, loading }) => {
+const DashboardTab = ({ data, loading, onRefresh }) => {
   if (loading || !data) {
     return (
       <div className="flex items-center justify-center h-48">
@@ -862,7 +973,8 @@ const DashboardTab = ({ data, loading }) => {
   const offerCount = stats.offerReceived || 0;
   const adminApplyCount = stats.adminApplyCount || 0;
   const candidateApplyCount = stats.candidateApplyCount || 0;
-  const totalSheetJobs = stats.totalJobs || 0;
+  // totalSheetJobs = student's matched jobs (savedJobResult count); fall back to totalJobs for compat
+  const totalSheetJobs = stats.totalSheetJobs || stats.totalJobs || 0;
   const jobsToApply = Math.max(totalSheetJobs - sheetAppliedCount, 0);
 
   const statCards = [
@@ -871,7 +983,6 @@ const DashboardTab = ({ data, loading }) => {
     { label: 'Offers', value: offerCount, color: 'bg-violet-50 text-violet-700 ring-violet-200', icon: <CheckCircle2 size={18} className="text-violet-600" /> },
     { label: 'Rejected', value: rejectedCount, color: 'bg-red-50 text-red-700 ring-red-200', icon: <XCircle size={18} className="text-red-600" /> },
     { label: 'Jobs to Apply', value: jobsToApply, color: 'bg-emerald-50 text-emerald-700 ring-emerald-200', icon: <Briefcase size={18} className="text-emerald-600" /> },
-    { label: 'Sheet Apps', value: sheetAppliedCount, color: 'bg-cyan-50 text-cyan-700 ring-cyan-200', icon: <Zap size={18} className="text-cyan-600" /> },
   ];
 
   /* Donut chart helper */
@@ -891,6 +1002,19 @@ const DashboardTab = ({ data, loading }) => {
 
   return (
     <div className="space-y-5">
+      {/* Header row with Refresh button */}
+      {onRefresh && (
+        <div className="flex justify-end">
+          <button
+            onClick={onRefresh}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors bg-white shadow-sm"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Refresh
+          </button>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {statCards.map((s, i) => (
@@ -953,63 +1077,61 @@ const DashboardTab = ({ data, loading }) => {
         </div>
       </div>
 
-      {/* Recent Applications */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-[13px] font-semibold text-gray-900 flex items-center gap-2">
-            <Briefcase size={15} className="text-blue-600" /> Recent Applications
-          </h3>
-          <span className="text-[11px] font-medium text-gray-400">{recentApplications?.length || 0} latest</span>
-        </div>
-        <div className="divide-y divide-gray-50">
-          {recentApplications?.length > 0 ? recentApplications.map(app => (
-            <div key={app.id} className="px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-gray-900 truncate">{app.job?.title || 'Untitled'}</p>
-                  <p className="text-[12px] text-gray-500 mt-0.5">{app.job?.company}{app.job?.location ? ` · ${app.job.location}` : ''}</p>
-                </div>
-                {statusBadge(app.status)}
-              </div>
-              <p className="text-[11px] text-gray-400 mt-1.5">{formatDate(app.appliedAt)}</p>
+      {/* Recent Applications — merge DB + sheet, sorted newest first */}
+      {(() => {
+        const dbApps = (recentApplications || []).map(app => ({
+          key: app.id,
+          title: app.job?.title || 'Untitled',
+          company: app.job?.company || '',
+          location: app.job?.location || '',
+          status: app.status,
+          date: app.appliedAt,
+          via: null,
+        }));
+        const sheetApps = (sheetApplications || []).map(sa => ({
+          key: sa.jobLink,
+          title: sa.jobTitle || sa.employerName || 'Job Application',
+          company: sa.employerName || '',
+          location: '',
+          status: sa.status,
+          date: sa.createdAt,
+          via: sa.appliedMethod === 'BOT' ? 'Bot' : 'Manual',
+        }));
+        const seenTitles = new Set(dbApps.map(a => a.title));
+        const uniqueSheet = sheetApps.filter(a => !seenTitles.has(a.title));
+        const combined = [...dbApps, ...uniqueSheet].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8);
+        return (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold text-gray-900 flex items-center gap-2">
+                <Briefcase size={15} className="text-blue-600" /> Recent Applications
+              </h3>
+              <span className="text-[11px] font-medium text-gray-400">{combined.length} latest</span>
             </div>
-          )) : (
-            <div className="px-5 py-8 text-center">
-              <Briefcase size={20} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-[13px] text-gray-400">No applications yet</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Sheet Applications */}
-      {sheetApplications?.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="text-[13px] font-semibold text-gray-900 flex items-center gap-2">
-              <Zap size={15} className="text-amber-600" /> Sheet Applications
-            </h3>
-            <span className="text-[11px] font-medium text-gray-400">{sheetApplications.length} total</span>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {sheetApplications.slice(0, 5).map((sa, i) => (
-              <div key={i} className="px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-gray-900 truncate">{sa.jobTitle || sa.employerName || 'Job'}</p>
-                    <p className="text-[12px] text-gray-500 mt-0.5">
-                      {sa.employerName} · via {sa.appliedMethod === 'BOT' ? 'Bot' : 'Manual'}
-                      {sa.matchScore != null ? ` · Match: ${sa.matchScore}%` : ''}
-                    </p>
+            <div className="divide-y divide-gray-50">
+              {combined.length > 0 ? combined.map(app => (
+                <div key={app.key} className="px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-gray-900 truncate">{app.title}</p>
+                      <p className="text-[12px] text-gray-500 mt-0.5">
+                        {app.company}{app.location ? ` · ${app.location}` : ''}{app.via ? ` · via ${app.via}` : ''}
+                      </p>
+                    </div>
+                    {statusBadge(app.status)}
                   </div>
-                  {statusBadge(sa.status)}
+                  <p className="text-[11px] text-gray-400 mt-1.5">{formatDate(app.date)}</p>
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1.5">{formatDate(sa.createdAt)}</p>
-              </div>
-            ))}
+              )) : (
+                <div className="px-5 py-8 text-center">
+                  <Briefcase size={20} className="mx-auto text-gray-300 mb-2" />
+                  <p className="text-[13px] text-gray-400">No applications yet</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
@@ -1143,7 +1265,7 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
                       onClick={() => onViewResume(job)}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 transition-colors"
                     >
-                      <FileText size={13} /> Resume
+                      <FileText size={13} /> {hasCompleteGeneratedResume(job.resume_text) ? 'Resume' : 'Gen Resume'}
                     </button>
                     <button
                       onClick={() => onViewDetail(job)}

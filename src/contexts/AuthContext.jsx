@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }) => {
       toast.success('Login successful!');
       return data.user;
     } catch (error) {
-      const msg = error.response?.data?.message || 'Login failed';
+      const msg = error.response?.data?.message || error.response?.data?.error || 'Unable to reach login server. Please try again.';
       toast.error(msg);
       throw error;
     }

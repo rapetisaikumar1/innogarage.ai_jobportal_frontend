@@ -168,8 +168,35 @@ const MyApplications = () => {
           appliedBy: null,
         };
       });
+
+      // Merge pending applies from sessionStorage (race condition fix: user navigated
+      // here before the mark-applied API call completed). Ignore entries older than 10 min
+      // so failed applies don't permanently appear.
+      const PENDING_TTL_MS = 10 * 60 * 1000;
+      const now = Date.now();
+      const pendingApplied = (() => {
+        try { return JSON.parse(sessionStorage.getItem('pendingApplied') || '[]'); } catch { return []; }
+      })().filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
+      const apiJobLinks = new Set((sheetRes.data.applications || []).map(a => a.jobLink));
+      const stillPending = pendingApplied.filter(p => !apiJobLinks.has(p.jobLink));
+      if (stillPending.length !== pendingApplied.length) {
+        try { sessionStorage.setItem('pendingApplied', JSON.stringify(stillPending)); } catch { /* ignore */ }
+      }
+      const pendingSheetApps = stillPending.map(p => ({
+        id: p.jobLink,
+        title: p.jobTitle || p.employerName || 'Job Application',
+        company: p.employerName || '—',
+        status: 'APPLIED',
+        appliedAt: p.appliedAt,
+        matchScore: p.matchScore,
+        jobLink: p.jobLink,
+        source: 'sheet',
+        fullJob: jobsMap[p.jobLink] || null,
+        appliedBy: null,
+      }));
+
       const seenLinks = new Set(dbApps.map(a => a.jobLink).filter(Boolean));
-      const uniqueSheetApps = sheetApps.filter(a => !seenLinks.has(a.jobLink));
+      const uniqueSheetApps = [...sheetApps, ...pendingSheetApps].filter(a => !seenLinks.has(a.jobLink));
       const all = [...dbApps, ...uniqueSheetApps].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
       setApplications(all);
     } catch (error) {
@@ -219,7 +246,6 @@ const MyApplications = () => {
             { label: 'Total Applied', value: stats.total, icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Interviews', value: stats.interviews, icon: Calendar, color: 'text-violet-600', bg: 'bg-violet-50' },
             { label: 'Offers', value: stats.offers, icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-            { label: 'Applied by Mentor', value: stats.adminApplied, icon: Bot, color: 'text-amber-600', bg: 'bg-amber-50' },
           ].map((stat, i) => (
             <div key={i} className="bg-white/50 backdrop-blur-xl border border-white/50 rounded-lg px-4 py-3 flex items-center gap-3 shadow-sm shadow-blue-100/20">
               <div className={`w-8 h-8 ${stat.bg} rounded-lg flex items-center justify-center`}>

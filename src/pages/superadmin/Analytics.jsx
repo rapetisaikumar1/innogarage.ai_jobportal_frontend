@@ -29,19 +29,24 @@ const Analytics = () => {
     return <div className="card text-center py-12"><p className="text-gray-500">No analytics data available</p></div>;
   }
 
+  const applicationsByStatus = analytics.applicationsByStatus || {};
+  const totalAdmins = analytics.totalAdmins ?? analytics.totalMentors ?? 0;
+  const interviewCount = applicationsByStatus.INTERVIEW_SCHEDULED ?? applicationsByStatus.INTERVIEW ?? 0;
+  const offerCount = applicationsByStatus.OFFER_RECEIVED ?? applicationsByStatus.OFFER ?? 0;
+
   const overviewStats = [
-    { label: 'Total Students', value: analytics.totalStudents, icon: Users, color: 'blue' },
-    { label: 'Total Admins', value: analytics.totalAdmins, icon: Users, color: 'purple' },
-    { label: 'Total Jobs', value: analytics.totalJobs, icon: Briefcase, color: 'emerald' },
-    { label: 'Total Applications', value: analytics.totalApplications, icon: TrendingUp, color: 'amber' },
-    { label: 'Training Materials', value: analytics.totalMaterials, icon: BookOpen, color: 'rose' },
-    { label: 'Total Bookings', value: analytics.totalBookings, icon: Calendar, color: 'cyan' },
+    { label: 'Total Students', value: analytics.totalStudents ?? 0, icon: Users, accent: 'bg-blue-50 text-blue-600' },
+    { label: 'Total Admins', value: totalAdmins, icon: Users, accent: 'bg-purple-50 text-purple-600' },
+    { label: 'Total Jobs', value: analytics.totalJobs ?? 0, icon: Briefcase, accent: 'bg-emerald-50 text-emerald-600' },
+    { label: 'Total Applications', value: analytics.totalApplications ?? 0, icon: TrendingUp, accent: 'bg-amber-50 text-amber-600' },
+    { label: 'Training Materials', value: analytics.totalMaterials ?? 0, icon: BookOpen, accent: 'bg-rose-50 text-rose-600' },
+    { label: 'Total Bookings', value: analytics.totalBookings ?? 0, icon: Calendar, accent: 'bg-cyan-50 text-cyan-600' },
   ];
 
   const statusColors = {
     APPLIED: 'bg-blue-100 text-blue-700',
-    INTERVIEW: 'bg-purple-100 text-purple-700',
-    OFFER: 'bg-green-100 text-green-700',
+    INTERVIEW_SCHEDULED: 'bg-purple-100 text-purple-700',
+    OFFER_RECEIVED: 'bg-green-100 text-green-700',
     REJECTED: 'bg-red-100 text-red-700',
     WITHDRAWN: 'bg-gray-100 text-gray-700',
     MANUAL_APPLY_PENDING: 'bg-yellow-100 text-yellow-700',
@@ -60,7 +65,7 @@ const Analytics = () => {
           const Icon = stat.icon;
           return (
             <div key={stat.label} className="stat-card flex items-center gap-4">
-              <div className={`w-12 h-12 bg-${stat.color}-50 text-${stat.color}-600 rounded-xl flex items-center justify-center`}>
+              <div className={`w-12 h-12 ${stat.accent} rounded-xl flex items-center justify-center`}>
                 <Icon size={22} />
               </div>
               <div>
@@ -73,11 +78,11 @@ const Analytics = () => {
       </div>
 
       {/* Application Status Distribution */}
-      {analytics.applicationsByStatus && (
+      {applicationsByStatus && (
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Application Status Distribution</h2>
           <div className="space-y-3">
-            {Object.entries(analytics.applicationsByStatus).map(([status, count]) => {
+            {Object.entries(applicationsByStatus).map(([status, count]) => {
               const total = analytics.totalApplications || 1;
               const percentage = Math.round((count / total) * 100);
               return (
@@ -111,19 +116,19 @@ const Analytics = () => {
             <div className="flex items-center justify-between py-2 border-b">
               <span className="text-gray-600">Mentor-to-Student Ratio</span>
               <span className="font-bold text-gray-800">
-                1:{analytics.totalAdmins ? Math.round(analytics.totalStudents / analytics.totalAdmins) : 0}
+                1:{totalAdmins ? Math.round((analytics.totalStudents || 0) / totalAdmins) : 0}
               </span>
             </div>
             <div className="flex items-center justify-between py-2 border-b">
               <span className="text-gray-600">Interview Rate</span>
               <span className="font-bold text-gray-800">
-                {analytics.totalApplications ? Math.round(((analytics.applicationsByStatus?.INTERVIEW || 0) / analytics.totalApplications) * 100) : 0}%
+                {analytics.totalApplications ? Math.round((interviewCount / analytics.totalApplications) * 100) : 0}%
               </span>
             </div>
             <div className="flex items-center justify-between py-2">
               <span className="text-gray-600">Offer Rate</span>
               <span className="font-bold text-green-600">
-                {analytics.totalApplications ? Math.round(((analytics.applicationsByStatus?.OFFER || 0) / analytics.totalApplications) * 100) : 0}%
+                {analytics.totalApplications ? Math.round((offerCount / analytics.totalApplications) * 100) : 0}%
               </span>
             </div>
           </div>
@@ -134,7 +139,7 @@ const Analytics = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between py-2 border-b">
               <span className="text-gray-600">Active Admins</span>
-              <span className="font-bold text-gray-800">{analytics.totalAdmins}</span>
+              <span className="font-bold text-gray-800">{totalAdmins}</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b">
               <span className="text-gray-600">Registered Students</span>

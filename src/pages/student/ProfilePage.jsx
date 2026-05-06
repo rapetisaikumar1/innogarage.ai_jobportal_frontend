@@ -4,6 +4,21 @@ import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { User, Mail, Phone, Linkedin, GraduationCap, Briefcase, Tag, FileText, Lock, MapPin, Target, Upload, Eye, X, CreditCard, Car, Plane } from 'lucide-react';
 
+const LOCATION_OPTIONS = ['USA', 'Canada', 'India'];
+
+const EXPERIENCE_OPTIONS = [
+  { value: 'No Experience', label: 'No Experience (Entry Level)' },
+  { value: 'Less than 1 year', label: 'Less than 1 year' },
+  { value: '1 year', label: '1 year' },
+  { value: '2 years', label: '2 years' },
+  { value: '3 years', label: '3 years' },
+  { value: '4 years', label: '4 years' },
+  { value: '5 years', label: '5 years' },
+  { value: '6-7 years', label: '6–7 years' },
+  { value: '8-10 years', label: '8–10 years' },
+  { value: '10+ years', label: '10+ years (Senior)' },
+];
+
 const ProfilePage = () => {
   const { user, updateUser } = useAuth();
   const [profile, setProfile] = useState(null);
@@ -211,9 +226,18 @@ const ProfilePage = () => {
 
             <div>
               <label className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 mb-1">
-                <Briefcase size={11} className="text-gray-400" /> Experience
+                <Briefcase size={11} className="text-gray-400" /> Years of Experience
               </label>
-              <textarea className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all resize-none" rows={2} value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} />
+              <select
+                className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all cursor-pointer"
+                value={form.experience}
+                onChange={(e) => setForm({ ...form, experience: e.target.value })}
+              >
+                <option value="">Select experience level...</option>
+                {EXPERIENCE_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </div>
 
             {/* Job Search Fields */}
@@ -230,7 +254,14 @@ const ProfilePage = () => {
                   <label className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 mb-1">
                     <MapPin size={11} className="text-gray-400" /> Preferred Location
                   </label>
-                  <input type="text" className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all placeholder-gray-400" placeholder="e.g. Hyderabad, Remote" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+                  <select
+                    className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all cursor-pointer"
+                    value={form.location}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  >
+                    <option value="">Select country...</option>
+                    {LOCATION_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
               </div>
               <div>
@@ -244,9 +275,24 @@ const ProfilePage = () => {
                   <FileText size={11} className="text-gray-400" /> Resume
                 </label>
                 {profile?.resumeUrl && (
-                  <p className="text-[11px] text-gray-500 mb-1.5">Current: <a href={profile.resumeUrl} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">View Resume</a></p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <a href={profile.resumeUrl} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-blue-600 hover:text-blue-700 hover:underline" target="_blank" rel="noopener noreferrer">
+                      <FileText size={11} /> View Current Resume
+                    </a>
+                    <span className="text-gray-300">|</span>
+                    <span className="text-[10px] text-gray-400">Upload new to replace</span>
+                  </div>
                 )}
-                <input type="file" accept=".pdf" className="w-full text-[12px] text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 border border-gray-200 rounded-lg py-1.5 px-2 cursor-pointer" onChange={handleResumeUpload} />
+                <label className="flex items-center gap-3 w-full border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50/30 rounded-lg px-4 py-3 cursor-pointer transition-all group">
+                  <div className="w-8 h-8 bg-blue-50 group-hover:bg-blue-100 rounded-lg flex items-center justify-center shrink-0 transition-colors">
+                    <Upload size={15} className="text-blue-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-semibold text-gray-700 group-hover:text-blue-700 transition-colors">Click to upload resume</p>
+                    <p className="text-[10px] text-gray-400">PDF, Word (.doc, .docx) &mdash; max 10MB</p>
+                  </div>
+                  <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleResumeUpload} />
+                </label>
               </div>
             </div>
 

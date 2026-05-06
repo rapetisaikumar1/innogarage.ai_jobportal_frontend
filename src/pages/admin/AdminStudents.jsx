@@ -121,7 +121,7 @@ const AdminStudents = () => {
       : [];
 
     const stats = [
-      { label: 'Job Applications', value: detail._count?.jobApplications || 0, icon: <Briefcase size={18} />, color: 'text-blue-600', bgColor: 'bg-blue-50', ringColor: 'ring-blue-100' },
+      { label: 'Internal Applications', value: detail._count?.jobApplications || 0, icon: <Briefcase size={18} />, color: 'text-blue-600', bgColor: 'bg-blue-50', ringColor: 'ring-blue-100' },
       { label: 'Mentor Sessions', value: detail._count?.bookings || 0, icon: <BookOpen size={18} />, color: 'text-violet-600', bgColor: 'bg-violet-50', ringColor: 'ring-violet-100' },
       { label: 'Sheet Applications', value: detail._count?.sheetApplications || 0, icon: <Zap size={18} />, color: 'text-amber-600', bgColor: 'bg-amber-50', ringColor: 'ring-amber-100' },
       { label: 'Training Notes', value: detail._count?.trainingNotes || 0, icon: <FileText size={18} />, color: 'text-emerald-600', bgColor: 'bg-emerald-50', ringColor: 'ring-emerald-100' },
@@ -508,7 +508,7 @@ const AdminStudents = () => {
                   </td>
                   <td className="px-5 py-3.5 text-center">
                     <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 bg-blue-50 text-blue-700 text-[12px] font-bold rounded-full ring-1 ring-blue-100">
-                      {student._count?.jobApplications || 0}
+                      {(student._count?.jobApplications || 0) + (student._count?.sheetApplications || 0)}
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-center">

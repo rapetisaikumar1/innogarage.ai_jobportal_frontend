@@ -12,7 +12,7 @@ const ResumeViewPage = () => {
   const { user: authUser } = useAuth();
   const resumeRef = useRef(null);
 
-  const { sections = [], candidateName = '', headline = '', resumeText = '' } = location.state || {};
+  const { sections = [], candidateName = '', headline = '', resumeText = '', template = 'modern', highlightKeywords = [] } = location.state || {};
   const displayName = authUser?.fullName || candidateName || 'Resume';
 
   const handleDownloadPDF = () => {
@@ -86,6 +86,8 @@ ${RESUME_WORD_STYLES}
             linkedinProfile={authUser?.linkedinProfile}
             sections={sections}
             rawText={resumeText}
+            template={template}
+            highlightKeywords={highlightKeywords}
           />
         </div>
       </div>
