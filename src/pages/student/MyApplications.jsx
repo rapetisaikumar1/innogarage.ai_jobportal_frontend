@@ -125,12 +125,12 @@ const MyApplications = () => {
 
   const fetchApplications = async () => {
     try {
-      // Use allSettled so a single slow/failed endpoint (e.g. Google Sheet fetch)
+      // Use allSettled so one slow or failed endpoint does not block this page.
       // does not break the entire My Applications page.
       const results = await Promise.allSettled([
         api.get('/jobs/applications/mine?status=APPLIED'),
-        api.get('/jobs/sheet/applied-status'),
-        api.get('/jobs/sheet'),
+        api.get('/jobs/external-applied-status'),
+        api.get('/jobs/matched'),
       ]);
       const dbRes = results[0].status === 'fulfilled' ? results[0].value : { data: { applications: [] } };
       const sheetRes = results[1].status === 'fulfilled' ? results[1].value : { data: { applications: [] } };

@@ -254,8 +254,6 @@ const AdminStudentView = () => {
   const [resumeJob, setResumeJob] = useState(null);
   const resumeRef = useRef(null);
   const [filterType, setFilterType] = useState('all');
-  const pollRef = useRef(null);
-  const jobCountBeforeTrigger = useRef(0);
 
   // Applications state
   const [applications, setApplications] = useState([]);
@@ -287,11 +285,6 @@ const AdminStudentView = () => {
     else if (activeTab === 'applications') fetchApplications();
   }, [activeTab, studentId]);
 
-  // Cleanup polling
-  useEffect(() => {
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, []);
-
   const fetchDashboard = async () => {
     setDashLoading(true);
     try {
@@ -307,7 +300,7 @@ const AdminStudentView = () => {
   const fetchJobs = async () => {
     setJobsLoading(true);
     try {
-      const res = await api.get(`/admin/students/${studentId}/sheet-jobs`);
+      const res = await api.get(`/admin/students/${studentId}/matched-jobs`);
       setSheetJobs(res.data.jobs || []);
     } catch {
       toast.error('Failed to load job listings');
@@ -318,7 +311,7 @@ const AdminStudentView = () => {
 
   const fetchAppliedStatus = async () => {
     try {
-      const { data } = await api.get(`/admin/students/${studentId}/sheet-applied-status`);
+      const { data } = await api.get(`/admin/students/${studentId}/external-applied-status`);
       setAppliedLinks(new Set((data.applications || []).map(a => a.jobLink)));
     } catch { /* ignore */ }
   };
@@ -340,59 +333,24 @@ const AdminStudentView = () => {
   const handleTriggerJobSearch = async (days) => {
     setShowDaysPopup(false);
     setTriggeringSearch(true);
-    jobCountBeforeTrigger.current = sheetJobs.length;
+    setWaitingForJobs(true);
     try {
       const { data } = await api.post(`/admin/students/${studentId}/trigger-job-search`, { days: String(days) });
       toast.success(data.message || 'Job search triggered!');
 
-      // JS mode returns jobs directly — no polling needed
-      if (data.mode === 'js' && data.jobs) {
-        setSheetJobs(prev => {
-          const existingKeys = new Set(prev.map(j => `${j.employer_name}|${j.job_title}`.toLowerCase()));
-          const newOnes = data.jobs.filter(j => !existingKeys.has(`${j.employer_name}|${j.job_title}`.toLowerCase()));
-          return [...newOnes, ...prev];
-        });
-        setTriggeringSearch(false);
+      if (Array.isArray(data.jobs)) {
+        setSheetJobs(data.jobs);
         await fetchAppliedStatus();
-        return;
       }
-
-      // N8N mode — poll for results
-      setWaitingForJobs(true);
-      // Poll every 10s for new jobs
-      if (pollRef.current) clearInterval(pollRef.current);
-      pollRef.current = setInterval(async () => {
-        try {
-          const res = await api.get(`/admin/students/${studentId}/sheet-jobs`);
-          const newJobs = res.data.jobs || [];
-          if (newJobs.length > jobCountBeforeTrigger.current) {
-            setSheetJobs(newJobs);
-            setWaitingForJobs(false);
-            setTriggeringSearch(false);
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-            await fetchAppliedStatus();
-            toast.success('New jobs found!');
-          }
-        } catch { /* retry */ }
-      }, 10000);
-      // Safety timeout: stop after 3 minutes
-      setTimeout(() => {
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-          setWaitingForJobs(false);
-          setTriggeringSearch(false);
-          fetchJobs();
-        }
-      }, 180000);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to trigger job search');
+    } finally {
       setTriggeringSearch(false);
+      setWaitingForJobs(false);
     }
   };
 
-  // Mark sheet job as applied on behalf of student
+  // Mark an external saved job as applied on behalf of student
   const handleMarkApplied = async (job) => {
     if (!job.job_apply_link) return;
     const jobLink = job.job_apply_link;
@@ -402,7 +360,7 @@ const AdminStudentView = () => {
     // Open the apply link in new tab
     window.open(jobLink, '_blank', 'noopener,noreferrer');
     try {
-      await api.post(`/admin/students/${studentId}/mark-sheet-applied`, {
+      await api.post(`/admin/students/${studentId}/mark-external-applied`, {
         jobLink,
         employerName: job.employer_name,
         matchScore: job.match_score,

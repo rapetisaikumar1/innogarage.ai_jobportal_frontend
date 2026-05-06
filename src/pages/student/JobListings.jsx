@@ -5,21 +5,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import html2pdf from 'html2pdf.js';
 import { saveAs } from 'file-saver';
+import ResumeDocument, { RESUME_WORD_STYLES } from '../../components/resume/ResumeDocument';
 import {
   Search, ExternalLink, Briefcase, RefreshCw, X, FileText, AlertTriangle,
   Clock, Sparkles, MapPin, Building2, Bookmark, ChevronLeft, ChevronRight, Info, CheckCircle2,
   Eye, Download, Crown, Lock
 } from 'lucide-react';
-
-/* ── Section accent colors (cycle through) ── */
-const SECTION_COLORS = [
-  { border: '#1e40af', bg: '#eff6ff', text: '#1e40af' },
-  { border: '#7c3aed', bg: '#f5f3ff', text: '#7c3aed' },
-  { border: '#059669', bg: '#ecfdf5', text: '#059669' },
-  { border: '#dc2626', bg: '#fef2f2', text: '#dc2626' },
-  { border: '#d97706', bg: '#fffbeb', text: '#d97706' },
-  { border: '#0891b2', bg: '#ecfeff', text: '#0891b2' },
-];
 
 /* ── avatar bg palette ── */
 const AVATAR_BG = [
@@ -87,6 +78,15 @@ const extractRole = (job) => {
   // 5. Final fallback — use raw job_title if it exists at all, else employer
   if (job.job_title && job.job_title.trim().length > 3) return job.job_title.trim().slice(0, 80);
   return job.employer_name || 'View Details';
+};
+
+const hasCompleteGeneratedResume = (text) => {
+  if (!text || typeof text !== 'string') return false;
+  const clean = text.trim();
+  if (clean.length < 1200) return false;
+  // Only require PROFESSIONAL SUMMARY + an EXPERIENCE section — skills section name varies by resume format
+  return /PROFESSIONAL\s+SUMMARY/i.test(clean)
+    && /(?:PROFESSIONAL\s+EXPERIENCE|WORK\s+EXPERIENCE|EXPERIENCE)/i.test(clean);
 };
 
 const formatDate = (ts) => {
@@ -209,7 +209,19 @@ const parseResumeSections = (text, candidateName, sheetCandidateName) => {
   };
 
   const lines = text.split('\n');
-  const sectionHeaders = /^\s*(PROFESSIONAL\s*SUMMARY|SUMMARY|OBJECTIVE|PROFESSIONAL\s*EXPERIENCE|EXPERIENCE|WORK\s*EXPERIENCE|EDUCATION|SKILLS|KEY\s*SKILLS|TECHNICAL\s*SKILLS|CERTIFICATIONS|PROJECTS|ACHIEVEMENTS|AWARDS|LANGUAGES|INTERESTS|REFERENCES|CONTACT\s*INFORMATION|PROFESSIONAL\s*PROFILE|PROFILE|QUALIFICATIONS|CORE\s*COMPETENCIES|NOTES?\s*(?:ON\s*)?ADDRESSED\s*GAPS?|ADDITIONAL\s*NOTES?|NOTES?)\s*:?\s*$/i;
+  const sectionHeaders = /^\s*(PROFESSIONAL\s*SUMMARY|SUMMARY|OBJECTIVE|PROFESSIONAL\s*EXPERIENCE|EXPERIENCE|WORK\s*EXPERIENCE|EDUCATION|CORE\s*SKILLS|SKILLS|KEY\s*SKILLS|TECHNICAL\s*SKILLS|CERTIFICATIONS|PROJECT\s*HIGHLIGHTS|SELECTED\s*PROJECTS|PROJECTS|ACHIEVEMENTS|AWARDS|LANGUAGES|INTERESTS|REFERENCES|ATS\s*KEYWORDS|CONTACT\s*INFORMATION|PROFESSIONAL\s*PROFILE|PROFILE|QUALIFICATIONS|CORE\s*COMPETENCIES|NOTES?\s*(?:ON\s*)?ADDRESSED\s*GAPS?|ADDITIONAL\s*NOTES?|NOTES?)\s*:?\s*$/i;
+  // Also treat any short all-uppercase line as a section heading (handles user's custom section names)
+  const isAllCapsHeading = (line) => {
+    const t = line.trim();
+    if (t.length < 3 || t.length > 70) return false;
+    if (/[.!?;,]$/.test(t)) return false;
+    if (/[|]/.test(t)) return false; // pipe = job header line, not a section heading
+    if (/\b(19|20)\d{2}\b/.test(t)) return false; // has year = job header line
+    const letters = t.replace(/[^A-Za-z]/g, '');
+    if (letters.length < 3) return false;
+    const upperCount = (letters.match(/[A-Z]/g) || []).length;
+    return upperCount / letters.length >= 0.85 && t.split(/\s+/).length <= 8;
+  };
   const sections = [];
   let currentSection = null;
   const contactLines = [];
@@ -263,25 +275,23 @@ const parseResumeSections = (text, candidateName, sheetCandidateName) => {
     // Strip candidate name from the beginning of lines
     trimmed = stripName(trimmed);
     if (!trimmed) continue;
-    if (sectionHeaders.test(trimmed)) {
+    if (sectionHeaders.test(trimmed) || isAllCapsHeading(trimmed)) {
       foundFirstSection = true;
       if (currentSection) sections.push(currentSection);
       currentSection = { heading: trimmed.replace(/:$/, '').trim().toUpperCase(), lines: [] };
     } else if (!foundFirstSection) {
-      // Capture role/title line from pre-section area
-      if (!roleTitle) {
-        const titleMatch = trimmed.match(/^\(?\s*(?:job\s*title\s*[:–\-]?)\s*(.+?)\s*\)?$/i);
-        if (titleMatch) {
-          roleTitle = titleMatch[1].trim();
-          continue;
-        }
-        // If it looks like a title (not too long, no phone/email), treat as role
-        if (trimmed.length <= 80 && !/[@]/.test(trimmed) && !/^\(?\+/.test(trimmed)) {
+      // Before the first section heading: capture only the role/title line for the header.
+      // Discard name lines, contact lines, location lines, and any URL lines entirely.
+      const isUrlLine = /^https?:\/\/|^www\.|linkedin\.com|github\.com/i.test(trimmed);
+      const hasEmailOrPhone = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(trimmed)
+        || /(\+?\(?\d[\d\s\-().]{6,}\d)/.test(trimmed);
+      if (!isUrlLine && !hasEmailOrPhone && !isNameLine(trimmed) && !isLocationLine(trimmed)) {
+        // Only capture the FIRST short non-contact line as roleTitle; discard everything else
+        if (!roleTitle && trimmed.length <= 100) {
           roleTitle = trimmed;
-          continue;
         }
+        // intentionally do NOT push to contactLines — discard silently
       }
-      contactLines.push(trimmed);
     } else {
       if (!currentSection) currentSection = { heading: 'DETAILS', lines: [] };
       currentSection.lines.push(trimmed);
@@ -331,7 +341,8 @@ const parseResumeSections = (text, candidateName, sheetCandidateName) => {
     !/^NOTES?/i.test(s.heading) &&
     !/^ADDITIONAL\s*NOTES?/i.test(s.heading) &&
     !/^ADDRESSED\s*GAPS?/i.test(s.heading) &&
-    !/^CONTACT\s*INFORMATION$/i.test(s.heading)
+    !/^CONTACT\s*INFORMATION$/i.test(s.heading) &&
+    !/^ATS\s*KEYWORDS?/i.test(s.heading)
   );
 
   return { contact: contactLines.join('\n'), roleTitle, sections: filteredSections };
@@ -402,7 +413,7 @@ const extractResumeRoleTitle = (resumeText, candidateName, sheetCandidateName) =
     return false;
   };
   const isLocationLine = (line) => /^\s*(remote|on-?site|hybrid)?\s*\(?.*(?:usa|india|uk|canada|germany|australia|arizona|california|texas|new york|florida|illinois|ohio|georgia|north carolina|virginia|washington|massachusetts|colorado|oregon|utah|nevada|michigan|minnesota|maryland|wisconsin|tennessee|missouri|connecticut|iowa|kansas|arkansas|nebraska|idaho|hawaii|alabama|louisiana|oklahoma|kentucky|south carolina|mississippi|pennsylvania|new jersey)[^a-z]*\)?\s*$/i.test(line);
-  const sectionHeaders = /^\s*(PROFESSIONAL\s*SUMMARY|SUMMARY|OBJECTIVE|PROFESSIONAL\s*EXPERIENCE|EXPERIENCE|WORK\s*EXPERIENCE|EDUCATION|SKILLS|KEY\s*SKILLS|TECHNICAL\s*SKILLS|CERTIFICATIONS|PROJECTS|ACHIEVEMENTS|AWARDS|LANGUAGES|INTERESTS|REFERENCES|CONTACT\s*INFORMATION|PROFESSIONAL\s*PROFILE|PROFILE|QUALIFICATIONS|CORE\s*COMPETENCIES)\s*:?\s*$/i;
+  const sectionHeaders = /^\s*(PROFESSIONAL\s*SUMMARY|SUMMARY|OBJECTIVE|PROFESSIONAL\s*EXPERIENCE|EXPERIENCE|WORK\s*EXPERIENCE|EDUCATION|CORE\s*SKILLS|SKILLS|KEY\s*SKILLS|TECHNICAL\s*SKILLS|CERTIFICATIONS|PROJECT\s*HIGHLIGHTS|SELECTED\s*PROJECTS|PROJECTS|ACHIEVEMENTS|AWARDS|LANGUAGES|INTERESTS|REFERENCES|ATS\s*KEYWORDS|CONTACT\s*INFORMATION|PROFESSIONAL\s*PROFILE|PROFILE|QUALIFICATIONS|CORE\s*COMPETENCIES)\s*:?\s*$/i;
 
   for (const line of resumeText.split('\n')) {
     const trimmed = line.trim();
@@ -429,7 +440,7 @@ const JobListings = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [triggeringN8n, setTriggeringN8n] = useState(false);
+  const [triggeringSearch, setTriggeringSearch] = useState(false);
   const [appliedLinks, setAppliedLinks] = useState(new Set());
   const [adminAppliedLinks, setAdminAppliedLinks] = useState(new Set());
   const [showDaysPopup, setShowDaysPopup] = useState(false);
@@ -437,6 +448,8 @@ const JobListings = () => {
   const [search, setSearch] = useState('');
   const [detailJob, setDetailJob] = useState(null);
   const [resumeJob, setResumeJob] = useState(null);
+  const [resumeConfirmJob, setResumeConfirmJob] = useState(null);
+  const [creatingResume, setCreatingResume] = useState(false);
   const [resumeViewMode, setResumeViewMode] = useState(false);
   const resumeRef = useRef(null);
   const [filterType, setFilterType] = useState('all');
@@ -444,8 +457,6 @@ const JobListings = () => {
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [waitingForJobs, setWaitingForJobs] = useState(false);
   const [usage, setUsage] = useState({ plan: 'free', used: 0, max: 5, label: 'Free' });
-  const pollRef = useRef(null);
-  const jobCountBeforeTrigger = useRef(0);
 
   const handleMarkApplied = async (job) => {
     const link = job.job_apply_link;
@@ -470,19 +481,18 @@ const JobListings = () => {
     });
     // Save to backend (fire-and-forget)
     try {
-      const resumeRole = extractResumeRoleTitle(job.resume_text, authUser?.fullName, job.candidate_name);
-      await api.post('/jobs/sheet/mark-applied', {
+      await api.post('/jobs/external/mark-applied', {
         jobLink: link,
         employerName: job.employer_name,
         matchScore: job.match_score,
-        jobTitle: resumeRole || extractRole(job),
+        jobTitle: extractRole(job),
       });
     } catch { /* best effort */ }
   };
 
   const fetchAppliedStatus = async () => {
     try {
-      const { data } = await api.get('/jobs/sheet/applied-status');
+      const { data } = await api.get('/jobs/external-applied-status');
       const apps = data.applications || [];
       setAppliedLinks(new Set(apps.map(a => a.jobLink)));
       setAdminAppliedLinks(new Set(apps.filter(a => a.appliedById).map(a => a.jobLink)));
@@ -496,13 +506,11 @@ const JobListings = () => {
     } catch { /* ignore */ }
   };
 
-  const fetchSheetJobs = async () => {
+  const fetchMatchedJobs = async () => {
     try {
       setLoading(true);
-      // Fetch only Google Sheet jobs (populated by n8n)
-      const sheetRes = await api.get('/jobs/sheet');
-      const sheetJobs = sheetRes.data.jobs || [];
-      setJobs(sheetJobs);
+      const { data } = await api.get('/jobs/matched');
+      setJobs(data.jobs || []);
     } catch (error) {
       toast.error('Failed to load job listings');
     } finally {
@@ -510,16 +518,16 @@ const JobListings = () => {
     }
   };
 
-  useEffect(() => { fetchSheetJobs(); fetchAppliedStatus(); fetchUsage(); return () => { if (pollRef.current) clearInterval(pollRef.current); }; }, []);
+  useEffect(() => { fetchMatchedJobs(); fetchAppliedStatus(); fetchUsage(); }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchSheetJobs(), fetchAppliedStatus(), fetchUsage()]);
+    await Promise.all([fetchMatchedJobs(), fetchAppliedStatus(), fetchUsage()]);
     setRefreshing(false);
     toast.success('Job listings refreshed!');
   };
 
-  const handleTriggerN8n = async (days) => {
+  const handleTriggerJobSearch = async (days) => {
     setShowDaysPopup(false);
 
     // Check limit on frontend too
@@ -528,56 +536,74 @@ const JobListings = () => {
       return;
     }
 
-    setTriggeringN8n(true);
+    setTriggeringSearch(true);
     setWaitingForJobs(true);
-    jobCountBeforeTrigger.current = jobs.length;
     try {
-      const { data } = await api.post('/jobs/trigger-n8n', { days: String(days) });
+      const { data } = await api.post('/jobs/search', { days: String(days) });
       toast.success(data.message || 'Job search triggered!');
       // Update usage count locally
       setUsage(prev => ({ ...prev, used: prev.used + 1 }));
 
-      // n8n mode: poll Google Sheet for new jobs
-      if (data.n8nTriggered) {
-        // Keep waitingForJobs true to show subtle indicator
-        if (pollRef.current) clearInterval(pollRef.current);
-        let pollCount = 0;
-        const baseCount = jobs.length;
-        const doPoll = async () => {
-          pollCount++;
-          try {
-            const res = await api.get('/jobs/sheet');
-            const sheetJobs = res.data.jobs || [];
-            if (sheetJobs.length > baseCount) {
-              setJobs(sheetJobs);
-              setWaitingForJobs(false);
-              setTriggeringN8n(false);
-              clearInterval(pollRef.current);
-              pollRef.current = null;
-              await fetchAppliedStatus();
-              toast.success('New jobs found!');
-              return;
-            }
-          } catch { /* retry next interval */ }
-          // Stop after 18 polls (90s)
-          if (pollCount >= 18) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-            setWaitingForJobs(false);
-            setTriggeringN8n(false);
-            fetchSheetJobs();
-          }
-        };
-        setTimeout(doPoll, 10000);
-        pollRef.current = setInterval(doPoll, 5000);
-      } else {
-        setWaitingForJobs(false);
-        setTriggeringN8n(false);
+      if (Array.isArray(data.jobs)) {
+        setJobs(data.jobs);
+        await fetchAppliedStatus();
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to trigger job search');
+    } finally {
       setWaitingForJobs(false);
-      setTriggeringN8n(false);
+      setTriggeringSearch(false);
+    }
+  };
+
+  const syncUpdatedJob = (updatedJob) => {
+    if (!updatedJob) return;
+
+    setJobs(prev => prev.map((job) => {
+      const sameLink = updatedJob.job_apply_link && job.job_apply_link === updatedJob.job_apply_link;
+      const sameId = updatedJob.id && job.id && job.id === updatedJob.id;
+      return sameLink || sameId ? { ...job, ...updatedJob } : job;
+    }));
+
+    setDetailJob(prev => {
+      if (!prev) return prev;
+      const sameLink = updatedJob.job_apply_link && prev.job_apply_link === updatedJob.job_apply_link;
+      const sameId = updatedJob.id && prev.id && prev.id === updatedJob.id;
+      return sameLink || sameId ? { ...prev, ...updatedJob } : prev;
+    });
+  };
+
+  const handleResumeClick = (job, options = {}) => {
+    if (!job) return;
+    if (options.closeDetails) setDetailJob(null);
+
+    if (hasCompleteGeneratedResume(job.resume_text)) {
+      setResumeJob(job);
+      return;
+    }
+
+    setResumeConfirmJob(job);
+  };
+
+  const handleGenerateResume = async () => {
+    if (!resumeConfirmJob || creatingResume) return;
+
+    setCreatingResume(true);
+    try {
+      const { data } = await api.post('/jobs/resume/generate', resumeConfirmJob);
+      const updatedJob = data.job;
+
+      if (updatedJob) {
+        syncUpdatedJob(updatedJob);
+        setResumeJob(updatedJob);
+      }
+
+      toast.success(data.message || 'ATS resume created successfully.');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to create ATS resume');
+    } finally {
+      setCreatingResume(false);
+      setResumeConfirmJob(null);
     }
   };
 
@@ -640,8 +666,51 @@ const JobListings = () => {
             </div>
             <div className="flex gap-2 pt-2">
               <button onClick={() => setShowDaysPopup(false)} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
-              <button onClick={() => handleTriggerN8n(daysInput || '1')} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors flex items-center justify-center gap-2">
+              <button onClick={() => handleTriggerJobSearch(daysInput || '1')} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors flex items-center justify-center gap-2">
                 <Sparkles size={14} /> Search
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ATS Resume Confirmation */}
+      {resumeConfirmJob && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45" onClick={() => { if (!creatingResume) setResumeConfirmJob(null); }}>
+          <div className="bg-white/85 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/60 p-6 w-[420px] space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0">
+                <FileText size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Create ATS Resume?</h3>
+                <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                  This will create a full ATS-friendly resume for
+                  <span className="font-semibold text-gray-800"> {extractRole(resumeConfirmJob)}</span>
+                  {resumeConfirmJob.employer_name ? <span> at <span className="font-semibold text-gray-800">{resumeConfirmJob.employer_name}</span></span> : null}.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-violet-100 bg-violet-50/80 px-4 py-3 text-sm text-violet-900 leading-relaxed">
+              The resume will use your uploaded profile resume as the source and tailor the full resume to this job description. Once created, it will be saved and reused for future viewing/downloads.
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setResumeConfirmJob(null)}
+                disabled={creatingResume}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGenerateResume}
+                disabled={creatingResume}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+              >
+                {creatingResume ? <RefreshCw size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                {creatingResume ? 'Creating...' : 'Create Resume'}
               </button>
             </div>
           </div>
@@ -652,7 +721,8 @@ const JobListings = () => {
       {resumeJob && (() => {
         const resumeText = resumeJob.resume_text || '';
         const candidateName = resumeJob.candidate_name || '';
-        const { contact, roleTitle, sections } = parseResumeSections(resumeText, authUser?.fullName || candidateName, resumeJob.candidate_name);
+        const { sections } = parseResumeSections(resumeText, authUser?.fullName || candidateName, resumeJob.candidate_name);
+        const jdRole = extractRole(resumeJob);
 
         const handleDownloadPDF = () => {
           const el = resumeRef.current;
@@ -671,12 +741,7 @@ const JobListings = () => {
           if (!el) return;
           const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="utf-8"><style>
-body{font-family:Georgia,serif;margin:40px 50px;color:#333}
-h1{font-size:22px;color:#1e3a5f;text-align:center;margin:0}
-.contact{text-align:center;font-size:11px;color:#4a5568;margin:8px 0 20px}
-h2{font-size:14px;color:#1e3a5f;text-transform:uppercase;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin:18px 0 8px}
-p,li{font-size:12px;line-height:1.6}
-ul{margin:4px 0;padding-left:20px}
+${RESUME_WORD_STYLES}
 </style></head><body>${el.innerHTML}</body></html>`;
           const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
           saveAs(blob, `${(authUser?.fullName || candidateName).replace(/\s+/g, '_')}_Resume.doc`);
@@ -686,7 +751,12 @@ ul{margin:4px 0;padding-left:20px}
           setResumeJob(null);
           setResumeViewMode(false);
           navigate('/dashboard/resume-view', {
-            state: { sections, candidateName: authUser?.fullName || candidateName },
+            state: {
+              sections,
+              candidateName: authUser?.fullName || candidateName,
+              headline: jdRole,
+              resumeText,
+            },
           });
         };
 
@@ -703,61 +773,16 @@ ul{margin:4px 0;padding-left:20px}
               {/* Resume Document */}
               <div className="overflow-y-auto flex-1 px-8 pb-4">
                 {resumeText ? (
-                  <div ref={resumeRef} className="border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
-                    {/* Gradient Header */}
-                    <div style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)', padding: '28px 40px 24px' }}>
-                      <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#ffffff', textAlign: 'center', textTransform: 'capitalize', fontFamily: 'Georgia, serif', margin: 0 }}>
-                        {authUser?.fullName || 'Resume'}
-                      </h1>
-
-                      {(authUser?.phone || authUser?.email || authUser?.linkedinProfile) && (
-                        <p style={{ textAlign: 'center', fontSize: '11px', color: '#93c5fd', marginTop: '8px', lineHeight: '1.6' }}>
-                          {[authUser?.phone, authUser?.email].filter(Boolean).join('  •  ')}
-                          {authUser?.linkedinProfile && (<><br />{authUser.linkedinProfile}</>)}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Content with colored sections */}
-                    <div style={{ padding: '20px 40px 32px', fontFamily: 'Georgia, serif' }}>
-                      {sections.map((section, si) => {
-                        const color = SECTION_COLORS[si % SECTION_COLORS.length];
-                        return (
-                          <div key={si} style={{ marginBottom: '16px' }}>
-                            <div style={{ borderLeft: `4px solid ${color.border}`, background: color.bg, padding: '6px 12px', marginBottom: '8px', borderRadius: '0 5px 5px 0' }}>
-                              <h2 style={{ fontSize: '12px', fontWeight: '700', letterSpacing: '0.1em', color: color.text, margin: 0, textTransform: 'uppercase' }}>
-                                {section.heading}
-                              </h2>
-                            </div>
-                            <div style={{ color: '#333', fontSize: '12px', lineHeight: '1.7', paddingLeft: '4px' }}>
-                              {section.lines.map((line, li) => {
-                                const trimmed = line.trim();
-                                if (!trimmed) return <div key={li} style={{ height: '6px' }} />;
-                                const isBullet = /^[-•*○◦▪●]/.test(trimmed) || /^(\d+[.)])/.test(trimmed);
-                                if (isBullet) {
-                                  const text = trimmed.replace(/^[-•*○◦▪●]\s*/, '').replace(/^(\d+[.)])\s*/, '');
-                                  return (
-                                    <div key={li} style={{ display: 'flex', gap: '8px', paddingLeft: '12px', paddingTop: '2px', paddingBottom: '2px' }}>
-                                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: color.border, display: 'inline-block', flexShrink: 0, marginTop: '7px' }} />
-                                      <span>{text}</span>
-                                    </div>
-                                  );
-                                }
-                                const isBoldLine = /^[A-Z].*\d{4}/.test(trimmed) || /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s/i.test(trimmed) || /–\s*(Present|Current)/i.test(trimmed);
-                                if (isBoldLine) return <p key={li} style={{ fontWeight: '600', marginTop: '4px', color: '#1e3a5f', margin: 0 }}>{trimmed}</p>;
-                                return <p key={li} style={{ paddingTop: '1px', paddingBottom: '1px', margin: 0 }}>{trimmed}</p>;
-                              })}
-                            </div>
-                            {si < sections.length - 1 && (
-                              <div style={{ borderBottom: '1px solid #e5e7eb', marginTop: '12px' }} />
-                            )}
-                          </div>
-                        );
-                      })}
-                      {sections.length === 0 && (
-                        <div style={{ fontSize: '12px', lineHeight: '1.7', color: '#333', whiteSpace: 'pre-line' }}>{resumeText}</div>
-                      )}
-                    </div>
+                  <div className="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
+                    <ResumeDocument
+                      ref={resumeRef}
+                      displayName={authUser?.fullName || candidateName || 'Resume'}
+                      headline={jdRole}
+                      contactItems={[authUser?.phone, authUser?.email].filter(Boolean)}
+                      linkedinProfile={authUser?.linkedinProfile}
+                      sections={sections}
+                      rawText={resumeText}
+                    />
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -940,7 +965,7 @@ ul{margin:4px 0;padding-left:20px}
             {/* Footer — Apply & Resume buttons */}
             <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0 bg-white">
               <button
-                onClick={() => { setDetailJob(null); setResumeJob(detailJob); }}
+                onClick={() => handleResumeClick(detailJob, { closeDetails: true })}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-violet-700 bg-violet-50 border border-violet-200 hover:bg-violet-100 transition-colors"
               >
                 <FileText size={15} />
@@ -1018,7 +1043,7 @@ ul{margin:4px 0;padding-left:20px}
               }
               setShowDaysPopup(true);
             }}
-            disabled={triggeringN8n}
+            disabled={triggeringSearch}
             className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-60 ${
               usage.used >= usage.max && usage.plan !== 'ultra'
                 ? 'bg-gray-400 text-white cursor-not-allowed'
@@ -1029,8 +1054,8 @@ ul{margin:4px 0;padding-left:20px}
               <><Lock size={14} /> Limit Reached</>
             ) : (
               <>
-                <Sparkles size={14} className={triggeringN8n ? 'animate-pulse' : ''} />
-                {triggeringN8n ? 'Searching...' : 'My Jobs'}
+                <Sparkles size={14} className={triggeringSearch ? 'animate-pulse' : ''} />
+                {triggeringSearch ? 'Searching...' : 'My Jobs'}
               </>
             )}
           </button>
@@ -1091,8 +1116,7 @@ ul{margin:4px 0;padding-left:20px}
                   {paginatedJobs.map((job, idx) => {
                     const globalIdx = (page - 1) * PAGE_SIZE + idx + 1;
                     const dateLabel = formatDate(job.timestamp);
-                    const resumeRole = extractResumeRoleTitle(job.resume_text, authUser?.fullName, job.candidate_name);
-                    const role = resumeRole || extractRole(job);
+                    const role = extractRole(job);
                     const score = parseInt(job.match_score) || 0;
                     const isApplied = job.job_apply_link && appliedLinks.has(job.job_apply_link);
 
@@ -1141,7 +1165,7 @@ ul{margin:4px 0;padding-left:20px}
                         <td className="pl-4 pr-5 py-3.5 w-80">
                           <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => setResumeJob(job)}
+                              onClick={() => handleResumeClick(job)}
                               className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
                               <FileText size={13} /> Resume
                             </button>

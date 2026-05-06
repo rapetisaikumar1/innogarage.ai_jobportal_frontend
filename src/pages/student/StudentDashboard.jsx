@@ -155,8 +155,8 @@ const StudentDashboard = () => {
       const [statsRes, appsRes, jobsRes, sheetAppliedRes] = await Promise.all([
           api.get('/jobs/stats'),
           api.get('/jobs/applications/mine?limit=5'),
-          api.get('/jobs/sheet'),
-          api.get('/jobs/sheet/applied-status'),
+          api.get('/jobs/matched'),
+          api.get('/jobs/external-applied-status'),
         ]);
         const allJobs = jobsRes.data.jobs || [];
         const sheetApplied = sheetAppliedRes.data.applications || [];
