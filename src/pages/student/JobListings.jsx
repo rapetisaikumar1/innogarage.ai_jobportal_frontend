@@ -666,7 +666,7 @@ const JobListings = () => {
             </div>
             <div className="flex gap-2 pt-2">
               <button onClick={() => setShowDaysPopup(false)} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
-              <button onClick={() => handleTriggerJobSearch(daysInput || '1')} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors flex items-center justify-center gap-2">
+              <button onClick={() => handleTriggerJobSearch(daysInput || '1')} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center justify-center gap-2">
                 <Sparkles size={14} /> Search
               </button>
             </div>
@@ -707,7 +707,7 @@ const JobListings = () => {
               <button
                 onClick={handleGenerateResume}
                 disabled={creatingResume}
-                className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
               >
                 {creatingResume ? <RefreshCw size={15} className="animate-spin" /> : <Sparkles size={15} />}
                 {creatingResume ? 'Creating...' : 'Create Resume'}
@@ -966,7 +966,7 @@ ${RESUME_WORD_STYLES}
             <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0 bg-white">
               <button
                 onClick={() => handleResumeClick(detailJob, { closeDetails: true })}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-violet-700 bg-violet-50 border border-violet-200 hover:bg-violet-100 transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
               >
                 <FileText size={15} />
                 Resume
@@ -978,7 +978,7 @@ ${RESUME_WORD_STYLES}
                   className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     appliedLinks.has(detailJob.job_apply_link)
                       ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
-                      : 'bg-violet-600 text-white hover:bg-violet-700 border border-violet-600'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-600'
                   }`}
                 >
                   {appliedLinks.has(detailJob.job_apply_link) ? (
@@ -1047,7 +1047,7 @@ ${RESUME_WORD_STYLES}
             className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-60 ${
               usage.used >= usage.max && usage.plan !== 'ultra'
                 ? 'bg-gray-400 text-white cursor-not-allowed'
-                : 'bg-violet-600 hover:bg-violet-700 text-white'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
             }`}
           >
             {usage.used >= usage.max && usage.plan !== 'ultra' ? (
@@ -1120,25 +1120,34 @@ ${RESUME_WORD_STYLES}
                     const score = parseInt(job.match_score) || 0;
                     const isApplied = job.job_apply_link && appliedLinks.has(job.job_apply_link);
 
+                    // Derive domain for company logo
+                    const logoDomain = (() => {
+                      if (job.employer_website) return job.employer_website.replace(/^https?:\/\//, '').split('/')[0];
+                      if (job.job_apply_link) return job.job_apply_link.replace(/^https?:\/\//, '').split('/')[0];
+                      return null;
+                    })();
+
                     return (
                       <tr key={job.id} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors group">
                         {/* # */}
                         <td className="pl-5 pr-2 py-3.5 w-10">
                           <span className="text-sm text-gray-400 font-medium">{globalIdx}</span>
                         </td>
-                        {/* Checkbox */}
-                        <td className="px-2 py-3.5 w-10">
-                          <input
-                            type="checkbox"
-                            checked={selectedRows.has(job.id)}
-                            onChange={() => toggleRow(job.id)}
-                            className="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500 cursor-pointer"
-                          />
-                        </td>
-                        {/* Avatar + Info */}
+                        {/* Logo + Info */}
                         <td className="px-3 py-3.5">
                           <div className="flex items-center gap-3.5">
-                            <div className={`w-10 h-10 rounded-xl ${avatarBg(job.employer_name)} text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm`}>
+                            {logoDomain ? (
+                              <img
+                                src={`https://logo.clearbit.com/${logoDomain}`}
+                                alt={job.employer_name}
+                                className="w-10 h-10 rounded-xl object-contain bg-white border border-gray-100 shadow-sm shrink-0 p-0.5"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextSibling.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div className={`w-10 h-10 rounded-xl ${avatarBg(job.employer_name)} text-white items-center justify-center font-bold text-sm shrink-0 shadow-sm ${logoDomain ? 'hidden' : 'flex'}`}>
                               {job.employer_name?.charAt(0)?.toUpperCase() || '?'}
                             </div>
                             <div className="min-w-0">
@@ -1154,7 +1163,7 @@ ${RESUME_WORD_STYLES}
                         <td className="px-4 py-3.5 text-right w-24">
                           {score > 0 && (
                             <div className="text-right">
-                              <span className={`text-lg font-bold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-violet-600' : score >= 40 ? 'text-amber-600' : 'text-gray-400'}`}>
+                              <span className={`text-lg font-bold ${score >= 80 ? 'text-emerald-600' : score >= 70 ? 'text-blue-600' : score >= 60 ? 'text-orange-500' : 'text-gray-400'}`}>
                                 {score}%
                               </span>
                               <p className="text-[10px] text-gray-400 leading-none mt-0.5">Resume Match</p>
@@ -1181,7 +1190,7 @@ ${RESUME_WORD_STYLES}
                             ) : job.job_apply_link?.startsWith('http') ? (
                               <button
                                 onClick={() => handleMarkApplied(job)}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors shadow-sm">
+                                className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm">
                                 <ExternalLink size={13} /> Apply
                               </button>
                             ) : null}
@@ -1221,7 +1230,7 @@ ${RESUME_WORD_STYLES}
                           onClick={() => setPage(item)}
                           className={`w-8 h-8 rounded-lg text-sm font-semibold transition-colors ${
                             page === item
-                              ? 'bg-violet-600 text-white'
+                              ? 'bg-blue-600 text-white'
                               : 'text-gray-500 hover:bg-gray-100'
                           }`}
                         >

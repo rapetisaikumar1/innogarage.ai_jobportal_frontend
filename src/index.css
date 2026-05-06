@@ -92,7 +92,7 @@ body {
   }
 
   .sidebar-link {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all duration-200 font-medium border border-transparent;
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-gray-800 hover:bg-gray-100 hover:text-gray-900 transition-all duration-200 font-semibold border border-transparent;
   }
 
   .sidebar-link-active {

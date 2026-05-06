@@ -293,7 +293,7 @@ const StudentDashboard = () => {
       </div>
 
       {/* ── Main two-column grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3">
 
         {/* Left: Recent Apps + Recent Jobs */}
         <div className="space-y-3 min-w-0">
@@ -320,7 +320,7 @@ const StudentDashboard = () => {
                 </div>
               </div>
             ) : (
-              <div className="divide-y divide-gray-50/80">
+              <div className="divide-y divide-gray-50/80 max-h-[280px] overflow-y-auto">
                 {recentApps.map((app) => {
                   const dateStr = new Date(app.appliedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                   const score = parseInt(app.matchScore) || 0;
@@ -373,7 +373,7 @@ const StudentDashboard = () => {
                 <p className="text-[13px] font-medium text-gray-600">No matched jobs yet — use <span className="font-semibold text-gray-800">My Jobs</span> to load roles.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-h-[340px] overflow-y-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="text-left text-[10px] text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-gray-50/60">
@@ -418,17 +418,17 @@ const StudentDashboard = () => {
         <div className="space-y-3">
 
           {/* Applications Overview */}
-          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-3.5 shadow shadow-blue-50/20">
-            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-3">Applications</h3>
-            <div className="flex items-center gap-3">
+          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-5 shadow shadow-blue-50/20">
+            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-4">Applications</h3>
+            <div className="flex items-center gap-4">
               <div className="relative shrink-0">
-                <DonutChart value={totalApplied} max={totalSheetJobs || 1} color="#1e40af" trackColor="#d1fae5" size={72} strokeWidth={8} />
+                <DonutChart value={totalApplied} max={totalSheetJobs || 1} color="#1e40af" trackColor="#d1fae5" size={88} strokeWidth={9} />
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[16px] font-extrabold text-gray-900 leading-none">{totalCount}</span>
+                  <span className="text-[17px] font-extrabold text-gray-900 leading-none">{totalCount}</span>
                   <span className="text-[9px] font-medium text-gray-500">Total</span>
                 </div>
               </div>
-              <div className="space-y-1.5 flex-1 min-w-0">
+              <div className="space-y-2 flex-1 min-w-0">
                 {[
                   { dot: 'bg-blue-800',    label: 'Applied',    val: totalApplied },
                   { dot: 'bg-cyan-500',    label: 'Candidate',  val: candidateApplyCount },
@@ -437,10 +437,10 @@ const StudentDashboard = () => {
                 ].map(r => (
                   <div key={r.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className={`w-1.5 h-1.5 rounded-full ${r.dot} shrink-0`} />
-                      <span className="text-[11px] font-medium text-gray-600 truncate">{r.label}</span>
+                      <span className={`w-2 h-2 rounded-full ${r.dot} shrink-0`} />
+                      <span className="text-[12px] font-medium text-gray-600 truncate">{r.label}</span>
                     </div>
-                    <span className="text-[12px] font-bold text-gray-800 ml-1">{r.val}</span>
+                    <span className="text-[13px] font-bold text-gray-800 ml-1">{r.val}</span>
                   </div>
                 ))}
               </div>
@@ -448,27 +448,27 @@ const StudentDashboard = () => {
           </div>
 
           {/* Progress */}
-          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-3.5 shadow shadow-violet-50/20">
-            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-3">Progress</h3>
-            <div className="flex items-center gap-3">
+          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-5 shadow shadow-violet-50/20">
+            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-4">Progress</h3>
+            <div className="flex items-center gap-4">
               <div className="relative shrink-0">
-                <DonutChart value={interviewCount} max={(totalApplied + interviewCount + rejectedCount) || 1} color="#0e7490" trackColor="#be185d" size={72} strokeWidth={8} />
+                <DonutChart value={interviewCount} max={(totalApplied + interviewCount + rejectedCount) || 1} color="#0e7490" trackColor="#be185d" size={88} strokeWidth={9} />
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[16px] font-extrabold text-gray-900 leading-none">{interviewCount + rejectedCount}</span>
+                  <span className="text-[17px] font-extrabold text-gray-900 leading-none">{interviewCount + rejectedCount}</span>
                   <span className="text-[9px] font-medium text-gray-500">Updates</span>
                 </div>
               </div>
-              <div className="space-y-1.5 flex-1 min-w-0">
+              <div className="space-y-2 flex-1 min-w-0">
                 {[
                   { dot: 'bg-cyan-700', label: 'Interviews', val: interviewCount },
                   { dot: 'bg-pink-700', label: 'Rejected',   val: rejectedCount },
                 ].map(r => (
                   <div key={r.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className={`w-1.5 h-1.5 rounded-full ${r.dot} shrink-0`} />
-                      <span className="text-[11px] font-medium text-gray-600 truncate">{r.label}</span>
+                      <span className={`w-2 h-2 rounded-full ${r.dot} shrink-0`} />
+                      <span className="text-[12px] font-medium text-gray-600 truncate">{r.label}</span>
                     </div>
-                    <span className="text-[12px] font-bold text-gray-800 ml-1">{r.val}</span>
+                    <span className="text-[13px] font-bold text-gray-800 ml-1">{r.val}</span>
                   </div>
                 ))}
               </div>

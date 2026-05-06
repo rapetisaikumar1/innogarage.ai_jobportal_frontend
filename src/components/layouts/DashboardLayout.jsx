@@ -397,13 +397,13 @@ const DashboardLayout = () => {
               {profileDropdown && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setProfileDropdown(false)} />
-                  <div className="absolute right-0 mt-2 w-60 bg-white/80 backdrop-blur-2xl rounded-2xl shadow-[0_8px_30px_-8px_rgba(0,0,0,0.18)] border border-white/50 z-50 overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-[0_8px_30px_-8px_rgba(0,0,0,0.22)] border border-gray-100 z-50 overflow-hidden">
                     {/* User details */}
                     <div className="px-4 pt-4 pb-3.5 text-center">
                       <p className="text-[15px] font-bold text-gray-900">{user?.fullName}</p>
-                      <p className="text-xs text-gray-500 mt-1">{user?.email}</p>
+                      <p className="text-xs text-gray-700 font-medium mt-1">{user?.email}</p>
                       {user?.phone && (
-                        <p className="text-xs text-gray-500 mt-0.5">{user.phone}</p>
+                        <p className="text-xs text-gray-700 font-medium mt-0.5">{user.phone}</p>
                       )}
                     </div>
 
@@ -414,7 +414,7 @@ const DashboardLayout = () => {
                           setProfileDropdown(false);
                           navigate(user?.role === 'SUPER_ADMIN' ? '/superadmin/profile' : user?.role === 'ADMIN' ? '/admin/profile' : '/dashboard/profile');
                         }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-gray-900 font-semibold hover:bg-gray-100 transition-colors"
                       >
                         <Contact size={16} className="text-gray-400" />
                         My Profile
