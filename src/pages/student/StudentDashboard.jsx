@@ -263,14 +263,14 @@ const StudentDashboard = () => {
       {/* ── Header ── */}
       <div className="flex items-center justify-between bg-white/40 backdrop-blur-xl border border-white/50 rounded-xl shadow shadow-indigo-50/30 px-4 py-3">
         <div>
-          <h1 className="text-[15px] font-bold text-gray-800 tracking-tight leading-none">
+          <h1 className="text-[18px] font-bold text-gray-800 tracking-tight leading-none">
             {greeting}, <span className="bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">{firstName}</span>
           </h1>
-          <p className="text-[11px] text-gray-400 mt-0.5">Here's your career progress at a glance</p>
+          <p className="text-[13px] text-gray-400 mt-0.5">Here's your career progress at a glance</p>
         </div>
         <button
           onClick={() => navigate('/dashboard/jobs')}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-[11px] font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-[13px] font-semibold rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Search size={12} strokeWidth={2.5} />
           Find Jobs
@@ -285,8 +285,8 @@ const StudentDashboard = () => {
               <Icon size={14} className={text} strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <p className="text-[20px] font-extrabold text-gray-900 leading-none">{value}</p>
-              <p className="text-[10px] text-gray-500 mt-0.5 truncate">{label}</p>
+              <p className="text-[22px] font-extrabold text-gray-900 leading-none">{value}</p>
+              <p className="text-[12px] text-gray-500 mt-0.5 truncate">{label}</p>
             </div>
           </div>
         ))}
@@ -301,12 +301,12 @@ const StudentDashboard = () => {
           {/* Recent Applications */}
           <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 overflow-hidden shadow shadow-blue-50/20">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/40">
-              <h2 className="text-[12px] font-bold text-gray-700 flex items-center gap-1.5">
-                <Briefcase size={13} className="text-gray-400" />
+              <h2 className="text-[14px] font-bold text-gray-700 flex items-center gap-1.5">
+                <Briefcase size={14} className="text-gray-400" />
                 Recent Applications
               </h2>
               {recentApps.length > 0 && (
-                <Link to="/dashboard/applications" className="text-[10px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
+                <Link to="/dashboard/applications" className="text-[12px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
                   View All <ArrowRight size={10} />
                 </Link>
               )}
@@ -315,8 +315,8 @@ const StudentDashboard = () => {
               <div className="flex items-center gap-3 px-4 py-4">
                 <Briefcase size={20} className="text-gray-200 shrink-0" />
                 <div>
-                  <p className="text-[12px] font-medium text-gray-500">No applications yet</p>
-                  <Link to="/dashboard/jobs" className="text-[11px] text-indigo-500 hover:underline">Browse jobs to get started →</Link>
+                  <p className="text-[13px] font-medium text-gray-500">No applications yet</p>
+                  <Link to="/dashboard/jobs" className="text-[12px] text-indigo-500 hover:underline">Browse jobs to get started →</Link>
                 </div>
               </div>
             ) : (
@@ -329,22 +329,22 @@ const StudentDashboard = () => {
                   const roleTitle = resumeRole || (fullJob ? extractRole(fullJob) : app.title);
                   return (
                     <div key={app.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
-                      <div className={`w-7 h-7 rounded-md ${avatarBg(app.company)} text-white flex items-center justify-center font-bold text-[11px] shrink-0`}>
+                      <div className={`w-8 h-8 rounded-md ${avatarBg(app.company)} text-white flex items-center justify-center font-bold text-[12px] shrink-0`}>
                         {app.company?.charAt(0)?.toUpperCase() || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-1.5 min-w-0">
-                          <span className="text-[12px] font-semibold text-gray-900 truncate">{app.company || '—'}</span>
-                          <span className="text-[10px] text-violet-600 truncate hidden sm:block">{roleTitle}</span>
+                          <span className="text-[13px] font-semibold text-gray-900 truncate">{app.company || '—'}</span>
+                          <span className="text-[11px] text-violet-600 truncate hidden sm:block">{roleTitle}</span>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-gray-400 flex items-center gap-1"><Clock size={8} />{dateStr}</span>
+                          <span className="text-[11px] text-gray-400 flex items-center gap-1"><Clock size={9} />{dateStr}</span>
                           {score > 0 && (
-                            <span className={`text-[10px] font-semibold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-blue-600' : 'text-amber-600'}`}>{score}% match</span>
+                            <span className={`text-[11px] font-semibold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-blue-600' : 'text-amber-600'}`}>{score}% match</span>
                           )}
                         </div>
                       </div>
-                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${statusStyle(app.status)}`}>
+                      <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${statusStyle(app.status)}`}>
                         {getStatusLabel(app.status)}
                       </span>
                     </div>
@@ -357,12 +357,12 @@ const StudentDashboard = () => {
           {/* Recent Job Listings */}
           <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 overflow-hidden shadow shadow-indigo-50/20">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/40">
-              <h2 className="text-[12px] font-bold text-gray-700 flex items-center gap-1.5">
-                <Search size={13} className="text-gray-400" />
+              <h2 className="text-[14px] font-bold text-gray-700 flex items-center gap-1.5">
+                <Search size={14} className="text-gray-400" />
                 Recent Job Listings
               </h2>
               {recentJobs.length > 0 && (
-                <Link to="/dashboard/jobs" className="text-[10px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
+                <Link to="/dashboard/jobs" className="text-[12px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
                   View All <ArrowRight size={10} />
                 </Link>
               )}
@@ -370,13 +370,13 @@ const StudentDashboard = () => {
             {recentJobs.length === 0 ? (
               <div className="flex items-center gap-3 px-4 py-4">
                 <Search size={20} className="text-gray-200 shrink-0" />
-                <p className="text-[12px] text-gray-500">No matched jobs yet — use <span className="font-medium text-gray-700">My Jobs</span> to load roles.</p>
+                <p className="text-[13px] text-gray-500">No matched jobs yet — use <span className="font-medium text-gray-700">My Jobs</span> to load roles.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-left text-[9px] text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-gray-50/60">
+                    <tr className="text-left text-[10px] text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-gray-50/60">
                       <th className="px-4 py-2 font-semibold">Role</th>
                       <th className="px-4 py-2 font-semibold">Company</th>
                       <th className="px-4 py-2 font-semibold">Score</th>
@@ -391,18 +391,18 @@ const StudentDashboard = () => {
                       return (
                         <tr key={job.id} className="border-t border-gray-50/80 hover:bg-gray-50/40 cursor-pointer transition-colors" onClick={() => navigate('/dashboard/jobs')}>
                           <td className="px-4 py-2">
-                            <p className="text-[12px] font-semibold text-gray-800 truncate max-w-[180px]">{title}</p>
+                            <p className="text-[13px] font-semibold text-gray-800 truncate max-w-[180px]">{title}</p>
                           </td>
-                          <td className="px-4 py-2 text-[12px] text-gray-500 truncate max-w-[140px]">{job.employer_name || '—'}</td>
+                          <td className="px-4 py-2 text-[13px] text-gray-500 truncate max-w-[140px]">{job.employer_name || '—'}</td>
                           <td className="px-4 py-2">
                             {score > 0
-                              ? <span className={`text-[12px] font-bold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-blue-600' : 'text-amber-600'}`}>{score}%</span>
-                              : <span className="text-gray-300 text-[11px]">—</span>}
+                              ? <span className={`text-[13px] font-bold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-blue-600' : 'text-amber-600'}`}>{score}%</span>
+                              : <span className="text-gray-300 text-[12px]">—</span>}
                           </td>
                           <td className="px-4 py-2">
                             {job.job_employment_type
-                              ? <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[9px] font-medium rounded">{job.job_employment_type}</span>
-                              : <span className="text-gray-300 text-[11px]">—</span>}
+                              ? <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[11px] font-medium rounded">{job.job_employment_type}</span>
+                              : <span className="text-gray-300 text-[12px]">—</span>}
                           </td>
                         </tr>
                       );
@@ -419,13 +419,13 @@ const StudentDashboard = () => {
 
           {/* Applications Overview */}
           <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-3.5 shadow shadow-blue-50/20">
-            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Applications</h3>
+            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-3">Applications</h3>
             <div className="flex items-center gap-3">
               <div className="relative shrink-0">
                 <DonutChart value={totalApplied} max={totalSheetJobs || 1} color="#1e40af" trackColor="#d1fae5" size={72} strokeWidth={8} />
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[14px] font-extrabold text-gray-900 leading-none">{totalCount}</span>
-                  <span className="text-[7px] text-gray-400">Total</span>
+                  <span class="text-[16px] font-extrabold text-gray-900 leading-none">{totalCount}</span>
+                  <span className="text-[9px] text-gray-400">Total</span>
                 </div>
               </div>
               <div className="space-y-1.5 flex-1 min-w-0">
@@ -438,9 +438,9 @@ const StudentDashboard = () => {
                   <div key={r.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className={`w-1.5 h-1.5 rounded-full ${r.dot} shrink-0`} />
-                      <span className="text-[10px] text-gray-500 truncate">{r.label}</span>
+                      <span className="text-[11px] text-gray-500 truncate">{r.label}</span>
                     </div>
-                    <span className="text-[11px] font-bold text-gray-800 ml-1">{r.val}</span>
+                    <span className="text-[12px] font-bold text-gray-800 ml-1">{r.val}</span>
                   </div>
                 ))}
               </div>
@@ -449,13 +449,13 @@ const StudentDashboard = () => {
 
           {/* Progress */}
           <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-3.5 shadow shadow-violet-50/20">
-            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Progress</h3>
+            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-3">Progress</h3>
             <div className="flex items-center gap-3">
               <div className="relative shrink-0">
                 <DonutChart value={interviewCount} max={(totalApplied + interviewCount + rejectedCount) || 1} color="#0e7490" trackColor="#be185d" size={72} strokeWidth={8} />
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[14px] font-extrabold text-gray-900 leading-none">{interviewCount + rejectedCount}</span>
-                  <span className="text-[7px] text-gray-400">Updates</span>
+                  <span className="text-[16px] font-extrabold text-gray-900 leading-none">{interviewCount + rejectedCount}</span>
+                  <span className="text-[9px] text-gray-400">Updates</span>
                 </div>
               </div>
               <div className="space-y-1.5 flex-1 min-w-0">
@@ -466,9 +466,9 @@ const StudentDashboard = () => {
                   <div key={r.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className={`w-1.5 h-1.5 rounded-full ${r.dot} shrink-0`} />
-                      <span className="text-[10px] text-gray-500 truncate">{r.label}</span>
+                      <span className="text-[11px] text-gray-500 truncate">{r.label}</span>
                     </div>
-                    <span className="text-[11px] font-bold text-gray-800 ml-1">{r.val}</span>
+                    <span className="text-[12px] font-bold text-gray-800 ml-1">{r.val}</span>
                   </div>
                 ))}
               </div>
