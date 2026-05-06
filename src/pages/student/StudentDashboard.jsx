@@ -266,7 +266,7 @@ const StudentDashboard = () => {
           <h1 className="text-[18px] font-bold text-gray-800 tracking-tight leading-none">
             {greeting}, <span className="bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">{firstName}</span>
           </h1>
-          <p className="text-[13px] text-gray-400 mt-0.5">Here's your career progress at a glance</p>
+          <p className="text-[13px] font-medium text-gray-500 mt-0.5">Here's your career progress at a glance</p>
         </div>
         <button
           onClick={() => navigate('/dashboard/jobs')}
@@ -286,7 +286,7 @@ const StudentDashboard = () => {
             </div>
             <div className="min-w-0">
               <p className="text-[22px] font-extrabold text-gray-900 leading-none">{value}</p>
-              <p className="text-[12px] text-gray-500 mt-0.5 truncate">{label}</p>
+              <p className="text-[12px] font-medium text-gray-600 mt-0.5 truncate">{label}</p>
             </div>
           </div>
         ))}
@@ -335,10 +335,10 @@ const StudentDashboard = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-1.5 min-w-0">
                           <span className="text-[13px] font-semibold text-gray-900 truncate">{app.company || '—'}</span>
-                          <span className="text-[11px] text-violet-600 truncate hidden sm:block">{roleTitle}</span>
+                          <span className="text-[11px] font-medium text-violet-600 truncate hidden sm:block">{roleTitle}</span>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[11px] text-gray-400 flex items-center gap-1"><Clock size={9} />{dateStr}</span>
+                          <span className="text-[11px] font-medium text-gray-500 flex items-center gap-1"><Clock size={9} />{dateStr}</span>
                           {score > 0 && (
                             <span className={`text-[11px] font-semibold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-blue-600' : 'text-amber-600'}`}>{score}% match</span>
                           )}
@@ -370,7 +370,7 @@ const StudentDashboard = () => {
             {recentJobs.length === 0 ? (
               <div className="flex items-center gap-3 px-4 py-4">
                 <Search size={20} className="text-gray-200 shrink-0" />
-                <p className="text-[13px] text-gray-500">No matched jobs yet — use <span className="font-medium text-gray-700">My Jobs</span> to load roles.</p>
+                <p className="text-[13px] font-medium text-gray-600">No matched jobs yet — use <span className="font-semibold text-gray-800">My Jobs</span> to load roles.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -393,7 +393,7 @@ const StudentDashboard = () => {
                           <td className="px-4 py-2">
                             <p className="text-[13px] font-semibold text-gray-800 truncate max-w-[180px]">{title}</p>
                           </td>
-                          <td className="px-4 py-2 text-[13px] text-gray-500 truncate max-w-[140px]">{job.employer_name || '—'}</td>
+                          <td className="px-4 py-2 text-[13px] font-medium text-gray-600 truncate max-w-[140px]">{job.employer_name || '—'}</td>
                           <td className="px-4 py-2">
                             {score > 0
                               ? <span className={`text-[13px] font-bold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-blue-600' : 'text-amber-600'}`}>{score}%</span>
@@ -424,8 +424,8 @@ const StudentDashboard = () => {
               <div className="relative shrink-0">
                 <DonutChart value={totalApplied} max={totalSheetJobs || 1} color="#1e40af" trackColor="#d1fae5" size={72} strokeWidth={8} />
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span class="text-[16px] font-extrabold text-gray-900 leading-none">{totalCount}</span>
-                  <span className="text-[9px] text-gray-400">Total</span>
+                  <span className="text-[16px] font-extrabold text-gray-900 leading-none">{totalCount}</span>
+                  <span className="text-[9px] font-medium text-gray-500">Total</span>
                 </div>
               </div>
               <div className="space-y-1.5 flex-1 min-w-0">
@@ -438,7 +438,7 @@ const StudentDashboard = () => {
                   <div key={r.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className={`w-1.5 h-1.5 rounded-full ${r.dot} shrink-0`} />
-                      <span className="text-[11px] text-gray-500 truncate">{r.label}</span>
+                      <span className="text-[11px] font-medium text-gray-600 truncate">{r.label}</span>
                     </div>
                     <span className="text-[12px] font-bold text-gray-800 ml-1">{r.val}</span>
                   </div>
@@ -455,7 +455,7 @@ const StudentDashboard = () => {
                 <DonutChart value={interviewCount} max={(totalApplied + interviewCount + rejectedCount) || 1} color="#0e7490" trackColor="#be185d" size={72} strokeWidth={8} />
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-[16px] font-extrabold text-gray-900 leading-none">{interviewCount + rejectedCount}</span>
-                  <span className="text-[9px] text-gray-400">Updates</span>
+                  <span className="text-[9px] font-medium text-gray-500">Updates</span>
                 </div>
               </div>
               <div className="space-y-1.5 flex-1 min-w-0">
@@ -466,7 +466,7 @@ const StudentDashboard = () => {
                   <div key={r.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className={`w-1.5 h-1.5 rounded-full ${r.dot} shrink-0`} />
-                      <span className="text-[11px] text-gray-500 truncate">{r.label}</span>
+                      <span className="text-[11px] font-medium text-gray-600 truncate">{r.label}</span>
                     </div>
                     <span className="text-[12px] font-bold text-gray-800 ml-1">{r.val}</span>
                   </div>
