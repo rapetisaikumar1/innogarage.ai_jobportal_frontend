@@ -250,259 +250,232 @@ const StudentDashboard = () => {
     return map[status] || status;
   };
 
+  const statusStyle = (status) => {
+    if (status === 'INTERVIEW_SCHEDULED') return 'bg-cyan-50 text-cyan-700 border-cyan-200';
+    if (status === 'REJECTED') return 'bg-red-50 text-red-600 border-red-200';
+    if (status === 'OFFER_RECEIVED') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    return 'bg-blue-50 text-blue-700 border-blue-200';
+  };
+
   return (
-    <div className="space-y-5">
-      {/* Welcome Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-white/40 backdrop-blur-xl border border-white/50 shadow-lg shadow-indigo-100/30 px-6 py-5">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-100/40 to-transparent rounded-full -translate-y-1/2 translate-x-1/3" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-indigo-100/30 to-transparent rounded-full translate-y-1/2 -translate-x-1/4" />
-        <div className="relative flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-800 tracking-tight">
-              {greeting}, <span className="bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">{firstName}</span>
-            </h1>
-            <p className="text-gray-500 text-[13px] mt-1">Here's your career progress at a glance</p>
-          </div>
-          <button
-            onClick={() => navigate('/dashboard/jobs')}
-            className="hidden sm:inline-flex items-center gap-2.5 px-4 py-2.5 bg-white/60 backdrop-blur-md border border-white/50 rounded-xl hover:shadow-md hover:bg-white/80 transition-all duration-300 group"
-          >
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm">
-              <Search size={15} className="text-white" strokeWidth={2} />
-            </div>
-            <span className="text-[12px] font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">Find Jobs</span>
-          </button>
+    <div className="space-y-3">
+
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between bg-white/40 backdrop-blur-xl border border-white/50 rounded-xl shadow shadow-indigo-50/30 px-4 py-3">
+        <div>
+          <h1 className="text-[15px] font-bold text-gray-800 tracking-tight leading-none">
+            {greeting}, <span className="bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">{firstName}</span>
+          </h1>
+          <p className="text-[11px] text-gray-400 mt-0.5">Here's your career progress at a glance</p>
         </div>
+        <button
+          onClick={() => navigate('/dashboard/jobs')}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-[11px] font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Search size={12} strokeWidth={2.5} />
+          Find Jobs
+        </button>
       </div>
 
-      {/* Summary Cards Row with Donut Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Applications Overview */}
-        <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-5 hover:shadow-lg shadow-md shadow-blue-100/20 transition-all duration-300">
-          <h3 className="text-[13px] font-bold text-gray-800 mb-4">Applications Overview</h3>
-          <div className="flex items-center gap-5">
-            <div className="relative">
-              <DonutChart value={totalApplied} max={totalSheetJobs || 1} color="#1e40af" trackColor="#d1fae5" size={90} strokeWidth={10} />
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[18px] font-extrabold text-gray-900 leading-none">{totalCount}</span>
-                <span className="text-[9px] text-gray-400 font-medium mt-0.5">Total</span>
-              </div>
+      {/* ── KPI Strip ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+        {statCards.map(({ label, value, icon: Icon, light, text }) => (
+          <div key={label} className="bg-white/60 backdrop-blur-md border border-white/50 rounded-xl px-3.5 py-2.5 flex items-center gap-2.5 shadow-sm">
+            <div className={`w-8 h-8 ${light} rounded-lg flex items-center justify-center shrink-0`}>
+              <Icon size={14} className={text} strokeWidth={2} />
             </div>
-            <div className="space-y-2 flex-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-800" />
-                  <span className="text-[11px] text-gray-600">Applied</span>
-                </div>
-                <span className="text-[13px] font-bold text-gray-900">{totalApplied}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
-                  <span className="text-[11px] text-gray-600">Candidate Apply</span>
-                </div>
-                <span className="text-[13px] font-bold text-gray-900">{candidateApplyCount}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                  <span className="text-[11px] text-gray-600">Admin Apply</span>
-                </div>
-                <span className="text-[13px] font-bold text-gray-900">{adminApplyCount}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                  <span className="text-[11px] text-gray-600">Jobs to Apply</span>
-                </div>
-                <span className="text-[13px] font-bold text-gray-900">{jobsToApply}</span>
-              </div>
+            <div className="min-w-0">
+              <p className="text-[20px] font-extrabold text-gray-900 leading-none">{value}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5 truncate">{label}</p>
             </div>
           </div>
-        </div>
-
-        {/* Progress Summary */}
-        <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-5 hover:shadow-lg shadow-md shadow-violet-100/20 transition-all duration-300">
-          <h3 className="text-[13px] font-bold text-gray-800 mb-4">Progress</h3>
-          <div className="flex items-center gap-5">
-            <div className="relative">
-              <DonutChart value={interviewCount} max={(totalApplied + interviewCount + rejectedCount) || 1} color="#0e7490" trackColor="#be185d" size={90} strokeWidth={10} />
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[18px] font-extrabold text-gray-900 leading-none">{interviewCount + rejectedCount}</span>
-                <span className="text-[9px] text-gray-400 font-medium mt-0.5">Updates</span>
-              </div>
-            </div>
-            <div className="space-y-3 flex-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-700" />
-                  <span className="text-[12px] text-gray-600">Interviews</span>
-                </div>
-                <span className="text-[13px] font-bold text-gray-900">{interviewCount}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-pink-700" />
-                  <span className="text-[12px] text-gray-600">Rejected</span>
-                </div>
-                <span className="text-[13px] font-bold text-gray-900">{rejectedCount}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Summary */}
-        <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-5 hover:shadow-lg shadow-md shadow-emerald-100/20 transition-all duration-300">
-          <h3 className="text-[13px] font-bold text-gray-800 mb-4">Summary</h3>
-          <div className="space-y-3">
-            {statCards.map(({ label, value, icon: Icon, light, text }) => (
-              <div key={label} className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-7 h-7 ${light} rounded-lg flex items-center justify-center`}>
-                    <Icon size={14} className={text} strokeWidth={2} />
-                  </div>
-                  <span className="text-[12px] text-gray-600">{label}</span>
-                </div>
-                <span className="text-[14px] font-bold text-gray-900">{value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Recent Applications */}
-      <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 overflow-hidden hover:shadow-lg shadow-md shadow-blue-100/20 transition-all duration-300">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/40">
-          <h2 className="text-[13px] font-bold text-gray-800 flex items-center gap-2">
-            <Briefcase size={14} className="text-gray-400" />
-            Recent Applications
-          </h2>
-          {recentApps.length > 0 && (
-            <Link to="/dashboard/applications" className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1">
-              View All <ArrowRight size={11} />
-            </Link>
-          )}
-        </div>
-        {recentApps.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
-              <Briefcase size={24} className="text-gray-300" />
-            </div>
-            <p className="text-[14px] text-gray-600 font-semibold">No applications yet</p>
-            <p className="text-[12px] text-gray-400 mt-1 mb-5 max-w-xs mx-auto">Start exploring job listings and apply to track your progress here</p>
-            <Link
-              to="/dashboard/jobs"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white text-[12px] font-semibold rounded-lg hover:bg-gray-800 transition-colors"
-            >
-              <Search size={13} /> Browse Jobs
-            </Link>
-          </div>
-        ) : (
-          <div className="px-4 py-3 space-y-2">
-            {recentApps.map((app) => {
-              const dateStr = new Date(app.appliedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-              const score = parseInt(app.matchScore) || 0;
-              // Derive role title from resume if available
-              const fullJob = app.fullJob;
-              const resumeRole = fullJob ? extractResumeRoleTitle(fullJob.resume_text, user?.fullName, fullJob.candidate_name) : '';
-              const roleTitle = resumeRole || (fullJob ? extractRole(fullJob) : app.title);
-              return (
-                <div key={app.id} className="border border-gray-100 rounded-lg px-3.5 py-3 hover:border-gray-200 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg ${avatarBg(app.company)} text-white flex items-center justify-center font-bold text-sm shrink-0`}>
-                      {app.company?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-[13px] font-semibold text-gray-900 truncate">{app.company || '—'}</h3>
-                      <p className="text-[11px] text-violet-600 truncate mt-0.5">{roleTitle}</p>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                          <Clock size={9} />
-                          {dateStr}
-                        </span>
-                        {score > 0 && (
-                          <span className={`text-[10px] font-bold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-violet-600' : 'text-amber-600'}`}>
-                            {score}% match
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold border bg-blue-50 text-blue-700 border-blue-200 shrink-0">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                      {getStatusLabel(app.status)}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {/* ── Main two-column grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-3">
 
-      {/* Recent Job Listings */}
-      <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 overflow-hidden hover:shadow-lg shadow-md shadow-indigo-100/20 transition-all duration-300">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/40">
-          <h2 className="text-[13px] font-bold text-gray-800 flex items-center gap-2">
-            <Search size={14} className="text-gray-400" />
-            Recent Job Listings
-          </h2>
-          {recentJobs.length > 0 && (
-            <Link to="/dashboard/jobs" className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1">
-              View All <ArrowRight size={11} />
-            </Link>
-          )}
-        </div>
-        {recentJobs.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
-              <Search size={24} className="text-gray-300" />
+        {/* Left: Recent Apps + Recent Jobs */}
+        <div className="space-y-3 min-w-0">
+
+          {/* Recent Applications */}
+          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 overflow-hidden shadow shadow-blue-50/20">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/40">
+              <h2 className="text-[12px] font-bold text-gray-700 flex items-center gap-1.5">
+                <Briefcase size={13} className="text-gray-400" />
+                Recent Applications
+              </h2>
+              {recentApps.length > 0 && (
+                <Link to="/dashboard/applications" className="text-[10px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
+                  View All <ArrowRight size={10} />
+                </Link>
+              )}
             </div>
-            <p className="text-[14px] text-gray-600 font-semibold">No job listings yet</p>
-            <p className="text-[12px] text-gray-400 mt-1">Use "My Jobs" to trigger a job search</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-[10px] text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-gray-50/50">
-                  <th className="px-5 py-2.5 font-semibold">Role</th>
-                  <th className="px-5 py-2.5 font-semibold">Company</th>
-                  <th className="px-5 py-2.5 font-semibold">Score</th>
-                  <th className="px-5 py-2.5 font-semibold">Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentJobs.map((job) => {
-                  const resumeRole = extractResumeRoleTitle(job.resume_text, user?.fullName, job.candidate_name);
-                  const title = resumeRole || extractRole(job);
-                  const score = parseInt(job.match_score) || 0;
+            {recentApps.length === 0 ? (
+              <div className="flex items-center gap-3 px-4 py-4">
+                <Briefcase size={20} className="text-gray-200 shrink-0" />
+                <div>
+                  <p className="text-[12px] font-medium text-gray-500">No applications yet</p>
+                  <Link to="/dashboard/jobs" className="text-[11px] text-indigo-500 hover:underline">Browse jobs to get started →</Link>
+                </div>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50/80">
+                {recentApps.map((app) => {
+                  const dateStr = new Date(app.appliedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  const score = parseInt(app.matchScore) || 0;
+                  const fullJob = app.fullJob;
+                  const resumeRole = fullJob ? extractResumeRoleTitle(fullJob.resume_text, user?.fullName, fullJob.candidate_name) : '';
+                  const roleTitle = resumeRole || (fullJob ? extractRole(fullJob) : app.title);
                   return (
-                    <tr key={job.id} className="border-t border-gray-50 hover:bg-gray-50/40 transition-colors cursor-pointer" onClick={() => navigate('/dashboard/jobs')}>
-                      <td className="px-5 py-3">
-                        <p className="text-[13px] font-semibold text-gray-800 truncate max-w-[200px]">{title}</p>
-                      </td>
-                      <td className="px-5 py-3 text-[13px] text-gray-500">{job.employer_name || '—'}</td>
-                      <td className="px-5 py-3">
-                        {score > 0 ? (
-                          <span className={`text-[13px] font-bold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-blue-600' : 'text-amber-600'}`}>{score}%</span>
-                        ) : (
-                          <span className="text-[12px] text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3">
-                        {job.job_employment_type ? (
-                          <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-medium rounded">{job.job_employment_type}</span>
-                        ) : (
-                          <span className="text-[12px] text-gray-400">—</span>
-                        )}
-                      </td>
-                    </tr>
+                    <div key={app.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
+                      <div className={`w-7 h-7 rounded-md ${avatarBg(app.company)} text-white flex items-center justify-center font-bold text-[11px] shrink-0`}>
+                        {app.company?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-1.5 min-w-0">
+                          <span className="text-[12px] font-semibold text-gray-900 truncate">{app.company || '—'}</span>
+                          <span className="text-[10px] text-violet-600 truncate hidden sm:block">{roleTitle}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-gray-400 flex items-center gap-1"><Clock size={8} />{dateStr}</span>
+                          {score > 0 && (
+                            <span className={`text-[10px] font-semibold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-blue-600' : 'text-amber-600'}`}>{score}% match</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${statusStyle(app.status)}`}>
+                        {getStatusLabel(app.status)}
+                      </span>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Recent Job Listings */}
+          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 overflow-hidden shadow shadow-indigo-50/20">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/40">
+              <h2 className="text-[12px] font-bold text-gray-700 flex items-center gap-1.5">
+                <Search size={13} className="text-gray-400" />
+                Recent Job Listings
+              </h2>
+              {recentJobs.length > 0 && (
+                <Link to="/dashboard/jobs" className="text-[10px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
+                  View All <ArrowRight size={10} />
+                </Link>
+              )}
+            </div>
+            {recentJobs.length === 0 ? (
+              <div className="flex items-center gap-3 px-4 py-4">
+                <Search size={20} className="text-gray-200 shrink-0" />
+                <p className="text-[12px] text-gray-500">No matched jobs yet — use <span className="font-medium text-gray-700">My Jobs</span> to load roles.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-[9px] text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-gray-50/60">
+                      <th className="px-4 py-2 font-semibold">Role</th>
+                      <th className="px-4 py-2 font-semibold">Company</th>
+                      <th className="px-4 py-2 font-semibold">Score</th>
+                      <th className="px-4 py-2 font-semibold">Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentJobs.map((job) => {
+                      const resumeRole = extractResumeRoleTitle(job.resume_text, user?.fullName, job.candidate_name);
+                      const title = resumeRole || extractRole(job);
+                      const score = parseInt(job.match_score) || 0;
+                      return (
+                        <tr key={job.id} className="border-t border-gray-50/80 hover:bg-gray-50/40 cursor-pointer transition-colors" onClick={() => navigate('/dashboard/jobs')}>
+                          <td className="px-4 py-2">
+                            <p className="text-[12px] font-semibold text-gray-800 truncate max-w-[180px]">{title}</p>
+                          </td>
+                          <td className="px-4 py-2 text-[12px] text-gray-500 truncate max-w-[140px]">{job.employer_name || '—'}</td>
+                          <td className="px-4 py-2">
+                            {score > 0
+                              ? <span className={`text-[12px] font-bold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-blue-600' : 'text-amber-600'}`}>{score}%</span>
+                              : <span className="text-gray-300 text-[11px]">—</span>}
+                          </td>
+                          <td className="px-4 py-2">
+                            {job.job_employment_type
+                              ? <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[9px] font-medium rounded">{job.job_employment_type}</span>
+                              : <span className="text-gray-300 text-[11px]">—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right sidebar: donut charts */}
+        <div className="space-y-3">
+
+          {/* Applications Overview */}
+          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-3.5 shadow shadow-blue-50/20">
+            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Applications</h3>
+            <div className="flex items-center gap-3">
+              <div className="relative shrink-0">
+                <DonutChart value={totalApplied} max={totalSheetJobs || 1} color="#1e40af" trackColor="#d1fae5" size={72} strokeWidth={8} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-[14px] font-extrabold text-gray-900 leading-none">{totalCount}</span>
+                  <span className="text-[7px] text-gray-400">Total</span>
+                </div>
+              </div>
+              <div className="space-y-1.5 flex-1 min-w-0">
+                {[
+                  { dot: 'bg-blue-800',    label: 'Applied',    val: totalApplied },
+                  { dot: 'bg-cyan-500',    label: 'Candidate',  val: candidateApplyCount },
+                  { dot: 'bg-amber-500',   label: 'Admin',      val: adminApplyCount },
+                  { dot: 'bg-emerald-400', label: 'To Apply',   val: jobsToApply },
+                ].map(r => (
+                  <div key={r.label} className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`w-1.5 h-1.5 rounded-full ${r.dot} shrink-0`} />
+                      <span className="text-[10px] text-gray-500 truncate">{r.label}</span>
+                    </div>
+                    <span className="text-[11px] font-bold text-gray-800 ml-1">{r.val}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Progress */}
+          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-3.5 shadow shadow-violet-50/20">
+            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Progress</h3>
+            <div className="flex items-center gap-3">
+              <div className="relative shrink-0">
+                <DonutChart value={interviewCount} max={(totalApplied + interviewCount + rejectedCount) || 1} color="#0e7490" trackColor="#be185d" size={72} strokeWidth={8} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-[14px] font-extrabold text-gray-900 leading-none">{interviewCount + rejectedCount}</span>
+                  <span className="text-[7px] text-gray-400">Updates</span>
+                </div>
+              </div>
+              <div className="space-y-1.5 flex-1 min-w-0">
+                {[
+                  { dot: 'bg-cyan-700', label: 'Interviews', val: interviewCount },
+                  { dot: 'bg-pink-700', label: 'Rejected',   val: rejectedCount },
+                ].map(r => (
+                  <div key={r.label} className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`w-1.5 h-1.5 rounded-full ${r.dot} shrink-0`} />
+                      <span className="text-[10px] text-gray-500 truncate">{r.label}</span>
+                    </div>
+                    <span className="text-[11px] font-bold text-gray-800 ml-1">{r.val}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   );
