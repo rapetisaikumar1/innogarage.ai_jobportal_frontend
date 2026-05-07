@@ -122,11 +122,6 @@ const DashboardLayout = () => {
   };
 
   const navItems = getNavItems();
-  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-  const isAdmin = user?.role === 'ADMIN';
-  const isStudent = user?.role === 'STUDENT';
-  const useHorizontalNav = false;
-  const roleLabel = isSuperAdmin ? 'Super Admin' : isAdmin ? 'Mentor' : 'Student';
 
   return (
     <div className="h-screen bg-gradient-to-br from-slate-100 via-blue-50/80 to-indigo-100/60 flex overflow-hidden">
