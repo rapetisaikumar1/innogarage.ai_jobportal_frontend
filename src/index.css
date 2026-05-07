@@ -3,12 +3,23 @@
 @tailwind utilities;
 
 body {
-  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 15px;
   line-height: 1.6;
+  font-feature-settings: 'cv05' 1, 'ss01' 1, 'kern' 1;
+  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/*
+  Override tiny arbitrary Tailwind font sizes with readable minimums.
+  Non-layered rules beat @layer utilities in the CSS cascade — no !important needed.
+*/
+.text-\[10px\] { font-size: 11.5px; }
+.text-\[11px\] { font-size: 12px; }
+.text-\[12px\] { font-size: 13px; }
+.text-\[13px\] { font-size: 14px; }
 
 /* ─── How It Works: flowing energy beam ─── */
 .hiw-beam {
@@ -62,10 +73,27 @@ body {
   100%   { transform: scale(1); opacity: 0.4; }
 }
 
-/* ─── Job search loader: shimmer progress bar ─── */
+/* ─── Job search loader animations ─── */
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position: 200% 0; }
+}
+@keyframes textShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes glow-pulse {
+  0%, 100% { transform: scale(1);   opacity: 1; box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+  50%       { transform: scale(1.4); opacity: 1; box-shadow: 0 0 8px 3px rgba(99,102,241,0.5); }
+}
+@keyframes scanBar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+/* Slide-in animation for newly arrived streaming jobs */
+@keyframes jobSlideIn {
+  from { opacity: 0; transform: translateY(-14px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)     scale(1);    }
 }
 
 @layer components {

@@ -7,7 +7,19 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+      },
+      fontSize: {
+        'xs':  ['12px',   { lineHeight: '1.5' }],
+        'sm':  ['13.5px', { lineHeight: '1.55' }],
+        'base':['15px',   { lineHeight: '1.6' }],
+        'lg':  ['17px',   { lineHeight: '1.55' }],
+        'xl':  ['19px',   { lineHeight: '1.5' }],
+        '2xl': ['22px',   { lineHeight: '1.4' }],
+        '3xl': ['28px',   { lineHeight: '1.3' }],
+        '4xl': ['34px',   { lineHeight: '1.2' }],
+        '5xl': ['42px',   { lineHeight: '1.1' }],
+        '6xl': ['52px',   { lineHeight: '1' }],
       },
       colors: {
         primary: {
