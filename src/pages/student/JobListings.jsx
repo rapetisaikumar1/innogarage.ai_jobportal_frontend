@@ -714,26 +714,29 @@ const JobListings = () => {
 
       if (Array.isArray(data.jobs) && data.jobs.length > 0) {
         const newJobs = data.jobs;
-        // Start with existing jobs visible, new ones stream in
-        setJobs(newJobs);
         writeJobsCache(newJobs);
-        await fetchAppliedStatus();
 
-        // Stream-reveal: start at 0 visible new jobs, increment every 120ms
-        setStreamedCount(0);
-        let idx = 0;
+        // Set streamedCount=0 and jobs together so React batches them in one render.
+        // This ensures the initial render already has jobs hidden (not a flash of all-visible).
         if (streamTimerRef.current) clearInterval(streamTimerRef.current);
-        streamTimerRef.current = setInterval(() => {
-          idx += 1;
-          setStreamedCount(idx);
-          if (idx >= newJobs.length) {
-            clearInterval(streamTimerRef.current);
-            streamTimerRef.current = null;
-            // Show all & clear streamed state after a moment
-            setTimeout(() => setStreamedCount(null), 300);
-          }
-        }, 120);
+        setStreamedCount(0);
+        setJobs(newJobs);
 
+        // Small tick to ensure the hidden-state render has committed before streaming starts
+        setTimeout(() => {
+          let idx = 0;
+          streamTimerRef.current = setInterval(() => {
+            idx += 1;
+            setStreamedCount(idx);
+            if (idx >= newJobs.length) {
+              clearInterval(streamTimerRef.current);
+              streamTimerRef.current = null;
+              setTimeout(() => setStreamedCount(null), 400);
+            }
+          }, 150);
+        }, 50);
+
+        fetchAppliedStatus(); // fire-and-forget, don't await (would break batching)
         toast.success(data.message || `Found ${newJobs.length} matching jobs!`);
       } else {
         toast.info(data.message || 'No new matching jobs found.');
@@ -874,7 +877,7 @@ const JobListings = () => {
       {/* Days Popup */}
       {showDaysPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white/70 backdrop-blur-2xl rounded-xl shadow-xl border border-white/50 p-6 w-[340px] space-y-4">
+          <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-6 w-[340px] space-y-4">
             <h3 className="text-lg font-bold text-gray-800">Search Jobs</h3>
             <p className="text-sm text-gray-500">How many days of job listings do you want?</p>
             <div className="flex items-center gap-3">
@@ -1237,18 +1240,21 @@ ${RESUME_WORD_STYLES}
         </div>
       )}
 
-      {/* Search-in-progress inline banner — replaces the old modal overlay */}
+      {/* Search-in-progress inline banner */}
       {triggeringSearch && (
-        <div className="flex items-center gap-3 px-4 py-2.5 mb-3 rounded-xl bg-violet-50 border border-violet-200 shrink-0">
-          <div className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-300 animate-bounce" style={{ animationDelay: '300ms' }} />
+        <div className="flex items-center gap-4 px-5 py-3.5 mb-3 rounded-xl bg-blue-50 border border-blue-100 shrink-0">
+          {/* Animated shimmer bar */}
+          <div className="w-32 h-1.5 bg-blue-100 rounded-full overflow-hidden shrink-0">
+            <div className="h-full rounded-full" style={{
+              background: 'linear-gradient(90deg, #bfdbfe 0%, #3b82f6 40%, #bfdbfe 80%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 1.5s linear infinite',
+            }} />
           </div>
-          <Sparkles size={14} className="text-violet-500 shrink-0" />
-          <p className="text-sm font-medium text-violet-700">
-            Finding your best job matches — this usually takes 30–60 seconds. New jobs will appear below as they stream in.
-          </p>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-blue-800">Searching for your best job matches…</p>
+            <p className="text-xs text-blue-500 mt-0.5">This usually takes 30–60 seconds. Jobs will appear below one by one.</p>
+          </div>
         </div>
       )}
 
@@ -1258,9 +1264,9 @@ ${RESUME_WORD_STYLES}
           <h1 className="text-xl font-bold text-gray-900">Job Listings</h1>
           <p className="text-sm text-gray-400 mt-0.5">
             {triggeringSearch
-              ? <span className="text-violet-500 font-medium flex items-center gap-1.5"><Sparkles size={12} className="animate-pulse" /> Searching for your best matches…</span>
+              ? <span className="text-blue-500 font-medium flex items-center gap-1.5"><RefreshCw size={12} className="animate-spin" /> Searching for your best matches…</span>
               : streamedCount !== null
-              ? <span className="text-violet-500 font-medium">Streaming {Math.min(streamedCount, filteredJobs.length)} of {filteredJobs.length} jobs…</span>
+              ? <span className="text-blue-500 font-medium">Loading {Math.min(streamedCount, filteredJobs.length)} of {filteredJobs.length} jobs…</span>
               : <>Showing {paginatedJobs.length} of {filteredJobs.length} jobs{totalPages > 1 && ` · Page ${page}/${totalPages}`}</>
             }
           </p>
@@ -1332,44 +1338,26 @@ ${RESUME_WORD_STYLES}
         </div>
 
         {/* Sort by Score */}
-        <div className="flex items-center gap-1 bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
-          <span className="pl-3 pr-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">Sort</span>
-          <button
-            onClick={() => setSortOrder('default')}
-            title="Default order (API)"
-            className={`flex items-center gap-1 px-3 py-2.5 text-xs font-semibold transition-colors ${
-              sortOrder === 'default'
-                ? 'bg-gray-900 text-white'
-                : 'text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            <ArrowUpDown size={13} />
-            Default
-          </button>
-          <button
-            onClick={() => setSortOrder('score-desc')}
-            title="Highest score first"
-            className={`flex items-center gap-1 px-3 py-2.5 text-xs font-semibold transition-colors ${
-              sortOrder === 'score-desc'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            <ArrowDown size={13} />
-            Score ↓
-          </button>
-          <button
-            onClick={() => setSortOrder('score-asc')}
-            title="Lowest score first"
-            className={`flex items-center gap-1 px-3 py-2.5 text-xs font-semibold transition-colors ${
-              sortOrder === 'score-asc'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            <ArrowUp size={13} />
-            Score ↑
-          </button>
+        <div className="flex items-center bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+          <span className="pl-3 pr-2 text-[11px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap select-none">Sort</span>
+          <div className="w-px h-5 bg-gray-100" />
+          {[
+            { value: 'default', label: 'Newest' },
+            { value: 'score-desc', label: 'Score High' },
+            { value: 'score-asc',  label: 'Score Low' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setSortOrder(opt.value)}
+              className={`px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+                sortOrder === opt.value
+                  ? 'bg-gray-900 text-white'
+                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
 
         {/* Type filter */}
@@ -1420,10 +1408,13 @@ ${RESUME_WORD_STYLES}
                     return (
                       <tr
                         key={job.id}
-                        className={`border-b border-gray-50 hover:bg-gray-50/60 transition-all group ${
-                          isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
-                        }`}
-                        style={{ transitionDuration: isVisible ? '350ms' : '0ms' }}
+                        className="border-b border-gray-50 hover:bg-gray-50/60 group"
+                        style={{
+                          opacity: isVisible ? 1 : 0,
+                          transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
+                          transition: isVisible ? 'opacity 350ms ease, transform 350ms ease' : 'none',
+                          pointerEvents: isVisible ? 'auto' : 'none',
+                        }}
                       >
                         {/* # */}
                         <td className="pl-5 pr-2 py-3.5 w-10">

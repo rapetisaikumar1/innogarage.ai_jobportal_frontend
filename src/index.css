@@ -62,6 +62,12 @@ body {
   100%   { transform: scale(1); opacity: 0.4; }
 }
 
+/* ─── Job search loader: shimmer progress bar ─── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 @layer components {
   .btn-primary {
     @apply bg-primary-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
