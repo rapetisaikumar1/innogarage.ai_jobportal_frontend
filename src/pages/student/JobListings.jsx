@@ -9,7 +9,8 @@ import ResumeDocument, { RESUME_WORD_STYLES, RESUME_TEMPLATES } from '../../comp
 import {
   Search, ExternalLink, Briefcase, RefreshCw, X, FileText, AlertTriangle,
   Clock, Sparkles, MapPin, Building2, Bookmark, ChevronLeft, ChevronRight, Info, CheckCircle2,
-  Eye, Download, Crown, Lock, Palette, PenLine, Save, Sun, Moon, GripVertical, BarChart3, Zap
+  Eye, Download, Crown, Lock, Palette, PenLine, Save, Sun, Moon, GripVertical, BarChart3, Zap,
+  ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 
 /* ── avatar bg palette ── */
@@ -524,6 +525,7 @@ const JobListings = () => {
   const [savingResumeDraft, setSavingResumeDraft] = useState(false);
   const resumeRef = useRef(null);
   const [filterType, setFilterType] = useState('all');
+  const [sortOrder, setSortOrder] = useState('default'); // 'default' | 'score-desc' | 'score-asc'
   const [page, setPage] = useState(1);
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [waitingForJobs, setWaitingForJobs] = useState(false);
@@ -835,18 +837,20 @@ const JobListings = () => {
     }
     if (filterType === 'applied') filtered = filtered.filter((j) => !!(j.job_apply_link && appliedLinks.has(j.job_apply_link)));
     if (filterType === 'admin_apply') filtered = filtered.filter((j) => !!(j.job_apply_link && adminAppliedLinks.has(j.job_apply_link)));
-    // Sort by score (highest first), then push applied jobs to the bottom
-    const sorted = [...filtered].sort((a, b) => (parseInt(b.match_score) || 0) - (parseInt(a.match_score) || 0));
-    const notApplied = sorted.filter(j => !(j.job_apply_link && appliedLinks.has(j.job_apply_link)));
-    const applied = sorted.filter(j => !!(j.job_apply_link && appliedLinks.has(j.job_apply_link)));
-    return [...notApplied, ...applied];
-  }, [jobs, search, filterType, appliedLinks, adminAppliedLinks]);
+    // Sort only when the user explicitly picks a sort order; default preserves API order
+    if (sortOrder === 'score-desc') {
+      filtered = [...filtered].sort((a, b) => (parseInt(b.match_score) || 0) - (parseInt(a.match_score) || 0));
+    } else if (sortOrder === 'score-asc') {
+      filtered = [...filtered].sort((a, b) => (parseInt(a.match_score) || 0) - (parseInt(b.match_score) || 0));
+    }
+    return filtered;
+  }, [jobs, search, filterType, sortOrder, appliedLinks, adminAppliedLinks]);
 
   const totalPages = Math.max(1, Math.ceil(filteredJobs.length / PAGE_SIZE));
   const paginatedJobs = filteredJobs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Reset page when filters change
-  useEffect(() => { setPage(1); }, [search, filterType]);
+  // Reset page when filters or sort change
+  useEffect(() => { setPage(1); }, [search, filterType, sortOrder]);
 
   const toggleRow = (id) => {
     setSelectedRows(prev => {
@@ -1312,6 +1316,7 @@ ${RESUME_WORD_STYLES}
 
       {/* Search + Filter Row */}
       <div className="flex items-center gap-3 mb-4 shrink-0">
+        {/* Search input */}
         <div className="flex-1 bg-white rounded-xl border border-gray-100 px-4 py-2.5 flex items-center gap-2 shadow-sm">
           <Search size={16} className="text-gray-400 shrink-0" />
           <input
@@ -1325,6 +1330,49 @@ ${RESUME_WORD_STYLES}
             <button onClick={() => setSearch('')} className="text-gray-300 hover:text-gray-500"><X size={14} /></button>
           )}
         </div>
+
+        {/* Sort by Score */}
+        <div className="flex items-center gap-1 bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+          <span className="pl-3 pr-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">Sort</span>
+          <button
+            onClick={() => setSortOrder('default')}
+            title="Default order (API)"
+            className={`flex items-center gap-1 px-3 py-2.5 text-xs font-semibold transition-colors ${
+              sortOrder === 'default'
+                ? 'bg-gray-900 text-white'
+                : 'text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            <ArrowUpDown size={13} />
+            Default
+          </button>
+          <button
+            onClick={() => setSortOrder('score-desc')}
+            title="Highest score first"
+            className={`flex items-center gap-1 px-3 py-2.5 text-xs font-semibold transition-colors ${
+              sortOrder === 'score-desc'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            <ArrowDown size={13} />
+            Score ↓
+          </button>
+          <button
+            onClick={() => setSortOrder('score-asc')}
+            title="Lowest score first"
+            className={`flex items-center gap-1 px-3 py-2.5 text-xs font-semibold transition-colors ${
+              sortOrder === 'score-asc'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            <ArrowUp size={13} />
+            Score ↑
+          </button>
+        </div>
+
+        {/* Type filter */}
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
