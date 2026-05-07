@@ -42,7 +42,7 @@ const timeAgo = (dateStr) => {
 };
 
 const Avatar = ({ user, size = 'md' }) => {
-  const sizeClasses = size === 'sm' ? 'w-7 h-7 text-[10px]' : size === 'lg' ? 'w-10 h-10 text-sm' : 'w-9 h-9 text-xs';
+  const sizeClasses = size === 'sm' ? 'w-7 h-7 text-xs' : size === 'lg' ? 'w-10 h-10 text-sm' : 'w-9 h-9 text-xs';
   if (user?.avatarUrl) {
     return <img src={user.avatarUrl} alt="" className={`${sizeClasses} rounded-full object-cover`} referrerPolicy="no-referrer" />;
   }
@@ -84,18 +84,18 @@ const Comment = ({ comment, postId, currentUserId, onDelete, onReplyAdded, depth
       <div className="py-2 group">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-[12px] font-semibold text-gray-800">{comment.user?.fullName}</span>
-            <span className="text-[10px] text-gray-400">{timeAgo(comment.createdAt)}</span>
+            <span className="text-sm font-semibold text-gray-800">{comment.user?.fullName}</span>
+            <span className="text-xs text-gray-400">{timeAgo(comment.createdAt)}</span>
             {comment.userId === currentUserId && (
-              <button onClick={() => onDelete(comment.id)} className="text-[10px] text-gray-300 hover:text-red-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity ml-auto">
+              <button onClick={() => onDelete(comment.id)} className="text-xs text-gray-300 hover:text-red-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity ml-auto">
                 Delete
               </button>
             )}
           </div>
-          <p className="text-[12px] text-gray-600 leading-relaxed whitespace-pre-wrap break-words">{comment.content}</p>
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap break-words">{comment.content}</p>
           <div className="flex items-center gap-3 mt-1">
             {depth < 2 && (
-              <button onClick={() => setShowReplyInput(!showReplyInput)} className="text-[11px] text-gray-400 hover:text-blue-500 font-medium">
+              <button onClick={() => setShowReplyInput(!showReplyInput)} className="text-xs text-gray-400 hover:text-blue-500 font-medium">
                 Reply
               </button>
             )}
@@ -107,7 +107,7 @@ const Comment = ({ comment, postId, currentUserId, onDelete, onReplyAdded, depth
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
                 placeholder="Write a reply..."
-                className="flex-1 text-[12px] bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-gray-300 focus:ring-1 focus:ring-gray-200"
+                className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-gray-300 focus:ring-1 focus:ring-gray-200"
                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleReply()}
               />
               <button
@@ -124,7 +124,7 @@ const Comment = ({ comment, postId, currentUserId, onDelete, onReplyAdded, depth
           {comment.replies && comment.replies.length > 0 && (
             <>
               {!showReplies && (
-                <button onClick={() => setShowReplies(true)} className="flex items-center gap-1 mt-1.5 ml-1 text-[11px] text-blue-500 hover:text-blue-700 font-medium">
+                <button onClick={() => setShowReplies(true)} className="flex items-center gap-1 mt-1.5 ml-1 text-xs text-blue-500 hover:text-blue-700 font-medium">
                   <CornerDownRight size={12} />
                   {comment.replies.length} {comment.replies.length === 1 ? 'reply' : 'replies'}
                 </button>
@@ -230,7 +230,7 @@ const PostCard = ({ post, currentUserId, onDelete, onUpdate }) => {
       {/* Post Header */}
       <div className="px-4 pt-3.5 pb-0">
         <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-1.5 text-[12px] min-w-0">
+          <div className="flex items-center gap-1.5 text-sm min-w-0">
             <span className="font-semibold text-gray-800">{post.user?.fullName}</span>
             {post.user?.jobRole && (
               <>
@@ -245,7 +245,7 @@ const PostCard = ({ post, currentUserId, onDelete, onUpdate }) => {
             {post.tag && (() => {
               const TagIcon = tagCfg.icon;
               return (
-                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded border ${tagCfg.bg} ${tagCfg.color} ${tagCfg.border}`}>
+                <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded border ${tagCfg.bg} ${tagCfg.color} ${tagCfg.border}`}>
                   <TagIcon size={10} />
                   {post.tag}
                 </span>
@@ -262,7 +262,7 @@ const PostCard = ({ post, currentUserId, onDelete, onUpdate }) => {
                     <div className="absolute right-0 mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-20 py-1">
                       <button
                         onClick={() => { onDelete(post.id); setShowMenu(false); }}
-                        className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-red-600 hover:bg-red-50 transition-colors"
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <Trash2 size={11} />
                         Delete
@@ -276,7 +276,7 @@ const PostCard = ({ post, currentUserId, onDelete, onUpdate }) => {
         </div>
 
         {/* Content */}
-        <p className="text-[13px] text-gray-700 leading-[1.7] whitespace-pre-wrap break-words pb-3">
+        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap break-words pb-3">
           {post.content}
         </p>
       </div>
@@ -285,7 +285,7 @@ const PostCard = ({ post, currentUserId, onDelete, onUpdate }) => {
       <div className="px-4 py-2 flex items-center gap-4 border-t border-gray-100 bg-gray-50/40">
         <button
           onClick={handleLike}
-          className={`flex items-center gap-1.5 text-[11px] font-medium transition-colors ${
+          className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${
             post.isLiked
               ? 'text-rose-500'
               : 'text-gray-400 hover:text-rose-500'
@@ -296,7 +296,7 @@ const PostCard = ({ post, currentUserId, onDelete, onUpdate }) => {
         </button>
         <button
           onClick={handleToggleComments}
-          className={`flex items-center gap-1.5 text-[11px] font-medium transition-colors ${
+          className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${
             showComments
               ? 'text-blue-500'
               : 'text-gray-400 hover:text-blue-500'
@@ -315,13 +315,13 @@ const PostCard = ({ post, currentUserId, onDelete, onUpdate }) => {
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="Add a comment..."
-              className="flex-1 text-[12px] bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-100 focus:bg-white transition-all"
+              className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-100 focus:bg-white transition-all"
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleComment()}
             />
             <button
               onClick={handleComment}
               disabled={sending || !commentText.trim()}
-              className="px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-[11px] font-semibold disabled:opacity-30 transition-colors"
+              className="px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold disabled:opacity-30 transition-colors"
             >
               Reply
             </button>
@@ -330,10 +330,10 @@ const PostCard = ({ post, currentUserId, onDelete, onUpdate }) => {
           {loadingComments ? (
             <div className="flex items-center justify-center gap-2 py-4">
               <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-[11px] text-gray-400">Loading...</span>
+              <span className="text-xs text-gray-400">Loading...</span>
             </div>
           ) : comments.length === 0 ? (
-            <div className="text-center py-3 text-[11px] text-gray-400">No comments yet</div>
+            <div className="text-center py-3 text-xs text-gray-400">No comments yet</div>
           ) : (
             <div className="mt-1">
               {comments.map((c) => (
@@ -473,11 +473,11 @@ const ShoutboardPage = () => {
               <MessageSquare size={16} className="text-blue-600" />
             </div>
             <div>
-              <h1 className="text-[16px] font-bold text-gray-900">Discussion Forum</h1>
-              <p className="text-[11px] text-gray-400">Share thoughts, tips & celebrate wins</p>
+              <h1 className="text-lg font-bold text-gray-900">Discussion Forum</h1>
+              <p className="text-xs text-gray-400">Share thoughts, tips & celebrate wins</p>
             </div>
           </div>
-          <span className="text-[11px] text-gray-400 bg-gray-50 px-2.5 py-1 rounded-md">{filteredPosts.length} {filteredPosts.length === 1 ? 'post' : 'posts'}</span>
+          <span className="text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-md">{filteredPosts.length} {filteredPosts.length === 1 ? 'post' : 'posts'}</span>
         </div>
 
         {/* Search Bar */}
@@ -488,7 +488,7 @@ const ShoutboardPage = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search discussions by content, author, or topic..."
-            className="w-full pl-9 pr-3 py-2.5 text-[12px] bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 placeholder-gray-400 text-gray-700 transition-all"
+            className="w-full pl-9 pr-3 py-2.5 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 placeholder-gray-400 text-gray-700 transition-all"
           />
         </div>
 
@@ -500,7 +500,7 @@ const ShoutboardPage = () => {
               value={newPost}
               onChange={(e) => { setNewPost(e.target.value); autoResize(e); }}
               placeholder="Start a discussion... Share interview tips, career wins, or ask questions"
-              className="w-full text-[13px] text-gray-800 placeholder-gray-400 bg-transparent border-none outline-none resize-none min-h-[48px] leading-relaxed"
+              className="w-full text-sm text-gray-800 placeholder-gray-400 bg-transparent border-none outline-none resize-none min-h-[48px] leading-relaxed"
               rows={2}
             />
           </div>
@@ -514,7 +514,7 @@ const ShoutboardPage = () => {
                   <button
                     key={tag}
                     onClick={() => setSelectedTag(isSelected ? '' : tag)}
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium whitespace-nowrap transition-all border ${
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-all border ${
                       isSelected
                         ? `${cfg.bg} ${cfg.color} ${cfg.border}`
                         : 'border-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-100'
@@ -529,7 +529,7 @@ const ShoutboardPage = () => {
             <button
               onClick={handlePost}
               disabled={posting || !newPost.trim()}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold disabled:opacity-30 transition-colors shrink-0 ml-3"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold disabled:opacity-30 transition-colors shrink-0 ml-3"
             >
               <Send size={11} />
               Post
@@ -547,10 +547,10 @@ const ShoutboardPage = () => {
             <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center mx-auto mb-3">
               <MessageSquare size={18} className="text-gray-300" />
             </div>
-            <p className="text-[13px] font-semibold text-gray-600">
+            <p className="text-sm font-semibold text-gray-600">
               {filterTag ? `No ${filterTag} discussions yet` : searchQuery ? 'No matching discussions' : 'No discussions yet'}
             </p>
-            <p className="text-[11px] text-gray-400 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               {searchQuery ? 'Try a different search term' : 'Start a conversation above to get things going!'}
             </p>
           </div>
@@ -574,13 +574,13 @@ const ShoutboardPage = () => {
         {/* Sort By */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-3.5 py-2.5 border-b border-gray-100">
-            <p className="text-[12px] font-bold text-gray-700">Sort By</p>
+            <p className="text-sm font-bold text-gray-700">Sort By</p>
           </div>
           <div className="p-3">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full text-[11px] text-gray-700 bg-white border border-gray-200 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 cursor-pointer"
+              className="w-full text-sm text-gray-700 bg-white border border-gray-200 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 cursor-pointer"
             >
               {SORT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -592,14 +592,14 @@ const ShoutboardPage = () => {
         {/* Filter Links */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-3.5 py-2.5 border-b border-gray-100">
-            <p className="text-[12px] font-bold text-gray-700">Filter</p>
+            <p className="text-sm font-bold text-gray-700">Filter</p>
           </div>
           <div className="py-1">
             {SIDEBAR_FILTERS.map((f) => (
               <button
                 key={f.key}
                 onClick={() => setSidebarFilter(f.key)}
-                className={`w-full text-left px-3.5 py-2 text-[11px] font-medium transition-colors ${
+                className={`w-full text-left px-3.5 py-2 text-xs font-medium transition-colors ${
                   sidebarFilter === f.key
                     ? `${f.color} bg-gray-50 font-semibold`
                     : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50/60'
@@ -614,13 +614,13 @@ const ShoutboardPage = () => {
         {/* Filter by Topics */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-3.5 py-2.5 border-b border-gray-100">
-            <p className="text-[12px] font-bold text-gray-700">Filter by topics</p>
+            <p className="text-sm font-bold text-gray-700">Filter by topics</p>
           </div>
           <div className="p-3">
             <select
               value={filterTag}
               onChange={(e) => setFilterTag(e.target.value)}
-              className="w-full text-[11px] text-gray-700 bg-white border border-gray-200 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 cursor-pointer"
+              className="w-full text-sm text-gray-700 bg-white border border-gray-200 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 cursor-pointer"
             >
               <option value="">All Topics</option>
               {TAG_OPTIONS.map((tag) => (
@@ -634,7 +634,7 @@ const ShoutboardPage = () => {
         {(filterTag || sidebarFilter !== 'all' || searchQuery) && (
           <button
             onClick={() => { setFilterTag(''); setSidebarFilter('all'); setSearchQuery(''); setSortBy('newest'); }}
-            className="w-full text-[11px] text-gray-400 hover:text-red-500 font-medium py-2 transition-colors text-center"
+            className="w-full text-xs text-gray-400 hover:text-red-500 font-medium py-2 transition-colors text-center"
           >
             Reset all filters
           </button>
