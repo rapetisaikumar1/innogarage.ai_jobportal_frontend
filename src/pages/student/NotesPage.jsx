@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { StickyNote, Plus, Edit3, Trash2, Save, X, Search, Clock, Tag } from 'lucide-react';
+import { StickyNote, Plus, Edit3, Trash2, Save, X, Search, Clock } from 'lucide-react';
 
 const CATEGORY_STYLE = {
-  'Interview Prep': { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200' },
-  'Technical Notes': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-  'Career Development': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-  'General': { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' },
+  'Interview Prep':    { bg: 'bg-violet-50',  text: 'text-violet-700',  border: 'border-violet-200',  accent: 'border-l-violet-400',  dot: 'bg-violet-400'  },
+  'Technical Notes':   { bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200',    accent: 'border-l-blue-400',    dot: 'bg-blue-400'    },
+  'Career Development':{ bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', accent: 'border-l-emerald-400', dot: 'bg-emerald-400' },
+  'General':           { bg: 'bg-gray-100',   text: 'text-gray-600',   border: 'border-gray-200',   accent: 'border-l-gray-400',   dot: 'bg-gray-400'   },
 };
 
 const NotesPage = () => {
@@ -205,44 +205,48 @@ const NotesPage = () => {
                   return (
                     <div
                       key={note.id}
-                      className="border border-gray-100 rounded-xl p-4 hover:border-gray-200 hover:shadow-sm transition-all group flex flex-col"
+                      className={`border border-l-4 ${cs.accent} border-gray-100 rounded-xl p-5 hover:shadow-md transition-all group flex flex-col bg-white`}
                     >
                       {/* Title + Actions */}
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h3 className="text-sm font-semibold text-gray-900 leading-snug">{note.title}</h3>
-                        <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <h3 className="text-base font-bold text-gray-900 leading-snug flex-1">{note.title}</h3>
+                        <div className="flex gap-0.5 shrink-0">
                           <button
                             onClick={() => handleEdit(note)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="Edit"
+                            className="p-2 rounded-lg text-gray-300 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                           >
-                            <Edit3 size={13} />
+                            <Edit3 size={14} />
                           </button>
                           <button
                             onClick={() => handleDelete(note.id)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Delete"
+                            className="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </div>
 
                       {/* Category */}
                       {note.category && (
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium border ${cs.bg} ${cs.text} ${cs.border} mb-2`}>
-                          <Tag size={9} />
-                          {note.category}
-                        </span>
+                        <div className="mb-3">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${cs.bg} ${cs.text}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cs.dot}`} />
+                            {note.category}
+                          </span>
+                        </div>
                       )}
 
                       {/* Content */}
-                      <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap mt-1 flex-1 line-clamp-5">
+                      <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap flex-1 line-clamp-6">
                         {note.content}
                       </p>
 
                       {/* Date */}
-                      <div className="flex items-center gap-1 mt-3 pt-2.5 border-t border-gray-100">
-                        <Clock size={10} className="text-gray-300" />
-                        <span className="text-xs text-gray-400">{dateStr}</span>
+                      <div className="flex items-center gap-1.5 mt-4 pt-3 border-t border-gray-100">
+                        <Clock size={11} className="text-gray-300 shrink-0" />
+                        <span className="text-xs text-gray-400">Updated {dateStr}</span>
                       </div>
                     </div>
                   );
