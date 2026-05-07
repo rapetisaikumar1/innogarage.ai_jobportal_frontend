@@ -122,6 +122,11 @@ const DashboardLayout = () => {
   };
 
   const navItems = getNavItems();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isAdmin = user?.role === 'ADMIN';
+  const isStudent = user?.role === 'STUDENT';
+  const useHorizontalNav = false;
+  const roleLabel = isSuperAdmin ? 'Super Admin' : isAdmin ? 'Mentor' : 'Student';
 
   return (
     <div className="h-screen bg-gradient-to-br from-slate-100 via-blue-50/80 to-indigo-100/60 flex overflow-hidden">
@@ -186,8 +191,8 @@ const DashboardLayout = () => {
               )
             );
 
-            const SectionLabel = ({ children }) => (
-              <p className="px-3 mb-2 mt-5 first:mt-0 text-xs font-bold uppercase tracking-[0.15em] text-gray-300">{children}</p>
+            const SectionLabel = ({ children, first }) => (
+              <p className={`px-3 mb-2 ${first ? 'mt-0' : 'mt-5'} text-xs font-bold uppercase tracking-[0.15em] text-gray-300`}>{children}</p>
             );
 
             return (
@@ -197,7 +202,7 @@ const DashboardLayout = () => {
                   if (!items.length) return null;
                   return (
                     <div key={section.label}>
-                      <SectionLabel>{section.label}</SectionLabel>
+                      <SectionLabel first={idx === 0}>{section.label}</SectionLabel>
                       <div className="space-y-0.5">{items.map(renderItem)}</div>
                     </div>
                   );
