@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import {
   Send, MessageSquare, Search, Paperclip, FileText, Image,
-  File, X, Download, CheckCheck, ChevronUp, ChevronDown, FolderOpen, ArrowLeft, Users
+  File, X, Download, CheckCheck, Clock, ChevronUp, ChevronDown, FolderOpen, ArrowLeft, Users
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import GroupChatPanel from '../../components/chat/GroupChatPanel';
@@ -147,14 +147,29 @@ const ChatPage = () => {
       msgText = text ? `${fileInfo}\n${text}` : fileInfo;
     }
 
+    // Optimistic update — show message instantly, no wait for server
+    const tempId = `temp-${Date.now()}`;
+    const optimistic = {
+      id: tempId,
+      senderId: user.id,
+      receiverId: activeContact.id,
+      message: msgText,
+      createdAt: new Date().toISOString(),
+      _pending: true,
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    setNewMessage('');
+    setAttachedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
     try {
       const res = await api.post('/chat/messages', { receiverId: activeContact.id, message: msgText });
       socket?.emit('sendMessage', res.data);
-      setMessages((prev) => [...prev, res.data]);
-      setNewMessage('');
-      setAttachedFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      // Replace optimistic msg with confirmed server response
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? res.data : m)));
     } catch (err) {
+      // Roll back optimistic message on failure
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
       toast.error('Failed to send message');
     }
   };
@@ -526,6 +541,7 @@ const ChatPage = () => {
                   <div className="space-y-2">
                     {msgs.map((msg, idx) => {
                       const isMine = msg.senderId === user.id;
+                      const isPending = !!msg._pending;
                       const parsed = parseMessage(msg.message);
                       const globalIdx = messages.indexOf(msg);
                       const isHighlighted = searchMatches.includes(globalIdx);
@@ -533,7 +549,7 @@ const ChatPage = () => {
                         <div
                           key={msg.id || idx}
                           ref={(el) => { if (isHighlighted) matchRefs.current[globalIdx] = el; }}
-                          className={`flex ${isMine ? 'justify-end' : 'justify-start'} ${isHighlighted && globalIdx === searchMatches[searchMatchIdx] ? 'ring-2 ring-amber-300 ring-offset-2 rounded-xl' : ''}`}
+                          className={`flex ${isMine ? 'justify-end' : 'justify-start'} ${isPending ? 'opacity-60' : ''} ${isHighlighted && globalIdx === searchMatches[searchMatchIdx] ? 'ring-2 ring-amber-300 ring-offset-2 rounded-xl' : ''}`}
                         >
                           <div className={`max-w-[65%] ${isMine ? 'order-1' : ''}`}>
                             {parsed.isFile && (
@@ -559,7 +575,9 @@ const ChatPage = () => {
                               <p className="text-[10px] text-gray-400">
                                 {format(new Date(msg.createdAt), 'h:mm a')}
                               </p>
-                              {isMine && <CheckCheck size={11} className="text-blue-400" />}
+                              {isMine && (isPending
+                                ? <Clock size={11} className="text-gray-300" />
+                                : <CheckCheck size={11} className="text-blue-400" />)}
                             </div>
                           </div>
                         </div>
