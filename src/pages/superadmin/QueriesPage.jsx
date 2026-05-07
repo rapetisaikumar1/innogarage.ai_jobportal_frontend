@@ -105,46 +105,41 @@ const QueriesPage = () => {
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-[16px] font-bold text-gray-900">Student Queries</h1>
-        <p className="text-[11px] text-gray-400 mt-0.5">Manage and respond to student support requests</p>
+        <h1 className="text-xl font-bold text-gray-900">Student Queries</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Manage and respond to student support requests</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total', value: stats.total, icon: MessageSquareMore, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Open', value: stats.open, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
-          { label: 'In Progress', value: stats.inProgress, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Closed', value: stats.closed, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Total', value: stats.total },
+          { label: 'Open', value: stats.open },
+          { label: 'In Progress', value: stats.inProgress },
+          { label: 'Closed', value: stats.closed },
         ].map((stat, i) => (
-          <div key={i} className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex items-center gap-3">
-            <div className={`w-8 h-8 ${stat.bg} rounded-lg flex items-center justify-center`}>
-              <stat.icon size={15} className={stat.color} />
-            </div>
-            <div>
-              <p className="text-[18px] font-bold text-gray-900 leading-none">{stat.value}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">{stat.label}</p>
-            </div>
+          <div key={i} className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3">
+            <p className="text-2xl font-bold text-gray-900 leading-none">{stat.value}</p>
+            <p className="text-sm text-gray-500">{stat.label}</p>
           </div>
         ))}
       </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 flex items-center gap-2 flex-1 sm:max-w-xs">
-          <Search size={13} className="text-gray-400 shrink-0" />
+        <div className="bg-white border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2 flex-1 sm:max-w-xs">
+          <Search size={14} className="text-gray-400 shrink-0" />
           <input
             type="text"
-            className="flex-1 text-[12px] bg-transparent outline-none placeholder-gray-400 text-gray-700"
+            className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-700"
             placeholder="Search by subject, student..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-1 bg-gray-100/80 rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
           <button
             onClick={() => setFilterStatus('')}
-            className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${!filterStatus ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${!filterStatus ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             All
           </button>
@@ -152,7 +147,7 @@ const QueriesPage = () => {
             <button
               key={s}
               onClick={() => setFilterStatus(filterStatus === s ? '' : s)}
-              className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors whitespace-nowrap ${filterStatus === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${filterStatus === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
               {STATUS_CONFIG[s].label}
             </button>
@@ -162,59 +157,50 @@ const QueriesPage = () => {
 
       {/* Queries List */}
       {filtered.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-lg text-center py-16">
+        <div className="bg-white border border-gray-200 rounded-xl text-center py-16">
           <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mx-auto mb-3">
-            <MessageSquareMore size={20} className="text-gray-300" />
+            <MessageSquareMore size={22} className="text-gray-300" />
           </div>
-          <h3 className="text-[13px] font-semibold text-gray-600">No queries found</h3>
-          <p className="text-[11px] text-gray-400 mt-1">
+          <h3 className="text-sm font-semibold text-gray-600">No queries found</h3>
+          <p className="text-xs text-gray-400 mt-1">
             {queries.length === 0 ? 'No student queries yet' : 'Try a different search or filter'}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
-          {filtered.map((query) => {
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          {filtered.map((query, idx) => {
             const sc = STATUS_CONFIG[query.status] || STATUS_CONFIG.OPEN;
             const dateStr = new Date(query.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            const timeStr = new Date(query.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
             return (
               <button
                 key={query.id}
                 onClick={() => { setExpandedId(query.id); setReplyText(query.adminReply || ''); }}
-                className="bg-white border border-gray-200 rounded-lg overflow-hidden text-left hover:shadow-md hover:border-gray-300 transition-all duration-200 group"
+                className={`w-full px-5 py-3.5 text-left hover:bg-gray-50/60 transition-colors ${idx < filtered.length - 1 ? 'border-b border-gray-100' : ''}`}
               >
-                <div className="px-4 py-3.5">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="text-[13px] font-semibold text-gray-900 line-clamp-1 group-hover:text-blue-700 transition-colors">{query.subject}</h3>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border shrink-0 ${sc.bg} ${sc.text} ${sc.border}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
-                      {sc.label}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed mb-2.5">{query.description}</p>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <User size={10} />
-                      {query.user?.fullName}
-                    </span>
-                    <span className="truncate max-w-[140px]">{query.user?.email}</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-400">
-                    <span>{dateStr} · {timeStr}</span>
-                    <span className="px-1.5 py-0.5 rounded bg-gray-100 text-[10px] font-medium text-gray-500">{query.category}</span>
-                    {query.assignedTo && (
-                      <span className="flex items-center gap-1 text-violet-600">
-                        <UserCheck size={10} />
-                        {query.assignedTo.fullName}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border shrink-0 ${sc.bg} ${sc.text} ${sc.border}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
+                        {sc.label}
                       </span>
-                    )}
+                      <span className="text-[11px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{query.category}</span>
+                    </div>
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">{query.subject}</h3>
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{query.description}</p>
+                    <div className="flex flex-wrap items-center gap-x-3 mt-1.5 text-xs text-gray-400">
+                      <span className="flex items-center gap-1"><User size={11} />{query.user?.fullName}</span>
+                      <span>{dateStr}</span>
+                      {query.assignedTo && (
+                        <span className="flex items-center gap-1 text-gray-600">
+                          <UserCheck size={11} />{query.assignedTo.fullName}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {query.adminReply && (
-                    <div className="mt-2.5 pt-2.5 border-t border-gray-100">
-                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Reply</p>
-                      <p className="text-[11px] text-gray-600 line-clamp-1">{query.adminReply}</p>
-                    </div>
+                    <div className="text-[11px] text-gray-400 bg-gray-50 rounded px-2 py-1 shrink-0 hidden sm:block">Replied</div>
                   )}
                 </div>
               </button>
@@ -240,13 +226,13 @@ const QueriesPage = () => {
                 <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-start justify-between gap-3 rounded-t-2xl z-10">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2.5 mb-1.5">
-                      <h2 className="text-[15px] font-bold text-gray-900 truncate">{query.subject}</h2>
+                      <h2 className="text-base font-bold text-gray-900 truncate">{query.subject}</h2>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border shrink-0 ${sc.bg} ${sc.text} ${sc.border}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
                         {sc.label}
                       </span>
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-400">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
                       <span className="flex items-center gap-1"><User size={10} />{query.user?.fullName}</span>
                       <span>{query.user?.email}</span>
                       <span>{dateStr} · {timeStr}</span>
@@ -268,14 +254,14 @@ const QueriesPage = () => {
                 <div className="px-5 py-4 space-y-4">
                   {/* Reassign */}
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                       <ArrowRightLeft size={10} /> Assign To
                     </p>
                     <select
                       value={query.assignedToId || ''}
                       onChange={(e) => handleReassign(query.id, e.target.value)}
                       disabled={updating}
-                      className="w-full text-[12px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-300 transition-all disabled:opacity-40"
+                      className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-300 transition-all disabled:opacity-40"
                     >
                       <option value="">Unassigned</option>
                       {staffList.map((s) => (
@@ -288,8 +274,8 @@ const QueriesPage = () => {
 
                   {/* Description */}
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Description</p>
-                    <p className="text-[12px] text-gray-700 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-lg px-3.5 py-3 border border-gray-100">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Description</p>
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-lg px-3.5 py-3 border border-gray-100">
                       {query.description}
                     </p>
                   </div>
@@ -297,8 +283,8 @@ const QueriesPage = () => {
                   {query.status === 'CLOSED' ? (
                     query.adminReply && (
                       <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Admin Reply</p>
-                        <p className="text-[12px] text-gray-700 leading-relaxed whitespace-pre-wrap bg-emerald-50 rounded-lg px-3.5 py-3 border border-emerald-100">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Admin Reply</p>
+                        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-lg px-3.5 py-3 border border-gray-100">
                           {query.adminReply}
                         </p>
                       </div>
@@ -306,10 +292,10 @@ const QueriesPage = () => {
                   ) : (
                     <>
                       <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Admin Reply</p>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Admin Reply</p>
                         <textarea
                           rows={3}
-                          className="w-full text-[12px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 resize-none placeholder-gray-400 transition-all"
+                          className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-300 resize-none placeholder-gray-400 transition-all"
                           placeholder="Write a response to the student..."
                           value={replyText}
                           onChange={(e) => setReplyText(e.target.value)}

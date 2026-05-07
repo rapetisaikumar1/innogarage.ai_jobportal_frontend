@@ -130,15 +130,14 @@ const AdminBookings = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Pending', value: pending.length, icon: <AlertCircle size={17} />, color: 'text-amber-600', bg: 'bg-amber-50', ring: 'ring-amber-100' },
-          { label: 'Confirmed', value: confirmed.length, icon: <CheckCircle2 size={17} />, color: 'text-blue-600', bg: 'bg-blue-50', ring: 'ring-blue-100' },
-          { label: 'Completed', value: completed.length, icon: <CheckCircle2 size={17} />, color: 'text-emerald-600', bg: 'bg-emerald-50', ring: 'ring-emerald-100' },
-          { label: 'Cancelled', value: cancelled.length, icon: <XCircle size={17} />, color: 'text-red-500', bg: 'bg-red-50', ring: 'ring-red-100' },
+          { label: 'Pending', value: pending.length },
+          { label: 'Confirmed', value: confirmed.length },
+          { label: 'Completed', value: completed.length },
+          { label: 'Cancelled', value: cancelled.length },
         ].map((s, i) => (
-          <div key={i} className={`rounded-xl border border-gray-100 bg-white p-4 ring-1 ${s.ring}`}>
-            <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center ${s.color} mb-2`}>{s.icon}</div>
+          <div key={i} className="rounded-xl border border-gray-200 bg-white px-4 py-3 flex items-center gap-3">
             <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-            <p className="text-[12px] text-gray-500 mt-0.5">{s.label}</p>
+            <p className="text-[12px] text-gray-500">{s.label}</p>
           </div>
         ))}
       </div>
@@ -159,91 +158,86 @@ const AdminBookings = () => {
 
       {/* Bookings List */}
       {currentList.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 text-center py-14">
-          <Calendar size={32} className="mx-auto text-gray-300 mb-3" />
+        <div className="bg-white rounded-xl border border-gray-200 text-center py-12">
+          <Calendar size={28} className="mx-auto text-gray-300 mb-2" />
           <p className="text-sm font-medium text-gray-500">No {tab} bookings</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {currentList.map(b => {
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          {currentList.map((b, idx) => {
             const isPast = new Date(b.startTime) <= now;
             return (
-              <div key={b.id} className={`bg-white rounded-xl border border-gray-200 overflow-hidden ${isPast ? 'opacity-50' : ''}`}>
-                <div className="flex items-center justify-between px-5 py-4 gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-[12px] font-bold flex-shrink-0 ${
-                      b.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
-                      b.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-700' :
-                      b.status === 'CANCELLED' ? 'bg-red-100 text-red-600' :
-                      'bg-emerald-100 text-emerald-700'
-                    }`}>
-                      {getInitials(b.student?.fullName)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-bold text-gray-900 truncate">{b.student?.fullName}</p>
-                      <div className="flex items-center gap-3 mt-0.5 text-[11px] text-gray-400">
-                        <span className="flex items-center gap-1"><Calendar size={10} /> {getDateLabel(b.startTime)}</span>
-                        <span className="flex items-center gap-1"><Clock size={10} /> {format(new Date(b.startTime), 'h:mm a')} - {format(new Date(b.endTime), 'h:mm a')}</span>
-                        {b.student?.email && <span className="hidden md:inline truncate">{b.student.email}</span>}
-                      </div>
+              <div key={b.id} className={`flex items-center justify-between px-4 py-3 gap-4 hover:bg-gray-50/60 transition-colors ${idx < currentList.length - 1 ? 'border-b border-gray-100' : ''} ${isPast ? 'opacity-50' : ''}`}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${
+                    b.status === 'PENDING' ? 'bg-gray-100 text-gray-600' :
+                    b.status === 'CONFIRMED' ? 'bg-gray-800 text-white' :
+                    b.status === 'CANCELLED' ? 'bg-gray-100 text-gray-500' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {getInitials(b.student?.fullName)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-gray-900 truncate">{b.student?.fullName}</p>
+                    <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-400 flex-wrap">
+                      <span className="flex items-center gap-0.5"><Calendar size={10} /> {getDateLabel(b.startTime)}</span>
+                      <span className="flex items-center gap-0.5"><Clock size={10} /> {format(new Date(b.startTime), 'h:mm a')} – {format(new Date(b.endTime), 'h:mm a')}</span>
+                      {b.student?.email && <span className="hidden md:inline truncate max-w-[180px]">{b.student.email}</span>}
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold ring-1 ring-inset uppercase tracking-wider ${
-                      b.status === 'PENDING' ? 'bg-amber-50 text-amber-600 ring-amber-200' :
-                      b.status === 'CONFIRMED' ? 'bg-blue-50 text-blue-600 ring-blue-200' :
-                      b.status === 'CANCELLED' ? 'bg-red-50 text-red-500 ring-red-200' :
-                      'bg-emerald-50 text-emerald-600 ring-emerald-200'
-                    }`}>
-                      {b.status === 'PENDING' && <AlertCircle size={9} />}
-                      {b.status === 'CONFIRMED' && <CheckCircle2 size={9} />}
-                      {b.status === 'CANCELLED' && <XCircle size={9} />}
-                      {b.status}
-                    </span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className={`hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                    b.status === 'PENDING' ? 'bg-gray-100 text-gray-500' :
+                    b.status === 'CONFIRMED' ? 'bg-gray-800 text-white' :
+                    b.status === 'CANCELLED' ? 'bg-gray-100 text-gray-500' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {b.status}
+                  </span>
 
-                    {b.status === 'PENDING' && !isPast && (
-                      <>
-                        <button
-                          onClick={() => { setConfirmModal(b); setMeetLink(''); }}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-semibold hover:bg-blue-700 transition-colors"
+                  {b.status === 'PENDING' && !isPast && (
+                    <>
+                      <button
+                        onClick={() => { setConfirmModal(b); setMeetLink(''); }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-[11px] font-semibold hover:bg-gray-700 transition-colors"
+                      >
+                        <CheckCircle2 size={12} /> Confirm
+                      </button>
+                      <button
+                        onClick={() => { setCancelModal(b); setCancelReason(''); }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-500 text-[11px] font-semibold hover:bg-gray-100 transition-colors"
+                      >
+                        <XCircle size={12} /> Decline
+                      </button>
+                    </>
+                  )}
+
+                  {b.status === 'CONFIRMED' && !isPast && (
+                    <>
+                      {b.meetLink && (
+                        <a
+                          href={b.meetLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-[11px] font-semibold hover:bg-gray-700 transition-colors"
                         >
-                          <CheckCircle2 size={12} /> Confirm
-                        </button>
-                        <button
-                          onClick={() => { setCancelModal(b); setCancelReason(''); }}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-red-500 text-[11px] font-semibold hover:bg-red-50 transition-colors"
-                        >
-                          <XCircle size={12} /> Decline
-                        </button>
-                      </>
-                    )}
+                          <Video size={12} /> Join Meet
+                        </a>
+                      )}
+                      <button
+                        onClick={() => { setCancelModal(b); setCancelReason(''); }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-500 text-[11px] font-semibold hover:bg-gray-100 transition-colors"
+                      >
+                        <XCircle size={12} /> Cancel
+                      </button>
+                    </>
+                  )}
 
-                    {b.status === 'CONFIRMED' && !isPast && (
-                      <>
-                        {b.meetLink && (
-                          <a
-                            href={b.meetLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 text-white text-[11px] font-semibold hover:bg-green-700 transition-colors"
-                          >
-                            <Video size={12} /> Join Meet
-                          </a>
-                        )}
-                        <button
-                          onClick={() => { setCancelModal(b); setCancelReason(''); }}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-red-500 text-[11px] font-semibold hover:bg-red-50 transition-colors"
-                        >
-                          <XCircle size={12} /> Cancel
-                        </button>
-                      </>
-                    )}
-
-                    {b.status === 'CANCELLED' && b.notes && (
-                      <span className="text-[10px] text-gray-400 max-w-[200px] truncate hidden md:inline" title={b.notes}>{b.notes}</span>
-                    )}
-                  </div>
+                  {b.status === 'CANCELLED' && b.notes && (
+                    <span className="text-[10px] text-gray-400 max-w-[160px] truncate hidden md:inline" title={b.notes}>{b.notes}</span>
+                  )}
                 </div>
               </div>
             );

@@ -27,8 +27,16 @@ const AdminChat = () => {
   const [chatMode, setChatMode] = useState('direct');
   const [groupUnread, setGroupUnread] = useState(0);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
+  const activeContactRef = useRef(null);
+
+  const scrollToBottom = (smooth = true) => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    container.scrollTo({ top: container.scrollHeight, behavior: smooth ? 'smooth' : 'instant' });
+  };
 
   useEffect(() => {
     const newSocket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
@@ -36,12 +44,21 @@ const AdminChat = () => {
     });
     setSocket(newSocket);
     newSocket.on('newMessage', (msg) => {
-      if (msg.senderId === activeContact?.id || msg.receiverId === activeContact?.id) {
-        setMessages((prev) => [...prev, msg]);
+      const current = activeContactRef.current;
+      if (msg.senderId === current?.id || msg.receiverId === current?.id) {
+        setMessages((prev) => [
+          ...prev.filter(m => !m._pending),
+          msg,
+        ]);
       }
       fetchContacts();
     });
     return () => newSocket.disconnect();
+  }, []);  // run once — uses activeContactRef to avoid stale closure
+
+  // Sync activeContactRef so socket handler always sees current contact
+  useEffect(() => {
+    activeContactRef.current = activeContact;
   }, [activeContact]);
 
   useEffect(() => { fetchContacts(); fetchGroupUnread(); }, []);
@@ -55,7 +72,7 @@ const AdminChat = () => {
   };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    scrollToBottom();
   }, [messages]);
 
   const fetchContacts = async () => {
@@ -69,6 +86,7 @@ const AdminChat = () => {
 
   const selectContact = async (contact) => {
     setActiveContact(contact);
+    activeContactRef.current = contact;
     setShowMobileSidebar(false);
     setLoadingMessages(true);
     try {
@@ -95,14 +113,27 @@ const AdminChat = () => {
       msgText = text ? `${fileInfo}\n${text}` : fileInfo;
     }
 
+    // Optimistic UI: show message immediately
+    const tempId = `temp_${Date.now()}`;
+    const optimisticMsg = {
+      id: tempId,
+      _pending: true,
+      senderId: user.id,
+      receiverId: activeContact.id,
+      message: msgText,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setNewMessage('');
+    setAttachedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
     try {
       const res = await api.post('/chat/messages', { receiverId: activeContact.id, message: msgText });
       socket?.emit('sendMessage', res.data);
-      setMessages((prev) => [...prev, res.data]);
-      setNewMessage('');
-      setAttachedFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      setMessages((prev) => prev.map(m => m.id === tempId ? res.data : m));
     } catch (err) {
+      setMessages((prev) => prev.filter(m => m.id !== tempId));
       toast.error('Failed to send message');
     }
   };
@@ -388,7 +419,7 @@ const AdminChat = () => {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 bg-gray-50/40">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-5 py-4 bg-gray-50/40">
               {loadingMessages ? (
                 <div className="flex justify-center py-12">
                   <div className="w-7 h-7 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -459,7 +490,7 @@ const AdminChat = () => {
                   </div>
                 ))
               )}
-              <div ref={messagesEndRef} />
+              <div ref={messagesEndRef} className="h-0" />
             </div>
 
             {/* File Attachment Preview */}

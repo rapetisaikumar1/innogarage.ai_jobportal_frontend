@@ -286,10 +286,10 @@ const AdminSlots = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Total Slots', value: stats.total, icon: <Calendar size={17} />, color: 'text-slate-600', bg: 'bg-slate-50', ring: 'ring-slate-100' },
-          { label: 'Available', value: stats.available, icon: <Clock size={17} />, color: 'text-blue-600', bg: 'bg-blue-50', ring: 'ring-blue-100' },
-          { label: 'Booked', value: stats.booked, icon: <Users size={17} />, color: 'text-emerald-600', bg: 'bg-emerald-50', ring: 'ring-emerald-100' },
-          { label: 'Expired', value: stats.expired, icon: <AlertCircle size={17} />, color: 'text-gray-500', bg: 'bg-gray-50', ring: 'ring-gray-100' },
+          { label: 'Total Slots', value: stats.total, icon: <Calendar size={17} />, color: 'text-gray-600', bg: 'bg-gray-50', ring: 'ring-gray-100' },
+          { label: 'Available', value: stats.available, icon: <Clock size={17} />, color: 'text-gray-600', bg: 'bg-gray-50', ring: 'ring-gray-100' },
+          { label: 'Booked', value: stats.booked, icon: <Users size={17} />, color: 'text-gray-600', bg: 'bg-gray-50', ring: 'ring-gray-100' },
+          { label: 'Expired', value: stats.expired, icon: <AlertCircle size={17} />, color: 'text-gray-400', bg: 'bg-gray-50', ring: 'ring-gray-100' },
         ].map((s, i) => (
           <div key={i} className={`rounded-xl border border-gray-100 bg-white p-4 ring-1 ${s.ring}`}>
             <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center ${s.color} mb-2`}>{s.icon}</div>
@@ -339,22 +339,22 @@ const AdminSlots = () => {
             const todayOrTomorrow = isToday(new Date(dateKey + 'T00:00:00')) || isTomorrow(new Date(dateKey + 'T00:00:00'));
 
             return (
-              <div key={dateKey} className={`bg-white rounded-xl border overflow-hidden ${todayOrTomorrow ? 'border-blue-200 ring-1 ring-blue-50' : 'border-gray-200'}`}>
+              <div key={dateKey} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 {/* Date Header */}
                 <button
                   onClick={() => toggleDate(dateKey)}
                   className="w-full px-5 py-3.5 flex items-center justify-between hover:bg-gray-50/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${todayOrTomorrow ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-500'}`}>
+                    <div className="w-9 h-9 rounded-lg bg-gray-50 text-gray-500 flex items-center justify-center">
                       <Calendar size={16} />
                     </div>
                     <div className="text-left">
-                      <p className={`text-[13px] font-semibold ${todayOrTomorrow ? 'text-blue-900' : 'text-gray-900'}`}>{dateLabel}</p>
+                      <p className="text-[13px] font-semibold text-gray-900">{dateLabel}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[11px] text-gray-500">{dateSlots.length} slot{dateSlots.length > 1 ? 's' : ''}</span>
-                        {availableCount > 0 && <span className="text-[11px] text-blue-600 font-medium">{availableCount} available</span>}
-                        {bookedCount > 0 && <span className="text-[11px] text-emerald-600 font-medium">{bookedCount} booked</span>}
+                        {availableCount > 0 && <span className="text-[11px] text-gray-600 font-medium">{availableCount} available</span>}
+                        {bookedCount > 0 && <span className="text-[11px] text-gray-600 font-medium">{bookedCount} booked</span>}
                         {expiredCount > 0 && <span className="text-[11px] text-gray-400">{expiredCount} expired</span>}
                       </div>
                     </div>
@@ -373,7 +373,7 @@ const AdminSlots = () => {
                         // Expired
                         if (slot.expired) {
                           return (
-                            <div key={slot.id} className="relative rounded-lg border border-gray-100 bg-gray-50/80 p-3 opacity-50">
+                            <div key={slot.id} className="relative rounded-lg border border-gray-200 bg-gray-50 p-3 opacity-50">
                               <p className="text-[12px] font-semibold text-gray-400">{startF}</p>
                               <p className="text-[10px] text-gray-400">to {endF}</p>
                               <span className="mt-2 inline-flex items-center gap-1 text-[10px] text-gray-400 font-medium">
@@ -386,19 +386,19 @@ const AdminSlots = () => {
                         // Booked - PENDING
                         if (slot.booked && slot.booking?.status === 'PENDING') {
                           return (
-                            <div key={slot.id} className="relative rounded-lg border border-amber-200 bg-amber-50/60 p-3 ring-1 ring-amber-100">
-                              <p className="text-[12px] font-semibold text-amber-800">{startF}</p>
-                              <p className="text-[10px] text-amber-600">to {endF}</p>
+                            <div key={slot.id} className="relative rounded-lg border border-gray-200 bg-white p-3">
+                              <p className="text-[12px] font-semibold text-gray-800">{startF}</p>
+                              <p className="text-[10px] text-gray-500">to {endF}</p>
                               <div className="mt-2">
-                                <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 font-semibold">
+                                <span className="inline-flex items-center gap-1 text-[10px] text-gray-600 font-semibold">
                                   <AlertCircle size={10} /> Pending
                                 </span>
                                 {slot.booking?.student?.fullName && (
-                                  <p className="text-[10px] text-amber-600 mt-0.5 truncate" title={slot.booking.student.fullName}>
+                                  <p className="text-[10px] text-gray-500 mt-0.5 truncate" title={slot.booking.student.fullName}>
                                     {slot.booking.student.fullName}
                                   </p>
                                 )}
-                                <p className="text-[9px] text-amber-500 mt-1">Confirm in Bookings tab</p>
+                                <p className="text-[9px] text-gray-400 mt-1">Confirm in Bookings tab</p>
                               </div>
                             </div>
                           );
@@ -409,16 +409,16 @@ const AdminSlots = () => {
                           const isConfirmed = slot.booking?.status === 'CONFIRMED';
                           const isCancelled = slot.booking?.status === 'CANCELLED';
                           return (
-                            <div key={slot.id} className={`relative rounded-lg border ${isCancelled ? 'border-red-200 bg-red-50/60 ring-1 ring-red-100' : 'border-emerald-200 bg-emerald-50/60 ring-1 ring-emerald-100'} p-3 transition-opacity ${slot.pastBooked ? 'opacity-40' : ''}`}>
-                              <p className={`text-[12px] font-semibold ${isCancelled ? 'text-red-800' : 'text-emerald-800'}`}>{startF}</p>
-                              <p className={`text-[10px] ${isCancelled ? 'text-red-600' : 'text-emerald-600'}`}>to {endF}</p>
+                            <div key={slot.id} className={`relative rounded-lg border border-gray-200 bg-white p-3 ${slot.pastBooked ? 'opacity-40' : ''}`}>
+                              <p className="text-[12px] font-semibold text-gray-800">{startF}</p>
+                              <p className="text-[10px] text-gray-500">to {endF}</p>
                               <div className="mt-2">
-                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${isCancelled ? 'text-red-600' : 'text-emerald-700'}`}>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-gray-600">
                                   {isCancelled ? <XCircle size={10} /> : <CheckCircle2 size={10} />}
                                   {isCancelled ? 'Cancelled' : isConfirmed ? 'Confirmed' : 'Completed'}
                                 </span>
                                 {slot.booking?.student?.fullName && (
-                                  <p className={`text-[10px] mt-0.5 truncate ${isCancelled ? 'text-red-500' : 'text-emerald-600'}`} title={slot.booking.student.fullName}>
+                                  <p className="text-[10px] mt-0.5 truncate text-gray-500" title={slot.booking.student.fullName}>
                                     {slot.booking.student.fullName}
                                   </p>
                                 )}
@@ -427,7 +427,7 @@ const AdminSlots = () => {
                                     href={slot.booking.meetLink}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="mt-1.5 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-600 text-white text-[10px] font-semibold hover:bg-green-700 transition-colors"
+                                    className="mt-1.5 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-800 text-white text-[10px] font-semibold hover:bg-gray-900 transition-colors"
                                   >
                                     <Video size={10} /> Join Meet
                                   </a>
@@ -439,10 +439,10 @@ const AdminSlots = () => {
 
                         // Available
                         return (
-                          <div key={slot.id} className="group relative rounded-lg border border-blue-200 bg-blue-50/40 p-3 hover:border-blue-300 hover:bg-blue-50 transition-all ring-1 ring-blue-50">
-                            <p className="text-[12px] font-semibold text-blue-800">{startF}</p>
-                            <p className="text-[10px] text-blue-500">to {endF}</p>
-                            <span className="mt-2 inline-flex items-center gap-1 text-[10px] text-blue-600 font-semibold">
+                          <div key={slot.id} className="group relative rounded-lg border border-gray-200 bg-white p-3 hover:border-gray-300 hover:shadow-sm transition-all">
+                            <p className="text-[12px] font-semibold text-gray-700">{startF}</p>
+                            <p className="text-[10px] text-gray-400">to {endF}</p>
+                            <span className="mt-2 inline-flex items-center gap-1 text-[10px] text-gray-500 font-medium">
                               <Clock size={10} /> Available
                             </span>
                             <button
