@@ -181,7 +181,7 @@ const DashboardLayout = () => {
             );
 
             const SectionLabel = ({ children }) => (
-              <p className="px-3 mb-2 mt-5 first:mt-0 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-300">{children}</p>
+              <p className="px-3 mb-2 mt-5 first:mt-0 text-xs font-bold uppercase tracking-[0.15em] text-gray-300">{children}</p>
             );
 
             return (
@@ -208,7 +208,7 @@ const DashboardLayout = () => {
                   <div className="mt-5">
                     <button
                       onClick={() => { setShowSubscribe(true); setSidebarOpen(false); }}
-                      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-md shadow-violet-200 transition-all duration-200"
+                      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-md shadow-violet-200 transition-all duration-200"
                     >
                       <Crown size={17} strokeWidth={1.8} className="text-violet-200" />
                       <span>Upgrade Plan</span>
@@ -231,7 +231,7 @@ const DashboardLayout = () => {
         <div className="px-3 py-3 border-t border-gray-100">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors w-full"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors w-full"
           >
             <LogOut size={16} strokeWidth={2} />
             <span>Logout</span>
@@ -268,7 +268,7 @@ const DashboardLayout = () => {
                 : plan === 'ultra' ? { label: 'Ultra', gradient: 'from-amber-500 to-orange-500', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', Icon: Zap }
                 : { label: 'Free', gradient: 'from-gray-400 to-gray-500', bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200', Icon: Zap };
               return (
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${config.bg} ${config.text} ${config.border} border text-[12px] font-bold shadow-sm`}>
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${config.bg} ${config.text} ${config.border} border text-sm font-bold shadow-sm`}>
                   <config.Icon size={13} strokeWidth={2.5} />
                   {config.label}
                 </div>
@@ -278,7 +278,7 @@ const DashboardLayout = () => {
             {/* Achievers */}
             {user?.role === 'STUDENT' && (
             <button
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white hover:bg-gray-50 transition-all text-gray-600 hover:text-gray-800 text-[13px] font-medium border border-gray-200 shadow-sm group"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white hover:bg-gray-50 transition-all text-gray-600 hover:text-gray-800 text-sm font-medium border border-gray-200 shadow-sm group"
               onClick={() => navigate('/dashboard/achievers')}
             >
               <Trophy size={15} strokeWidth={2} className="text-amber-500" />
@@ -297,7 +297,7 @@ const DashboardLayout = () => {
               >
                 <Bell size={20} strokeWidth={1.8} />
                 {notifCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">{notifCount > 9 ? '9+' : notifCount}</span>
+                  <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center ring-2 ring-white">{notifCount > 9 ? '9+' : notifCount}</span>
                 )}
               </button>
 
@@ -306,13 +306,13 @@ const DashboardLayout = () => {
                   <div className="fixed inset-0 z-40" onClick={() => setNotifDropdown(false)} />
                   <div className="absolute right-0 mt-2 w-80 bg-white/80 backdrop-blur-2xl rounded-xl shadow-[0_8px_30px_-8px_rgba(0,0,0,0.18)] border border-white/50 z-50 overflow-hidden">
                     <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
-                      <p className="text-[13px] font-bold text-gray-800">Notifications</p>
+                      <p className="text-sm font-bold text-gray-800">Notifications</p>
                       {notifCount > 0 && (
                         <button
                           onClick={async () => {
                             try { await api.put('/notifications/read-all'); setNotifCount(0); setNotifications(prev => prev.map(n => ({ ...n, isRead: true }))); } catch {}
                           }}
-                          className="text-[10px] font-semibold text-blue-600 hover:text-blue-700"
+                          className="text-xs font-semibold text-blue-600 hover:text-blue-700"
                         >
                           Mark all read
                         </button>
@@ -358,9 +358,9 @@ const DashboardLayout = () => {
                                 {iconConfig.icon}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className={`text-[12px] ${!n.isRead ? 'font-semibold text-gray-800' : 'font-medium text-gray-600'} leading-snug`}>{n.title}</p>
-                                <p className="text-[11px] text-gray-400 mt-0.5 truncate">{n.message}</p>
-                                <p className="text-[10px] text-gray-300 mt-1">{timeAgo}</p>
+                                <p className={`text-sm ${!n.isRead ? 'font-semibold text-gray-800' : 'font-medium text-gray-600'} leading-snug`}>{n.title}</p>
+                                <p className="text-xs text-gray-400 mt-0.5 truncate">{n.message}</p>
+                                <p className="text-xs text-gray-300 mt-1">{timeAgo}</p>
                               </div>
                               {!n.isRead && <span className="w-2 h-2 bg-blue-500 rounded-full shrink-0 mt-2" />}
                             </button>
@@ -369,7 +369,7 @@ const DashboardLayout = () => {
                       ) : (
                         <div className="px-4 py-8 text-center">
                           <Bell size={24} className="text-gray-200 mx-auto mb-2" />
-                          <p className="text-[12px] text-gray-400">No notifications yet</p>
+                          <p className="text-sm text-gray-400">No notifications yet</p>
                         </div>
                       )}
                     </div>
@@ -391,7 +391,7 @@ const DashboardLayout = () => {
                   {user?.registrationNumber && (
                     <span className="text-xs font-bold text-gray-800 leading-tight tracking-wide">{user.registrationNumber}</span>
                   )}
-                  <span className="text-[11px] text-gray-400 leading-tight mt-0.5">{user?.fullName}</span>
+                  <span className="text-xs text-gray-400 leading-tight mt-0.5">{user?.fullName}</span>
                 </div>
                 <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${profileDropdown ? 'rotate-180' : ''}`} />
               </button>
@@ -402,7 +402,7 @@ const DashboardLayout = () => {
                   <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-[0_8px_30px_-8px_rgba(0,0,0,0.22)] border border-gray-100 z-50 overflow-hidden">
                     {/* User details */}
                     <div className="px-4 pt-4 pb-3.5 text-center">
-                      <p className="text-[15px] font-bold text-gray-900">{user?.fullName}</p>
+                      <p className="text-base font-bold text-gray-900">{user?.fullName}</p>
                       <p className="text-xs text-gray-700 font-medium mt-1">{user?.email}</p>
                       {user?.phone && (
                         <p className="text-xs text-gray-700 font-medium mt-0.5">{user.phone}</p>
@@ -416,7 +416,7 @@ const DashboardLayout = () => {
                           setProfileDropdown(false);
                           navigate(user?.role === 'SUPER_ADMIN' ? '/superadmin/profile' : user?.role === 'ADMIN' ? '/admin/profile' : '/dashboard/profile');
                         }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-gray-900 font-semibold hover:bg-gray-100 transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-900 font-semibold hover:bg-gray-100 transition-colors"
                       >
                         <Contact size={16} className="text-gray-400" />
                         My Profile
@@ -424,7 +424,7 @@ const DashboardLayout = () => {
                       {user?.registrationNumber && (
                         <button
                           onClick={() => { navigator.clipboard.writeText(user.registrationNumber); setProfileDropdown(false); }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-primary-700 bg-primary-50/60 hover:bg-primary-50 transition-colors"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-primary-700 bg-primary-50/60 hover:bg-primary-50 transition-colors"
                         >
                           <Hash size={16} className="text-primary-400" />
                           {user.registrationNumber}
@@ -432,7 +432,7 @@ const DashboardLayout = () => {
                       )}
                       <button
                         onClick={() => { setProfileDropdown(false); handleLogout(); }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-red-600 hover:bg-red-50 transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <LogOut size={16} className="text-red-400" />
                         Logout
@@ -453,7 +453,7 @@ const DashboardLayout = () => {
                 disabled ? (
                   <div
                     key={to}
-                    className="flex items-center gap-2 text-[13px] font-medium text-gray-300 cursor-not-allowed whitespace-nowrap select-none"
+                    className="flex items-center gap-2 text-sm font-medium text-gray-300 cursor-not-allowed whitespace-nowrap select-none"
                   >
                     <Icon size={15} strokeWidth={1.8} />
                     <span>{label}</span>
@@ -464,7 +464,7 @@ const DashboardLayout = () => {
                     to={to}
                     end={end}
                     className={({ isActive }) =>
-                      `flex items-center gap-2 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 ${
+                      `flex items-center gap-2 text-sm font-medium whitespace-nowrap transition-colors duration-150 ${
                         isActive
                           ? 'text-gray-900 font-semibold'
                           : 'text-gray-500 hover:text-gray-900'
@@ -490,7 +490,7 @@ const DashboardLayout = () => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
                   <div className="md:col-span-1">
                     <Logo size="md" />
-                    <p className="mt-4 text-[13px] leading-relaxed text-gray-500">
+                    <p className="mt-4 text-sm leading-relaxed text-gray-500">
                       Your AI-powered career copilot. Build resumes, apply to jobs, connect with mentors — all in one platform.
                     </p>
                     <div className="flex items-center gap-3 mt-5">
@@ -498,8 +498,8 @@ const DashboardLayout = () => {
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-gray-900 font-semibold mb-4 text-[13px] uppercase tracking-wider">Platform</h4>
-                    <ul className="space-y-3 text-[13px]">
+                    <h4 className="text-gray-900 font-semibold mb-4 text-sm uppercase tracking-wider">Platform</h4>
+                    <ul className="space-y-3 text-sm">
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Job Discovery</span></li>
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Resume Builder</span></li>
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Mentorship</span></li>
@@ -507,8 +507,8 @@ const DashboardLayout = () => {
                     </ul>
                   </div>
                   <div>
-                    <h4 className="text-gray-900 font-semibold mb-4 text-[13px] uppercase tracking-wider">Product</h4>
-                    <ul className="space-y-3 text-[13px]">
+                    <h4 className="text-gray-900 font-semibold mb-4 text-sm uppercase tracking-wider">Product</h4>
+                    <ul className="space-y-3 text-sm">
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Smart Matching</span></li>
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Quick Apply</span></li>
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Skill Insights</span></li>
@@ -516,8 +516,8 @@ const DashboardLayout = () => {
                     </ul>
                   </div>
                   <div>
-                    <h4 className="text-gray-900 font-semibold mb-4 text-[13px] uppercase tracking-wider">Company</h4>
-                    <ul className="space-y-3 text-[13px]">
+                    <h4 className="text-gray-900 font-semibold mb-4 text-sm uppercase tracking-wider">Company</h4>
+                    <ul className="space-y-3 text-sm">
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">About</span></li>
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Privacy Policy</span></li>
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Terms of Service</span></li>
@@ -526,8 +526,8 @@ const DashboardLayout = () => {
                   </div>
                 </div>
                 <div className="border-t border-gray-200 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <p className="text-[13px] text-gray-500">&copy; {new Date().getFullYear()} INNOGARAGE.ai &mdash; All rights reserved.</p>
-                  <div className="flex items-center gap-2 text-[13px] text-gray-500">
+                  <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} INNOGARAGE.ai &mdash; All rights reserved.</p>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Zap size={14} className="text-amber-400" />
                     <span>Built with passion for job seekers everywhere.</span>
                   </div>

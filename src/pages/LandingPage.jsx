@@ -297,7 +297,7 @@ const LandingPage = () => {
                     </div>
                   </div>
                   <div className="mt-3 lg:mt-6">
-                    <span className={`inline-block text-[11px] font-bold tracking-[0.2em] uppercase bg-gradient-to-r ${item.gradient} bg-clip-text text-transparent mb-1.5`}>
+                    <span className={`inline-block text-xs font-bold tracking-[0.2em] uppercase bg-gradient-to-r ${item.gradient} bg-clip-text text-transparent mb-1.5`}>
                       Step {item.step}
                     </span>
                     <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-indigo-700 transition-colors duration-300">{item.title}</h3>

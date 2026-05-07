@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { ArrowRight, User, GraduationCap, Briefcase, FileText, Mail, CheckCircle2, Phone, Linkedin, Target, ChevronDown, MapPin } from 'lucide-react';
@@ -54,22 +54,20 @@ const COUNTRY_CODES = [
   { code: 'NP', name: 'Nepal', dial: '+977', flag: '🇳🇵' },
 ];
 
-// Popular cities for autosuggest
-const CITIES = [
-  'New York, NY','Los Angeles, CA','Chicago, IL','Houston, TX','Phoenix, AZ','Philadelphia, PA','San Antonio, TX','San Diego, CA','Dallas, TX','San Jose, CA','Austin, TX','Jacksonville, FL','Fort Worth, TX','Columbus, OH','Charlotte, NC','Indianapolis, IN','San Francisco, CA','Seattle, WA','Denver, CO','Washington, DC','Nashville, TN','Oklahoma City, OK','El Paso, TX','Boston, MA','Portland, OR','Las Vegas, NV','Memphis, TN','Louisville, KY','Baltimore, MD','Milwaukee, WI','Albuquerque, NM','Tucson, AZ','Fresno, CA','Mesa, AZ','Sacramento, CA','Atlanta, GA','Kansas City, MO','Colorado Springs, CO','Omaha, NE','Raleigh, NC','Miami, FL','Minneapolis, MN','Tampa, FL','New Orleans, LA','Cleveland, OH','Orlando, FL','Pittsburgh, PA','Cincinnati, OH','St. Louis, MO','Salt Lake City, UT',
-  'London, UK','Manchester, UK','Birmingham, UK','Edinburgh, UK','Glasgow, UK',
-  'Toronto, Canada','Vancouver, Canada','Montreal, Canada','Calgary, Canada','Ottawa, Canada',
-  'Mumbai, India','Bangalore, India','Delhi, India','Hyderabad, India','Chennai, India','Pune, India','Kolkata, India','Ahmedabad, India','Noida, India','Gurgaon, India','Jaipur, India',
-  'Sydney, Australia','Melbourne, Australia','Brisbane, Australia','Perth, Australia',
-  'Berlin, Germany','Munich, Germany','Frankfurt, Germany','Hamburg, Germany',
-  'Paris, France','Lyon, France','Toulouse, France',
-  'Singapore','Dubai, UAE','Abu Dhabi, UAE',
-  'Tokyo, Japan','Osaka, Japan',
-  'Seoul, South Korea',
-  'São Paulo, Brazil','Rio de Janeiro, Brazil',
-  'Mexico City, Mexico',
-  'Amsterdam, Netherlands','Dublin, Ireland','Zurich, Switzerland',
-  'Remote','Hybrid','Remote (US)','Remote (India)','Remote (UK)',
+const PREFERRED_LOCATIONS = [
+  { value: 'USA', label: '🇺🇸 United States' },
+  { value: 'Canada', label: '🇨🇦 Canada' },
+  { value: 'India', label: '🇮🇳 India' },
+];
+
+const EXPERIENCE_OPTIONS = [
+  { value: '0-1 years', label: 'Less than 1 year' },
+  { value: '1-2 years', label: '1 – 2 years' },
+  { value: '2-3 years', label: '2 – 3 years' },
+  { value: '3-5 years', label: '3 – 5 years' },
+  { value: '5-7 years', label: '5 – 7 years' },
+  { value: '7-10 years', label: '7 – 10 years' },
+  { value: '10+ years', label: '10+ years' },
 ];
 
 const CompleteProfilePage = () => {
@@ -91,37 +89,6 @@ const CompleteProfilePage = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [linkedinError, setLinkedinError] = useState('');
   const [phoneError, setPhoneError] = useState('');
-  const [locationInput, setLocationInput] = useState('');
-  const [locationSuggestions, setLocationSuggestions] = useState([]);
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const locationRef = useRef(null);
-
-  // Close location dropdown on outside click
-  useEffect(() => {
-    const handleClick = (e) => { if (locationRef.current && !locationRef.current.contains(e.target)) setShowLocationDropdown(false); };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  const handleLocationChange = (val) => {
-    setLocationInput(val);
-    setForm(prev => ({ ...prev, location: val }));
-    if (val.length >= 2) {
-      const lower = val.toLowerCase();
-      const matches = CITIES.filter(c => c.toLowerCase().includes(lower)).slice(0, 8);
-      setLocationSuggestions(matches);
-      setShowLocationDropdown(matches.length > 0);
-    } else {
-      setLocationSuggestions([]);
-      setShowLocationDropdown(false);
-    }
-  };
-
-  const selectLocation = (city) => {
-    setLocationInput(city);
-    setForm(prev => ({ ...prev, location: city }));
-    setShowLocationDropdown(false);
-  };
 
   const selectedCountry = useMemo(() => COUNTRY_CODES.find(c => c.code === countryCode) || COUNTRY_CODES[0], [countryCode]);
 
@@ -221,7 +188,7 @@ const CompleteProfilePage = () => {
                 </label>
                 <input
                   type="text"
-                  className="w-full px-3.5 py-2.5 text-[15px] border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
+                  className="w-full px-3.5 py-2.5 text-base border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
                   placeholder="John Doe"
                   value={form.fullName}
                   onChange={(e) => setForm({ ...form, fullName: e.target.value })}
@@ -237,7 +204,7 @@ const CompleteProfilePage = () => {
                 </label>
                 <input
                   type="email"
-                  className="w-full px-3.5 py-2.5 text-[15px] border border-gray-200 rounded-xl bg-gray-100/70 text-gray-500 cursor-not-allowed"
+                  className="w-full px-3.5 py-2.5 text-base border border-gray-200 rounded-xl bg-gray-100/70 text-gray-500 cursor-not-allowed"
                   value={user?.email || ''}
                   disabled
                 />
@@ -255,7 +222,7 @@ const CompleteProfilePage = () => {
                     <select
                       value={countryCode}
                       onChange={(e) => setCountryCode(e.target.value)}
-                      className="appearance-none w-[130px] pl-3 pr-7 py-2.5 text-[14px] border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 transition-all cursor-pointer"
+                      className="appearance-none w-[130px] pl-3 pr-7 py-2.5 text-base border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 transition-all cursor-pointer"
                     >
                       {COUNTRY_CODES.map(c => (
                         <option key={c.code} value={c.code}>{c.flag} {c.dial}</option>
@@ -265,7 +232,7 @@ const CompleteProfilePage = () => {
                   </div>
                   <input
                     type="tel"
-                    className={`flex-1 px-3.5 py-2.5 text-[15px] border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all ${phoneError ? 'border-red-300' : 'border-gray-200'}`}
+                    className={`flex-1 px-3.5 py-2.5 text-base border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all ${phoneError ? 'border-red-300' : 'border-gray-200'}`}
                     placeholder="9876543210"
                     value={phoneNumber}
                     onChange={(e) => { setPhoneNumber(e.target.value); validatePhone(e.target.value); }}
@@ -284,7 +251,7 @@ const CompleteProfilePage = () => {
                 </label>
                 <input
                   type="url"
-                  className={`w-full px-3.5 py-2.5 text-[15px] border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all ${linkedinError ? 'border-red-300' : 'border-gray-200'}`}
+                  className={`w-full px-3.5 py-2.5 text-base border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all ${linkedinError ? 'border-red-300' : 'border-gray-200'}`}
                   placeholder="https://www.linkedin.com/in/your-profile"
                   value={form.linkedinProfile}
                   onChange={(e) => { setForm({ ...form, linkedinProfile: e.target.value }); validateLinkedin(e.target.value); }}
@@ -293,35 +260,26 @@ const CompleteProfilePage = () => {
                 {linkedinError && <p className="text-xs text-red-500 mt-1">{linkedinError}</p>}
               </div>
 
-              {/* Preferred Job Location */}
-              <div ref={locationRef} className="relative">
+              {/* Preferred Location */}
+              <div>
                 <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 mb-1.5">
                   <MapPin size={14} className="text-gray-400" />
-                  Preferred Job Location <span className="text-red-400">*</span>
+                  Preferred Location <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="text"
-                  className="w-full px-3.5 py-2.5 text-[15px] border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
-                  placeholder="e.g. San Francisco, CA or Remote"
-                  value={locationInput}
-                  onChange={(e) => handleLocationChange(e.target.value)}
-                  onFocus={() => { if (locationSuggestions.length) setShowLocationDropdown(true); }}
-                  required
-                />
-                {showLocationDropdown && (
-                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                    {locationSuggestions.map((city) => (
-                      <button
-                        key={city}
-                        type="button"
-                        className="w-full text-left px-3.5 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors first:rounded-t-xl last:rounded-b-xl"
-                        onClick={() => selectLocation(city)}
-                      >
-                        {city}
-                      </button>
+                <div className="relative">
+                  <select
+                    className="w-full appearance-none px-3.5 py-2.5 text-base border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 transition-all cursor-pointer"
+                    value={form.location}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                    required
+                  >
+                    <option value="">Select a country…</option>
+                    {PREFERRED_LOCATIONS.map(loc => (
+                      <option key={loc.value} value={loc.value}>{loc.label}</option>
                     ))}
-                  </div>
-                )}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
               </div>
 
               {/* Education & Experience */}
@@ -333,7 +291,7 @@ const CompleteProfilePage = () => {
                   </label>
                   <input
                     type="text"
-                    className="w-full px-3.5 py-2.5 text-[15px] border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
+                    className="w-full px-3.5 py-2.5 text-base border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
                     placeholder="B.S. Computer Science"
                     value={form.education}
                     onChange={(e) => setForm({ ...form, education: e.target.value })}
@@ -343,16 +301,22 @@ const CompleteProfilePage = () => {
                 <div>
                   <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 mb-1.5">
                     <Briefcase size={14} className="text-gray-400" />
-                    Experience <span className="text-red-400">*</span>
+                    Years of Experience <span className="text-red-400">*</span>
                   </label>
-                  <input
-                    type="text"
-                    className="w-full px-3.5 py-2.5 text-[15px] border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
-                    placeholder="2 years in Software Dev"
-                    value={form.experience}
-                    onChange={(e) => setForm({ ...form, experience: e.target.value })}
-                    required
-                  />
+                  <div className="relative">
+                    <select
+                      className="w-full appearance-none px-3.5 py-2.5 text-base border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 transition-all cursor-pointer"
+                      value={form.experience}
+                      onChange={(e) => setForm({ ...form, experience: e.target.value })}
+                      required
+                    >
+                      <option value="">Select…</option>
+                      {EXPERIENCE_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
                 </div>
               </div>
 
@@ -360,11 +324,11 @@ const CompleteProfilePage = () => {
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 mb-1.5">
                   <Target size={14} className="text-gray-400" />
-                  Job Role You're Looking For <span className="text-red-400">*</span>
+                  Job Role <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
-                  className="w-full px-3.5 py-2.5 text-[15px] border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
+                  className="w-full px-3.5 py-2.5 text-base border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
                   placeholder="e.g. Frontend Developer, Data Analyst, UI/UX Designer"
                   value={form.jobRole}
                   onChange={(e) => setForm({ ...form, jobRole: e.target.value })}
@@ -377,11 +341,11 @@ const CompleteProfilePage = () => {
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 mb-1.5">
                   <Briefcase size={14} className="text-gray-400" />
-                  Key Skills <span className="text-red-400">*</span>
+                  Key Skills (comma separated) <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
-                  className="w-full px-3.5 py-2.5 text-[15px] border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
+                  className="w-full px-3.5 py-2.5 text-base border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
                   placeholder="React, Node.js, Python"
                   value={form.keySkills}
                   onChange={(e) => setForm({ ...form, keySkills: e.target.value })}
@@ -393,11 +357,11 @@ const CompleteProfilePage = () => {
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 mb-1.5">
                   <FileText size={14} className="text-gray-400" />
-                  Resume (PDF) <span className="text-red-400">*</span>
+                  Resume <span className="text-gray-400 font-normal text-xs">(PDF, DOC, DOCX)</span> <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="file"
-                  accept=".pdf"
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   required
                   className="w-full px-3.5 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50/50 text-gray-600 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 transition-all cursor-pointer"
                   onChange={(e) => setResume(e.target.files[0])}
@@ -407,7 +371,7 @@ const CompleteProfilePage = () => {
               {/* Submit */}
               <button
                 type="submit"
-                className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-indigo-200/50 hover:shadow-xl transition-all text-[15px] mt-2"
+                className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-indigo-200/50 hover:shadow-xl transition-all text-base mt-2"
                 disabled={loading}
               >
                 {loading ? (

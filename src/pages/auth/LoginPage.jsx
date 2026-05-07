@@ -211,7 +211,7 @@ const LoginPage = () => {
                 <span className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-clip-text text-transparent">Left Off</span>
               </h1>
 
-              <p className="text-gray-500 text-[15px] leading-relaxed mb-8 max-w-[420px]">
+              <p className="text-gray-500 text-base leading-relaxed mb-8 max-w-[420px]">
                 Your resumes, tracking board, and mentor sessions are all synced and ready. Jump back into your personalized career workspace.
               </p>
 
@@ -228,7 +228,7 @@ const LoginPage = () => {
                       <f.icon size={17} className="text-white" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-900 text-[15px] leading-snug">{f.title}</h3>
+                      <h3 className="font-bold text-gray-900 text-base leading-snug">{f.title}</h3>
                       <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
                     </div>
                   </div>
@@ -295,7 +295,7 @@ const LoginPage = () => {
                     <button
                       onClick={() => submitOtp(otp.join(''))}
                       disabled={otpLoading || otp.some(d => d === '')}
-                      className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-indigo-200/50 hover:shadow-xl transition-all text-[15px] disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-indigo-200/50 hover:shadow-xl transition-all text-base disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {otpLoading ? (
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -348,7 +348,7 @@ const LoginPage = () => {
                     </label>
                     <input
                       type="email"
-                      className="w-full px-3.5 py-2.5 text-[15px] border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
+                      className="w-full px-3.5 py-2.5 text-base border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
                       placeholder="Enter your email"
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -363,14 +363,14 @@ const LoginPage = () => {
                         <Lock size={14} className="text-gray-400" />
                         Password
                       </label>
-                      <Link to="/forgot-password" className="text-[13px] text-blue-600 hover:text-blue-700 font-semibold">
+                      <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 font-semibold">
                         Forgot password?
                       </Link>
                     </div>
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
-                        className="w-full px-3.5 py-2.5 pr-10 text-[15px] border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
+                        className="w-full px-3.5 py-2.5 pr-10 text-base border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50/50 text-gray-900 placeholder-gray-400 transition-all"
                         placeholder="Enter your password"
                         value={form.password}
                         onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -389,7 +389,7 @@ const LoginPage = () => {
                   {/* Submit */}
                   <button
                     type="submit"
-                    className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-indigo-200/50 hover:shadow-xl transition-all text-[15px] mt-1"
+                    className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-indigo-200/50 hover:shadow-xl transition-all text-base mt-1"
                     disabled={loading}
                   >
                     {loading ? (
@@ -409,7 +409,7 @@ const LoginPage = () => {
                     <div className="w-full border-t border-gray-100" />
                   </div>
                   <div className="relative flex justify-center">
-                    <span className="px-3 bg-white text-[12px] text-gray-400 font-medium">Or continue with</span>
+                    <span className="px-3 bg-white text-sm text-gray-400 font-medium">Or continue with</span>
                   </div>
                 </div>
 
@@ -418,7 +418,7 @@ const LoginPage = () => {
                   type="button"
                   onClick={() => handleGoogleLogin()}
                   disabled={googleLoading}
-                  className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50/80 text-gray-700 font-medium py-2.5 rounded-xl transition-all text-[15px] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50/80 text-gray-700 font-medium py-2.5 rounded-xl transition-all text-base disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {googleLoading ? (
                     <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
