@@ -110,38 +110,39 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-[5vh_5vw]">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-md" onClick={onClose} />
 
-      {/* Dialog — 80vw × 80vh */}
-      <div className="relative z-10 w-[80vw] h-[80vh] bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col">
+      {/* Dialog — 90vw × 90vh, no scroll */}
+      <div className="relative z-10 w-[90vw] h-[90vh] bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col">
 
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 z-20 w-9 h-9 flex items-center justify-center rounded-full bg-white border border-gray-200 hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all shadow-sm"
+          className="absolute top-5 right-5 z-20 w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 transition-all"
         >
-          <X size={16} strokeWidth={2.5} />
+          <X size={17} strokeWidth={2.5} />
         </button>
 
-        {/* Header */}
-        <div className="shrink-0 px-12 pt-8 pb-4 text-center">
-          <div className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 mb-3 shadow-lg shadow-violet-200/40">
-            <Crown size={13} className="text-amber-300" />
+        {/* ── Header ── */}
+        <div className="shrink-0 text-center px-12 pt-8 pb-5">
+          <div className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 mb-4 shadow-md">
+            <Crown size={14} className="text-amber-300" />
             <span className="text-xs font-bold text-white tracking-widest uppercase">Upgrade Your Career</span>
           </div>
-          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight leading-tight">
+          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight leading-tight mb-2">
             Unlock Your Full Potential with{' '}
             <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">INNOGARAGE.ai</span>
           </h2>
-          <p className="text-base text-gray-500 max-w-2xl mx-auto leading-relaxed mt-2">
+          <p className="text-base text-gray-500 max-w-2xl mx-auto leading-relaxed">
             Choose the plan that accelerates your career — from smart job matching to personal mentorship, we've got you covered.
           </p>
-          {/* Feature Highlights */}
-          <div className="flex flex-wrap items-center justify-center gap-2.5 mt-3">
+
+          {/* Feature pills */}
+          <div className="flex flex-wrap items-center justify-center gap-2.5 mt-4">
             {highlights.map(({ icon: Icon, label }) => (
-              <div key={label} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-50 border border-gray-200 shadow-sm">
+              <div key={label} className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-gray-50 border border-gray-200 shadow-sm">
                 <Icon size={13} className="text-indigo-500" />
                 <span className="text-sm font-semibold text-gray-600">{label}</span>
               </div>
@@ -149,8 +150,8 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
           </div>
         </div>
 
-        {/* Plans Grid — fills remaining height */}
-        <div className="flex-1 px-10 pb-2 pt-2 min-h-0">
+        {/* ── Plans Grid — flex-1 so it fills remaining height ── */}
+        <div className="flex-1 px-10 pb-0 min-h-0">
           <div className="grid grid-cols-3 gap-6 h-full">
             {plans.map((plan, idx) => {
               const PlanIcon = plan.icon;
@@ -161,8 +162,8 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
                   onMouseLeave={() => setHoveredPlan(null)}
                   className={`relative rounded-2xl border flex flex-col transition-all duration-300 ${
                     idx === 1
-                      ? 'border-violet-300 shadow-xl shadow-violet-100/50 scale-[1.02]'
-                      : `${plan.accentBorder} shadow-md bg-white`
+                      ? 'border-violet-300 shadow-2xl shadow-violet-100/50 scale-[1.02]'
+                      : `${plan.accentBorder} shadow-md`
                   } ${hoveredPlan === idx ? 'shadow-2xl -translate-y-1' : ''}`}
                 >
                   {/* Badge */}
@@ -184,7 +185,7 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
                     {/* Price */}
                     <div className="flex items-baseline justify-center gap-1.5 mb-4">
                       <span className={`text-4xl font-black tracking-tight leading-none bg-gradient-to-r ${plan.accent} bg-clip-text text-transparent`}>{plan.price}</span>
-                      <span className="text-base text-gray-400 font-medium">{plan.period}</span>
+                      <span className="text-sm text-gray-400 font-medium">{plan.period}</span>
                     </div>
 
                     {/* Divider */}
@@ -206,12 +207,12 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
                     <button
                       onClick={() => handleCheckout(plan.key)}
                       disabled={loadingPlan !== null}
-                      className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-base font-bold tracking-wide transition-all duration-300 mt-5 bg-gradient-to-r ${plan.accentBtn} text-white shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed`}
+                      className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 mt-5 bg-gradient-to-r ${plan.accentBtn} text-white shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
                       {loadingPlan === plan.key ? (
-                        <><Loader2 size={16} className="animate-spin" /> Redirecting...</>
+                        <><Loader2 size={15} className="animate-spin" /> Redirecting...</>
                       ) : (
-                        <>{plan.cta} <ArrowRight size={16} /></>
+                        <>{plan.cta} <ArrowRight size={15} /></>
                       )}
                     </button>
                   </div>
@@ -221,8 +222,8 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="shrink-0 px-12 pt-3 pb-5 text-center">
+        {/* ── Footer ── */}
+        <div className="shrink-0 text-center px-10 py-4">
           <button onClick={onClose} className="text-sm text-gray-400 hover:text-gray-600 transition-colors font-medium">
             Maybe later — continue to dashboard
           </button>
@@ -231,6 +232,7 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
             <span className="text-xs text-gray-400 font-medium">Secure Payment · Cancel Anytime</span>
           </div>
         </div>
+
       </div>
     </div>
   );
