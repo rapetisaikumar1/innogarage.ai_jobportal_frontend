@@ -3,7 +3,7 @@ import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import html2pdf from 'html2pdf.js';
-import { saveAs } from 'file-saver';
+import { downloadResumeAsDocx } from '../../utils/resumeDocx';
 import {
   Search, Briefcase, Calendar, Bot, Clock, FileText,
   X, ExternalLink, Eye, Download, AlertTriangle, Info
@@ -502,10 +502,7 @@ const MyApplications = () => {
           html2pdf().set({ margin: [10,10,10,10], filename: `${(candidateName||'Resume').replace(/\s+/g,'_')}_Resume.pdf`, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} }).from(el).save();
         };
         const handleDownloadWord = () => {
-          const el = resumeRef.current; if (!el) return;
-          const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>body{font-family:Georgia,serif;margin:40px 50px;color:#333}h1{font-size:22px;color:#1e3a5f;text-align:center;margin:0}.contact{text-align:center;font-size:11px;color:#4a5568;margin:8px 0 20px}h2{font-size:14px;color:#1e3a5f;text-transform:uppercase;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin:18px 0 8px}p,li{font-size:12px;line-height:1.6}ul{margin:4px 0;padding-left:20px}</style></head><body>${el.innerHTML}</body></html>`;
-          const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-          saveAs(blob, `${(candidateName||'Resume').replace(/\s+/g,'_')}_Resume.doc`);
+          downloadResumeAsDocx(resumeText, candidateName);
         };
 
         return (

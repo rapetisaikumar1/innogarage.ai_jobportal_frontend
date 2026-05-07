@@ -2,9 +2,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRef } from 'react';
 import html2pdf from 'html2pdf.js';
-import { saveAs } from 'file-saver';
 import { ArrowLeft, Download } from 'lucide-react';
-import ResumeDocument, { RESUME_WORD_STYLES } from '../../components/resume/ResumeDocument';
+import ResumeDocument from '../../components/resume/ResumeDocument';
+import { downloadResumeAsDocx } from '../../utils/resumeDocx';
 
 const ResumeViewPage = () => {
   const location = useLocation();
@@ -28,14 +28,7 @@ const ResumeViewPage = () => {
   };
 
   const handleDownloadWord = () => {
-    const el = resumeRef.current;
-    if (!el) return;
-    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8"><style>
-${RESUME_WORD_STYLES}
-</style></head><body>${el.innerHTML}</body></html>`;
-    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-    saveAs(blob, `${displayName.replace(/\s+/g, '_')}_Resume.doc`);
+    downloadResumeAsDocx(resumeText, displayName);
   };
 
   if (!sections.length) {

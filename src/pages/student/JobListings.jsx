@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import api, { getTokenForRole } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import html2pdf from 'html2pdf.js';
 import { saveAs } from 'file-saver';
-import ResumeDocument, { RESUME_WORD_STYLES, RESUME_TEMPLATES } from '../../components/resume/ResumeDocument';
+import ResumeDocument, { RESUME_TEMPLATES } from '../../components/resume/ResumeDocument';
+import { downloadResumeAsDocx } from '../../utils/resumeDocx';
 import {
   Search, ExternalLink, Briefcase, RefreshCw, X, FileText, AlertTriangle,
   Clock, Sparkles, MapPin, Building2, Bookmark, ChevronLeft, ChevronRight, Info, CheckCircle2,
@@ -533,6 +534,9 @@ const JobListings = () => {
   const [streamedCount, setStreamedCount] = useState(null); // null = show all; number = stream reveal limit
   const streamTimerRef = useRef(null);
   const [usage, setUsage] = useState({ plan: 'free', used: 0, max: 5, label: 'Free' });
+  const [searchStatusMsg, setSearchStatusMsg] = useState('');
+  const [newJobKeys, setNewJobKeys] = useState(new Set()); // tracks jobs that just arrived (for slide-in animation)
+  const streamAbortRef = useRef(null); // AbortController for SSE fetch
 
   const handleMarkApplied = async (job) => {
     const link = job.job_apply_link;
@@ -628,22 +632,26 @@ const JobListings = () => {
         if (cached && cached.length > 0) {
           setJobs(cached);
           setLoading(false);
-          // Revalidate silently in the background
-          api.get('/jobs/matched').then(({ data }) => {
+          // Revalidate with ?refresh=1 to always bypass server cache
+          api.get('/jobs/matched', { params: { refresh: '1' } }).then(({ data }) => {
             const fresh = data.jobs || [];
-            if (fresh.length > 0) { setJobs(fresh); writeJobsCache(fresh); }
+            setJobs(fresh);
+            if (fresh.length > 0) { writeJobsCache(fresh); }
+            else { clearJobsCache(); } // DB is empty — clear stale frontend cache
           }).catch(() => {});
           return;
         }
       }
       setLoading(true);
-      const { data } = await api.get('/jobs/matched');
+      const { data } = await api.get('/jobs/matched', { params: { refresh: forceRefresh ? '1' : undefined } });
       const fetchedJobs = data.jobs || [];
       setJobs(fetchedJobs);
       if (fetchedJobs.length > 0) {
         writeJobsCache(fetchedJobs);
         setWaitingForJobs(false);
         sessionStorage.removeItem('waitingForJobs');
+      } else {
+        clearJobsCache(); // DB empty — don't cache empty result but don't keep stale
       }
     } catch (error) {
       toast.error('Failed to load job listings');
@@ -696,63 +704,141 @@ const JobListings = () => {
     toast.success('Job listings refreshed!');
   };
 
+  /**
+   * Streaming Job Search Pipeline
+   * ─────────────────────────────
+   * Opens an SSE connection to GET /api/jobs/search/stream.
+   * The backend processes jobs source-by-source and emits each qualifying job (score ≥ 60)
+   * immediately as it is found. Each arriving job is prepended to the jobs list with a
+   * slide-in animation so the user sees results appear one by one in real time.
+   */
   const handleTriggerJobSearch = async (days) => {
     setShowDaysPopup(false);
 
-    // Check limit on frontend too
-    if (usage.used >= usage.max) {
+    if (usage.used >= usage.max && usage.plan !== 'ultra') {
       toast.error(`You've reached your ${usage.label} plan limit (${usage.max} searches/day). Upgrade for more!`);
       return;
     }
 
+    // Abort any previous stream still running
+    if (streamAbortRef.current) {
+      streamAbortRef.current.abort();
+      streamAbortRef.current = null;
+    }
+
+    const controller = new AbortController();
+    streamAbortRef.current = controller;
+
     setTriggeringSearch(true);
     setWaitingForJobs(true);
+    setSearchStatusMsg('Starting job search based on your profile…');
     sessionStorage.setItem('waitingForJobs', 'true');
     clearJobsCache();
+
+    const arrivedThisSession = []; // accumulate jobs found during this stream
+
     try {
-      const { data } = await api.post('/jobs/search', { days: String(days) });
-      setUsage(prev => ({ ...prev, used: prev.used + 1 }));
+      const token = getTokenForRole('STUDENT');
+      const apiBase = import.meta.env.VITE_API_URL || '/api';
+      const response = await fetch(
+        `${apiBase}/jobs/search/stream?days=${encodeURIComponent(String(days))}`,
+        {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' },
+          signal: controller.signal,
+        },
+      );
 
-      if (Array.isArray(data.jobs) && data.jobs.length > 0) {
-        const newJobs = data.jobs;
-        writeJobsCache(newJobs);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `Server error (${response.status})`);
+      }
 
-        // Set streamedCount=0 and jobs together so React batches them in one render.
-        // This ensures the initial render already has jobs hidden (not a flash of all-visible).
-        if (streamTimerRef.current) clearInterval(streamTimerRef.current);
-        setStreamedCount(0);
-        setJobs(newJobs);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let sseBuffer = '';
 
-        // Small tick to ensure the hidden-state render has committed before streaming starts
-        setTimeout(() => {
-          let idx = 0;
-          streamTimerRef.current = setInterval(() => {
-            idx += 1;
-            setStreamedCount(idx);
-            if (idx >= newJobs.length) {
-              clearInterval(streamTimerRef.current);
-              streamTimerRef.current = null;
-              setTimeout(() => setStreamedCount(null), 400);
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        sseBuffer += decoder.decode(value, { stream: true });
+        // SSE events are separated by double newline
+        const parts = sseBuffer.split('\n\n');
+        sseBuffer = parts.pop() || '';
+
+        for (const chunk of parts) {
+          // Skip heartbeat lines (start with ':')
+          const dataLine = chunk.split('\n').find(l => l.startsWith('data: '));
+          if (!dataLine) continue;
+          const jsonStr = dataLine.slice(6).trim();
+          if (!jsonStr) continue;
+
+          let msg;
+          try { msg = JSON.parse(jsonStr); } catch { continue; }
+
+          if (msg.type === 'job') {
+            const job = msg.job;
+            arrivedThisSession.push(job);
+
+            // Append the new job to the FRONT of the existing list immediately
+            setJobs(prev => {
+              const updated = [job, ...prev];
+              writeJobsCache(updated);
+              return updated;
+            });
+
+            // Mark this job as newly arrived so the row animates in
+            const jobKey = job.id || job.job_apply_link;
+            setNewJobKeys(prev => new Set([...prev, jobKey]));
+            // Remove animation marker after animation completes (~600ms)
+            setTimeout(() => {
+              setNewJobKeys(prev => {
+                const next = new Set(prev);
+                next.delete(jobKey);
+                return next;
+              });
+            }, 700);
+
+          } else if (msg.type === 'status') {
+            setSearchStatusMsg(msg.message);
+
+          } else if (msg.type === 'done') {
+            setUsage(prev => ({ ...prev, used: prev.used + 1 }));
+            if (msg.count > 0) {
+              toast.success(msg.message || `Found ${msg.count} matching jobs!`);
+            } else {
+              toast.info(msg.message || 'No new matching jobs found for your profile.');
             }
-          }, 150);
-        }, 50);
+            fetchAppliedStatus();
 
-        fetchAppliedStatus(); // fire-and-forget, don't await (would break batching)
-        toast.success(data.message || `Found ${newJobs.length} matching jobs!`);
-      } else {
-        toast.info(data.message || 'No new matching jobs found.');
+          } else if (msg.type === 'error') {
+            if (msg.limitReached) {
+              toast.error(msg.message);
+            } else {
+              toast.error(msg.message || 'Job search failed. Please try again.');
+            }
+          }
+        }
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to trigger job search');
+      if (error.name === 'AbortError') return; // navigated away — silent
+      toast.error(error.message || 'Failed to trigger job search');
     } finally {
       setWaitingForJobs(false);
       sessionStorage.removeItem('waitingForJobs');
       setTriggeringSearch(false);
+      setSearchStatusMsg('');
+      streamAbortRef.current = null;
     }
   };
 
-  // Cleanup stream timer on unmount
-  useEffect(() => () => { if (streamTimerRef.current) clearInterval(streamTimerRef.current); }, []);
+  // Cleanup on unmount: stop any running stream + interval timers
+  useEffect(() => () => {
+    if (streamTimerRef.current) clearInterval(streamTimerRef.current);
+    if (streamAbortRef.current) streamAbortRef.current.abort();
+  }, []);
 
   const syncUpdatedJob = (updatedJob) => {
     if (!updatedJob) return;
@@ -986,14 +1072,7 @@ const JobListings = () => {
         };
 
         const handleDownloadWord = () => {
-          const el = resumeRef.current;
-          if (!el) return;
-          const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8"><style>
-${RESUME_WORD_STYLES}
-</style></head><body>${el.innerHTML}</body></html>`;
-          const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-          saveAs(blob, `${(authUser?.fullName || candidateName).replace(/\s+/g, '_')}_Resume.doc`);
+          downloadResumeAsDocx(effectiveResumeText, authUser?.fullName || candidateName);
         };
 
         const handleViewFullPage = () => {
@@ -1256,18 +1335,40 @@ ${RESUME_WORD_STYLES}
 
       {/* Search-in-progress inline banner */}
       {triggeringSearch && (
-        <div className="flex items-center gap-4 px-5 py-3.5 mb-3 rounded-xl bg-blue-50 border border-blue-100 shrink-0">
-          {/* Animated shimmer bar */}
-          <div className="w-32 h-1.5 bg-blue-100 rounded-full overflow-hidden shrink-0">
-            <div className="h-full rounded-full" style={{
-              background: 'linear-gradient(90deg, #bfdbfe 0%, #3b82f6 40%, #bfdbfe 80%)',
-              backgroundSize: '200% 100%',
-              animation: 'shimmer 1.5s linear infinite',
+        <div className="flex items-center gap-5 px-5 py-4 mb-3 rounded-xl bg-white border border-gray-100 shrink-0" style={{ boxShadow: '0 2px 16px 0 rgba(99,102,241,0.08)' }}>
+
+          {/* Glowing pulse dots */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {[0, 150, 300].map((delay) => (
+              <span key={delay} style={{
+                display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #6366f1, #3b82f6)',
+                animation: `glow-pulse 1.2s ease-in-out ${delay}ms infinite`,
+              }} />
+            ))}
+          </div>
+
+          {/* Scan bar track */}
+          <div className="relative w-28 h-1 rounded-full shrink-0 overflow-hidden" style={{ background: '#e0e7ff' }}>
+            <div style={{
+              position: 'absolute', top: 0, left: 0, height: '100%', width: '35%',
+              borderRadius: '9999px',
+              background: 'linear-gradient(90deg, transparent, #6366f1, #818cf8, transparent)',
+              animation: 'scanBar 1.1s ease-in-out infinite',
             }} />
           </div>
+
+          {/* Text */}
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-blue-800">Searching for your best job matches…</p>
-            <p className="text-xs text-blue-500 mt-0.5">This usually takes 30–60 seconds. Jobs will appear below one by one.</p>
+            <p className="text-sm font-bold" style={{
+              background: 'linear-gradient(90deg, #4f46e5, #2563eb, #7c3aed, #4f46e5)',
+              backgroundSize: '300% auto',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              animation: 'textShimmer 2.5s linear infinite',
+            }}>Searching for your best job matches…</p>
+            <p className="text-xs text-gray-400 mt-0.5">{searchStatusMsg || 'Jobs appear below one by one as they are found for your profile.'}</p>
           </div>
         </div>
       )}
@@ -1411,6 +1512,9 @@ ${RESUME_WORD_STYLES}
                     const isApplied = job.job_apply_link && appliedLinks.has(job.job_apply_link);
                     // Stream reveal: visible when streamedCount is null (all shown) or globalIdx <= streamedCount
                     const isVisible = streamedCount === null || globalIdx <= streamedCount;
+                    // Slide-in animation for jobs that just arrived via SSE stream
+                    const jobKey = job.id || job.job_apply_link;
+                    const isNewArrival = newJobKeys.has(jobKey);
 
                     // Derive domain for company logo
                     const logoDomain = (() => {
@@ -1428,6 +1532,7 @@ ${RESUME_WORD_STYLES}
                           transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
                           transition: isVisible ? 'opacity 350ms ease, transform 350ms ease' : 'none',
                           pointerEvents: isVisible ? 'auto' : 'none',
+                          animation: isNewArrival ? 'jobSlideIn 0.45s cubic-bezier(0.22,1,0.36,1)' : undefined,
                         }}
                       >
                         {/* # */}
