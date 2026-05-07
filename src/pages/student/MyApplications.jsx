@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import html2pdf from 'html2pdf.js';
 import { downloadResumeAsDocx } from '../../utils/resumeDocx';
 import {
-  Search, Briefcase, Calendar, Bot, Clock, FileText,
+  Search, Briefcase, Bot, FileText, CheckCircle2,
   X, ExternalLink, Eye, Download, AlertTriangle, Info
 } from 'lucide-react';
 
@@ -232,147 +232,160 @@ const MyApplications = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-5">
-      {/* Header */}
-      <div>
-        <h1 className="text-[16px] font-bold text-gray-900">My Applications</h1>
-        <p className="text-[11px] text-gray-400 mt-0.5">Track and manage your job applications</p>
-      </div>
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
 
-      {/* Stats Row */}
-      {applications.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Total Applied', value: stats.total, icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'Interviews', value: stats.interviews, icon: Calendar, color: 'text-violet-600', bg: 'bg-violet-50' },
-            { label: 'Offers', value: stats.offers, icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          ].map((stat, i) => (
-            <div key={i} className="bg-white/50 backdrop-blur-xl border border-white/50 rounded-lg px-4 py-3 flex items-center gap-3 shadow-sm shadow-blue-100/20">
-              <div className={`w-8 h-8 ${stat.bg} rounded-lg flex items-center justify-center`}>
-                <stat.icon size={15} className={stat.color} />
-              </div>
-              <div>
-                <p className="text-[18px] font-bold text-gray-900 leading-none">{stat.value}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">{stat.label}</p>
-              </div>
-            </div>
-          ))}
+      {/* Header bar */}
+      <div className="flex items-center justify-between mb-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[16px] font-bold text-gray-900">My Applications</h1>
+          {applications.length > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold">
+              <Briefcase size={12} />
+              {stats.total} Applied
+            </span>
+          )}
         </div>
-      )}
-
-      {/* Search */}
-      <div className="flex items-center justify-end">
-        <div className="bg-white/50 backdrop-blur-xl border border-white/50 rounded-lg px-3 py-1.5 flex items-center gap-2 w-full sm:w-64 shadow-sm">
-          <Search size={13} className="text-gray-400 shrink-0" />
+        {/* Search */}
+        <div className="flex-1 max-w-xs ml-6 bg-white rounded-xl border border-gray-100 px-4 py-2.5 flex items-center gap-2 shadow-sm">
+          <Search size={14} className="text-gray-400 shrink-0" />
           <input
             type="text"
-            className="flex-1 text-[12px] bg-transparent outline-none placeholder-gray-400 text-gray-700"
-            placeholder="Search jobs..."
+            className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-800"
+            placeholder="Search company, role..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <button onClick={() => setSearch('')} className="text-gray-300 hover:text-gray-500">
+              <X size={13} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Applications List */}
-      {filtered.length === 0 ? (
-        <div className="bg-white/50 backdrop-blur-xl border border-white/50 rounded-lg text-center py-16 shadow-sm">
-          <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mx-auto mb-3">
-            <Briefcase size={20} className="text-gray-300" />
+      {/* Job Table */}
+      <div className="flex-1 overflow-hidden bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col">
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center flex-1 text-center py-16">
+            <Briefcase className="mx-auto text-gray-300 mb-3" size={32} />
+            <h3 className="text-base font-semibold text-gray-600">
+              {applications.length === 0 ? 'No applications yet' : 'No matching applications'}
+            </h3>
+            <p className="text-sm text-gray-400 mt-1">
+              {applications.length === 0 ? 'Start browsing jobs and apply!' : 'Try a different search term'}
+            </p>
           </div>
-          <h3 className="text-[13px] font-semibold text-gray-600">
-            {applications.length === 0 ? 'No applications yet' : 'No matching applications'}
-          </h3>
-          <p className="text-[11px] text-gray-400 mt-1">
-            {applications.length === 0 ? 'Start browsing jobs and apply!' : 'Try a different search term'}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map((app) => {
-            const dateStr = new Date(app.appliedAt).toLocaleDateString('en-US', {
-              month: 'short', day: 'numeric', year: 'numeric'
-            });
-            const fullJob = app.fullJob || (app.jobLink ? sheetJobsMap[app.jobLink] : null);
-            return (
-              <div
-                key={app.id}
-                className="bg-white/50 backdrop-blur-xl border border-white/50 rounded-lg px-4 py-3.5 hover:border-white/70 hover:bg-white/70 transition-all shadow-sm shadow-blue-100/10"
-              >
-                <div className="flex items-center gap-3">
-                  {/* Avatar */}
-                  <div className={`w-9 h-9 rounded-lg ${avatarBg(app.company)} text-white flex items-center justify-center font-bold text-sm shrink-0`}>
-                    {app.company?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
+        ) : (
+          <div className="overflow-y-auto flex-1">
+            <table className="w-full">
+              <tbody>
+                {filtered.map((app, idx) => {
+                  const fullJob = app.fullJob || (app.jobLink ? sheetJobsMap[app.jobLink] : null);
+                  const score = parseInt(app.matchScore) || (fullJob ? parseInt(fullJob.match_score) || 0 : 0);
+                  const role = app.title || (fullJob ? extractRole(fullJob) : 'Job Application');
+                  const company = app.company || '—';
 
-                  {/* Job Info */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-[13px] font-semibold text-gray-900 truncate">
-                      {app.company || '—'}
-                    </h3>
-                    <p className="text-[11px] text-violet-600 truncate mt-0.5">{app.title || 'Untitled Position'}</p>
-                    <div className="flex items-center gap-3 mt-0.5">
-                      <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                        <Clock size={9} />
-                        {dateStr}
-                      </span>
-                      {app.matchScore && parseInt(app.matchScore) > 0 && (
-                        <span className={`text-[10px] font-bold ${parseInt(app.matchScore)>=80?'text-emerald-600':parseInt(app.matchScore)>=60?'text-violet-600':'text-amber-600'}`}>
-                          {app.matchScore}% match
-                        </span>
-                      )}
-                    </div>
-                    {app.appliedBy && (app.appliedBy.role === 'ADMIN' || app.appliedBy.role === 'SUPER_ADMIN') && (
-                      <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                        <Bot size={10} /> Applied by Mentor
-                      </span>
-                    )}
-                  </div>
+                  const logoDomain = (() => {
+                    if (fullJob?.employer_website) return fullJob.employer_website.replace(/^https?:\/\//, '').split('/')[0];
+                    if (app.jobLink) return app.jobLink.replace(/^https?:\/\//, '').split('/')[0];
+                    return null;
+                  })();
 
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {fullJob && (
-                      <>
-                        <button
-                          onClick={() => setDetailJob(fullJob)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-medium text-gray-600 bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors"
-                          title="View details"
-                        >
-                          <Info size={12} /> Details
-                        </button>
-                        <button
-                          onClick={() => setResumeJob(fullJob)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-medium text-violet-600 bg-violet-50 border border-violet-200 hover:bg-violet-100 transition-colors"
-                          title="View resume"
-                        >
-                          <FileText size={12} /> Resume
-                        </button>
-                      </>
-                    )}
-                    {app.jobLink && (
-                      <a
-                        href={app.jobLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-medium text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
-                        title="Open job posting"
-                      >
-                        <ExternalLink size={12} /> Apply
-                      </a>
-                    )}
-                  </div>
+                  return (
+                    <tr key={app.id} className="border-b border-gray-50 hover:bg-gray-50/60 group">
+                      {/* # */}
+                      <td className="pl-5 pr-2 py-3.5 w-10">
+                        <span className="text-sm text-gray-400 font-medium">{idx + 1}</span>
+                      </td>
 
-                  {/* Applied Badge */}
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold border bg-blue-50 text-blue-700 border-blue-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    Applied
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                      {/* Logo + Info */}
+                      <td className="px-3 py-3.5">
+                        <div className="flex items-center gap-3.5">
+                          {logoDomain ? (
+                            <img
+                              src={`https://logo.clearbit.com/${logoDomain}`}
+                              alt={company}
+                              className="w-10 h-10 rounded-xl object-contain bg-white border border-gray-100 shadow-sm shrink-0 p-0.5"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div className={`w-10 h-10 rounded-xl ${avatarBg(company)} text-white items-center justify-center font-bold text-sm shrink-0 shadow-sm ${logoDomain ? 'hidden' : 'flex'}`}>
+                            {company?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-[13px] text-gray-900 truncate leading-snug">{company}</h3>
+                              {app.appliedBy && (app.appliedBy.role === 'ADMIN' || app.appliedBy.role === 'SUPER_ADMIN') && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+                                  <Bot size={9} /> Mentor
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[12px] text-gray-500 truncate mt-0.5 max-w-md font-medium">{role}</p>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Score */}
+                      <td className="px-4 py-3.5 text-right w-24">
+                        {score > 0 && (
+                          <div className="text-right">
+                            <span className={`text-lg font-bold ${score >= 80 ? 'text-emerald-600' : score >= 70 ? 'text-blue-600' : score >= 60 ? 'text-orange-500' : 'text-gray-400'}`}>
+                              {score}%
+                            </span>
+                            <p className="text-[10px] text-gray-400 leading-none mt-0.5">Match</p>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="pl-4 pr-5 py-3.5 w-80">
+                        <div className="flex items-center justify-end gap-2">
+                          {fullJob && (
+                            <>
+                              <button
+                                onClick={() => setResumeJob(fullJob)}
+                                className={`inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border transition-colors shadow-sm ${
+                                  fullJob.resume_text
+                                    ? 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                                    : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
+                                }`}
+                              >
+                                {fullJob.resume_text
+                                  ? <CheckCircle2 size={13} className="text-emerald-500" />
+                                  : <FileText size={13} />}
+                                Resume
+                              </button>
+                              <button
+                                onClick={() => setDetailJob(fullJob)}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm"
+                              >
+                                <Info size={13} /> Details
+                              </button>
+                            </>
+                          )}
+                          {app.jobLink ? (
+                            <span className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50">
+                              <CheckCircle2 size={13} /> Applied
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-blue-200 text-blue-700 bg-blue-50">
+                              <CheckCircle2 size={13} /> Applied
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* ═══ Detail Modal ═══ */}
       {detailJob && (
