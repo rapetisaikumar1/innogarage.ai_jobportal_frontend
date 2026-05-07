@@ -527,6 +527,8 @@ const JobListings = () => {
   const [page, setPage] = useState(1);
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [waitingForJobs, setWaitingForJobs] = useState(false);
+  const [streamedCount, setStreamedCount] = useState(null); // null = show all; number = stream reveal limit
+  const streamTimerRef = useRef(null);
   const [usage, setUsage] = useState({ plan: 'free', used: 0, max: 5, label: 'Free' });
 
   const handleMarkApplied = async (job) => {
@@ -703,17 +705,36 @@ const JobListings = () => {
     setTriggeringSearch(true);
     setWaitingForJobs(true);
     sessionStorage.setItem('waitingForJobs', 'true');
-    clearJobsCache(); // force fresh fetch after new search completes
+    clearJobsCache();
     try {
       const { data } = await api.post('/jobs/search', { days: String(days) });
-      toast.success(data.message || 'Job search triggered!');
-      // Update usage count locally
       setUsage(prev => ({ ...prev, used: prev.used + 1 }));
 
-      if (Array.isArray(data.jobs)) {
-        setJobs(data.jobs);
-        writeJobsCache(data.jobs);
+      if (Array.isArray(data.jobs) && data.jobs.length > 0) {
+        const newJobs = data.jobs;
+        // Start with existing jobs visible, new ones stream in
+        setJobs(newJobs);
+        writeJobsCache(newJobs);
         await fetchAppliedStatus();
+
+        // Stream-reveal: start at 0 visible new jobs, increment every 120ms
+        setStreamedCount(0);
+        let idx = 0;
+        if (streamTimerRef.current) clearInterval(streamTimerRef.current);
+        streamTimerRef.current = setInterval(() => {
+          idx += 1;
+          setStreamedCount(idx);
+          if (idx >= newJobs.length) {
+            clearInterval(streamTimerRef.current);
+            streamTimerRef.current = null;
+            // Show all & clear streamed state after a moment
+            setTimeout(() => setStreamedCount(null), 300);
+          }
+        }, 120);
+
+        toast.success(data.message || `Found ${newJobs.length} matching jobs!`);
+      } else {
+        toast.info(data.message || 'No new matching jobs found.');
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to trigger job search');
@@ -723,6 +744,9 @@ const JobListings = () => {
       setTriggeringSearch(false);
     }
   };
+
+  // Cleanup stream timer on unmount
+  useEffect(() => () => { if (streamTimerRef.current) clearInterval(streamTimerRef.current); }, []);
 
   const syncUpdatedJob = (updatedJob) => {
     if (!updatedJob) return;
@@ -1209,23 +1233,18 @@ ${RESUME_WORD_STYLES}
         </div>
       )}
 
-      {/* Waiting for Jobs Card */}
-      {waitingForJobs && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 px-8 py-8 w-[420px] text-center space-y-4">
-            <div className="mx-auto w-14 h-14 rounded-2xl bg-violet-50 flex items-center justify-center">
-              <Sparkles size={28} className="text-violet-500 animate-pulse" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900">Searching for jobs...</h3>
-            <p className="text-sm text-gray-500 leading-relaxed">
-              Thank you for your patience! We're finding the best job matches for you. This page will update automatically once new jobs are ready.
-            </p>
-            <div className="flex items-center justify-center gap-2 pt-1">
-              <div className="w-2 h-2 rounded-full bg-violet-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-              <div className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-              <div className="w-2 h-2 rounded-full bg-violet-300 animate-bounce" style={{ animationDelay: '300ms' }} />
-            </div>
+      {/* Search-in-progress inline banner — replaces the old modal overlay */}
+      {triggeringSearch && (
+        <div className="flex items-center gap-3 px-4 py-2.5 mb-3 rounded-xl bg-violet-50 border border-violet-200 shrink-0">
+          <div className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-300 animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
+          <Sparkles size={14} className="text-violet-500 shrink-0" />
+          <p className="text-sm font-medium text-violet-700">
+            Finding your best job matches — this usually takes 30–60 seconds. New jobs will appear below as they stream in.
+          </p>
         </div>
       )}
 
@@ -1234,7 +1253,12 @@ ${RESUME_WORD_STYLES}
         <div>
           <h1 className="text-xl font-bold text-gray-900">Job Listings</h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            Showing {paginatedJobs.length} of {filteredJobs.length} jobs{totalPages > 1 && ` · Page ${page}/${totalPages}`}
+            {triggeringSearch
+              ? <span className="text-violet-500 font-medium flex items-center gap-1.5"><Sparkles size={12} className="animate-pulse" /> Searching for your best matches…</span>
+              : streamedCount !== null
+              ? <span className="text-violet-500 font-medium">Streaming {Math.min(streamedCount, filteredJobs.length)} of {filteredJobs.length} jobs…</span>
+              : <>Showing {paginatedJobs.length} of {filteredJobs.length} jobs{totalPages > 1 && ` · Page ${page}/${totalPages}`}</>
+            }
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1335,6 +1359,8 @@ ${RESUME_WORD_STYLES}
                     const role = extractRole(job);
                     const score = parseInt(job.match_score) || 0;
                     const isApplied = job.job_apply_link && appliedLinks.has(job.job_apply_link);
+                    // Stream reveal: visible when streamedCount is null (all shown) or globalIdx <= streamedCount
+                    const isVisible = streamedCount === null || globalIdx <= streamedCount;
 
                     // Derive domain for company logo
                     const logoDomain = (() => {
@@ -1344,7 +1370,13 @@ ${RESUME_WORD_STYLES}
                     })();
 
                     return (
-                      <tr key={job.id} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors group">
+                      <tr
+                        key={job.id}
+                        className={`border-b border-gray-50 hover:bg-gray-50/60 transition-all group ${
+                          isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+                        }`}
+                        style={{ transitionDuration: isVisible ? '350ms' : '0ms' }}
+                      >
                         {/* # */}
                         <td className="pl-5 pr-2 py-3.5 w-10">
                           <span className="text-sm text-gray-400 font-medium">{globalIdx}</span>
