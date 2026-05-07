@@ -124,18 +124,16 @@ const DashboardLayout = () => {
   const navItems = getNavItems();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const isAdmin = user?.role === 'ADMIN';
-  const useHorizontalNav = isSuperAdmin || isAdmin;
+  const isStudent = user?.role === 'STUDENT';
+  const useHorizontalNav = false;
   const roleLabel = isSuperAdmin ? 'Super Admin' : isAdmin ? 'Mentor' : 'Student';
 
   return (
-    <div className={`h-screen bg-gradient-to-br from-slate-100 via-blue-50/80 to-indigo-100/60 ${useHorizontalNav ? 'flex flex-col' : 'flex'} overflow-hidden`}>
-      {/* Mobile Overlay — sidebar roles only */}
-      {!useHorizontalNav && sidebarOpen && (
+    <div className="h-screen bg-gradient-to-br from-slate-100 via-blue-50/80 to-indigo-100/60 flex overflow-hidden">
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
-
-      {/* Sidebar — hidden for Super Admin and Admin */}
-      {!useHorizontalNav && (
       <aside className={`fixed inset-y-0 left-0 z-50 w-56 bg-white border-r border-gray-100 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} flex flex-col`}>
         {/* Logo */}
         <div className="h-14 flex items-center justify-between px-4 border-b border-gray-50">
@@ -148,16 +146,29 @@ const DashboardLayout = () => {
         {/* Navigation */}
         <nav className="flex-1 px-3 pt-4 pb-2 overflow-y-auto sidebar-nav-scroll">
           {(() => {
-            const isStudent = user?.role === 'STUDENT';
-            const mainItems = isStudent
-              ? navItems.filter(i => ['Dashboard', 'Job Listings', 'My Applications'].includes(i.label))
-              : navItems.filter(i => i.label !== 'Profile');
-            const learnItems = isStudent
-              ? navItems.filter(i => ['Training', 'My Notes', 'Mentoring'].includes(i.label))
+            const role = user?.role;
+
+            // Define section groups per role
+            const sectionGroups = role === 'STUDENT'
+              ? [
+                  { label: 'Main', names: ['Dashboard', 'Job Listings', 'My Applications'] },
+                  { label: 'Learning', names: ['Training', 'My Notes', 'Mentoring'] },
+                  { label: 'Community', names: ['Chat', 'Shoutboard', 'Help & Support'] },
+                ]
+              : role === 'ADMIN'
+              ? [
+                  { label: 'Main', names: ['Dashboard', 'My Students', 'Training'] },
+                  { label: 'Management', names: ['Time Slots', 'Bookings'] },
+                  { label: 'Community', names: ['Chat', 'Queries'] },
+                ]
+              : role === 'SUPER_ADMIN'
+              ? [
+                  { label: 'Main', names: ['Dashboard', 'Manage Mentors', 'Manage Students'] },
+                  { label: 'Content', names: ['Training Materials', 'Analytics'] },
+                  { label: 'Community', names: ['Queries', 'Chat'] },
+                ]
               : [];
-            const communityItems = isStudent
-              ? navItems.filter(i => ['Chat', 'Shoutboard', 'Help & Support'].includes(i.label))
-              : [];
+
             const profileItem = navItems.find(i => i.label === 'Profile');
 
             const renderItem = ({ to, icon: Icon, label, end, disabled }) => (
@@ -186,25 +197,19 @@ const DashboardLayout = () => {
 
             return (
               <>
-                <SectionLabel>Main</SectionLabel>
-                <div className="space-y-0.5">{mainItems.map(renderItem)}</div>
-
-                {learnItems.length > 0 && (
-                  <>
-                    <SectionLabel>Learning</SectionLabel>
-                    <div className="space-y-0.5">{learnItems.map(renderItem)}</div>
-                  </>
-                )}
-
-                {communityItems.length > 0 && (
-                  <>
-                    <SectionLabel>Community</SectionLabel>
-                    <div className="space-y-0.5">{communityItems.map(renderItem)}</div>
-                  </>
-                )}
+                {sectionGroups.map((section, idx) => {
+                  const items = navItems.filter(i => section.names.includes(i.label));
+                  if (!items.length) return null;
+                  return (
+                    <div key={section.label}>
+                      <SectionLabel>{section.label}</SectionLabel>
+                      <div className="space-y-0.5">{items.map(renderItem)}</div>
+                    </div>
+                  );
+                })}
 
                 {/* Upgrade — student only */}
-                {isStudent && (
+                {role === 'STUDENT' && (
                   <div className="mt-5">
                     <button
                       onClick={() => { setShowSubscribe(true); setSidebarOpen(false); }}
@@ -238,23 +243,14 @@ const DashboardLayout = () => {
           </button>
         </div>
       </aside>
-      )}
 
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col min-w-0 min-h-0 ${useHorizontalNav ? '' : 'lg:ml-56'}`}>
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 lg:ml-56">
         {/* Top Header */}
         <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 lg:px-6 shrink-0 z-30">
-          {!useHorizontalNav && (
-            <button className="lg:hidden text-gray-500" onClick={() => setSidebarOpen(true)}>
-              <Menu size={20} />
-            </button>
-          )}
-
-          {useHorizontalNav && (
-            <div className="flex items-center">
-              <Logo size="sm" />
-            </div>
-          )}
+          <button className="lg:hidden text-gray-500" onClick={() => setSidebarOpen(true)}>
+            <Menu size={20} />
+          </button>
 
           <div className="flex-1 hidden sm:flex items-center pl-4">
           </div>
@@ -445,43 +441,8 @@ const DashboardLayout = () => {
           </div>
         </header>
 
-        {/* Horizontal Nav — Super Admin & Admin */}
-        {useHorizontalNav && (
-          <div className="px-4 lg:px-6 shrink-0">
-            <div className="flex items-center justify-center gap-6 overflow-x-auto scrollbar-hide py-3">
-              {navItems.map(({ to, icon: Icon, label, end, disabled }) => (
-                disabled ? (
-                  <div
-                    key={to}
-                    className="flex items-center gap-2 text-sm font-medium text-gray-300 cursor-not-allowed whitespace-nowrap select-none"
-                  >
-                    <Icon size={15} strokeWidth={1.8} />
-                    <span>{label}</span>
-                  </div>
-                ) : (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end={end}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2 text-sm font-medium whitespace-nowrap transition-colors duration-150 ${
-                        isActive
-                          ? 'text-gray-900 font-semibold'
-                          : 'text-gray-500 hover:text-gray-900'
-                      }`
-                    }
-                  >
-                    <Icon size={13} strokeWidth={1.8} />
-                    <span>{label}</span>
-                  </NavLink>
-                )
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Page Content */}
-        <main className={`flex-1 overflow-y-auto ${useHorizontalNav ? 'p-4 lg:p-5' : 'p-5 lg:p-7'}`}>
+        <main className="flex-1 overflow-y-auto p-5 lg:p-7">
           <Outlet />
 
           {/* Footer */}
