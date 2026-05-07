@@ -508,8 +508,9 @@ const MyApplications = () => {
                   <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{detailJob.jd}</p>
                 </div>
               ) : null}
-            </div>)}
-            {/* Footer */}
+              </>
+              )}
+            </div>
             <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0 bg-white">
               <button onClick={() => { setDetailJob(null); setResumeJob(detailJob); }} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-violet-700 bg-violet-50 border border-violet-200 hover:bg-violet-100 transition-colors">
                 <FileText size={15} /> Resume
