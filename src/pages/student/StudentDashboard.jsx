@@ -231,11 +231,11 @@ const StudentDashboard = () => {
         const allApps = [...dbApps, ...uniqueSheet].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
         setRecentApps(allApps.slice(0, 5));
 
-        // Show newest 15 jobs (by saved_at descending) — gives scroll room
+        // Show newest 5 jobs (by saved_at descending)
         setRecentJobs(
           [...allJobs]
             .sort((a, b) => new Date(b.saved_at || 0) - new Date(a.saved_at || 0))
-            .slice(0, 15)
+            .slice(0, 5)
         );
       } catch (error) {
         console.error('Failed to load dashboard:', error);
