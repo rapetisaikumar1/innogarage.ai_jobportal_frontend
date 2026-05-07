@@ -117,15 +117,15 @@ const HelpSupportPage = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <HelpCircle size={20} className="text-violet-600" />
-            <h1 className="text-[18px] font-bold text-gray-900">Help & Support</h1>
+            <h1 className="text-xl font-bold text-gray-900">Help & Support</h1>
           </div>
-          <p className="text-[12px] text-gray-500">
+          <p className="text-sm text-gray-500">
             Find answers to common questions or raise a support query.
           </p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-[12px]"
+          className="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-sm"
         >
           <Plus size={14} /> Raise a Query
         </button>
@@ -135,7 +135,7 @@ const HelpSupportPage = () => {
       <div className="flex gap-1 bg-gray-100/80 p-0.5 rounded-lg w-fit mb-5">
         <button
           onClick={() => setTab('faq')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
             tab === 'faq' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -143,7 +143,7 @@ const HelpSupportPage = () => {
         </button>
         <button
           onClick={() => setTab('my-queries')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
             tab === 'my-queries' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -161,8 +161,8 @@ const HelpSupportPage = () => {
                   <MessageSquareMore size={15} className="text-violet-600" />
                 </div>
                 <div>
-                  <h2 className="text-[15px] font-bold text-gray-900">Raise a Query</h2>
-                  <p className="text-[11px] text-gray-400">Describe your issue and we'll get back to you</p>
+                  <h2 className="text-base font-bold text-gray-900">Raise a Query</h2>
+                  <p className="text-xs text-gray-400">Describe your issue and we'll get back to you</p>
                 </div>
               </div>
               <button onClick={() => setShowForm(false)} className="text-gray-300 hover:text-gray-500 transition-colors">
@@ -172,20 +172,20 @@ const HelpSupportPage = () => {
 
             <form onSubmit={handleSubmit} className="px-5 py-4 space-y-3">
               <div>
-                <label className="block text-[12px] font-semibold text-gray-700 mb-1">Subject</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Subject</label>
                 <input
                   type="text"
                   placeholder="Brief summary of your issue"
-                  className="w-full text-[12px] bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-300 placeholder-gray-400 text-gray-800 transition-all"
+                  className="w-full text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-300 placeholder-gray-400 text-gray-800 transition-all"
                   value={form.subject}
                   onChange={(e) => setForm({ ...form, subject: e.target.value })}
                   required
                 />
               </div>
               <div>
-                <label className="block text-[12px] font-semibold text-gray-700 mb-1">Category</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Category</label>
                 <select
-                  className="w-full text-[12px] bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-300 text-gray-700 transition-all"
+                  className="w-full text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-300 text-gray-700 transition-all"
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
                 >
@@ -193,9 +193,9 @@ const HelpSupportPage = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-[12px] font-semibold text-gray-700 mb-1">Assign To</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Assign To</label>
                 <select
-                  className="w-full text-[12px] bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-300 text-gray-700 transition-all"
+                  className="w-full text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-300 text-gray-700 transition-all"
                   value={form.assignedToId}
                   onChange={(e) => setForm({ ...form, assignedToId: e.target.value })}
                 >
@@ -208,11 +208,11 @@ const HelpSupportPage = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-[12px] font-semibold text-gray-700 mb-1">Description</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
                 <textarea
                   rows={4}
                   placeholder="Describe your issue in detail..."
-                  className="w-full text-[12px] bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-300 placeholder-gray-400 text-gray-800 resize-none transition-all"
+                  className="w-full text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-300 placeholder-gray-400 text-gray-800 resize-none transition-all"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   required
@@ -222,14 +222,14 @@ const HelpSupportPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="px-4 py-2 text-[12px] font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-[12px] font-semibold transition-all disabled:opacity-60"
+                  className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-all disabled:opacity-60"
                 >
                   <Send size={13} />
                   {submitting ? 'Submitting...' : 'Submit Query'}
@@ -250,7 +250,7 @@ const HelpSupportPage = () => {
               <input
                 type="text"
                 placeholder="Search FAQs..."
-                className="flex-1 text-[12px] bg-transparent outline-none placeholder-gray-400 text-gray-800"
+                className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-800"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -258,12 +258,12 @@ const HelpSupportPage = () => {
 
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100">
-                <h2 className="text-[13px] font-bold text-gray-900">Frequently Asked Questions</h2>
+                <h2 className="text-sm font-bold text-gray-900">Frequently Asked Questions</h2>
               </div>
               <div className="divide-y divide-gray-100">
                 {filtered.length === 0 ? (
                   <div className="px-4 py-8 text-center">
-                    <p className="text-[12px] text-gray-400">No matching questions found.</p>
+                    <p className="text-sm text-gray-400">No matching questions found.</p>
                   </div>
                 ) : (
                   filtered.map((faq, idx) => (
@@ -272,7 +272,7 @@ const HelpSupportPage = () => {
                         onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
                         className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
                       >
-                        <span className="text-[12px] font-medium text-gray-800 pr-4">{faq.question}</span>
+                        <span className="text-sm font-medium text-gray-800 pr-4">{faq.question}</span>
                         {openFaq === idx ? (
                           <ChevronUp size={14} className="text-gray-400 shrink-0" />
                         ) : (
@@ -281,7 +281,7 @@ const HelpSupportPage = () => {
                       </button>
                       {openFaq === idx && (
                         <div className="px-4 pb-3">
-                          <p className="text-[11px] text-gray-500 leading-relaxed">{faq.answer}</p>
+                          <p className="text-xs text-gray-500 leading-relaxed">{faq.answer}</p>
                         </div>
                       )}
                     </div>
@@ -298,12 +298,12 @@ const HelpSupportPage = () => {
                 <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
                   <Mail size={14} className="text-violet-600" />
                 </div>
-                <h3 className="text-[13px] font-bold text-gray-900">Email Support</h3>
+                <h3 className="text-sm font-bold text-gray-900">Email Support</h3>
               </div>
-              <p className="text-[11px] text-gray-500 leading-relaxed">
+              <p className="text-xs text-gray-500 leading-relaxed">
                 Reach out to our support team and we'll get back to you within 24 hours.
               </p>
-              <p className="text-[11px] font-semibold text-violet-600 mt-2">support@innogarage.ai</p>
+              <p className="text-xs font-semibold text-violet-600 mt-2">support@innogarage.ai</p>
             </div>
           </div>
         </div>
@@ -321,8 +321,8 @@ const HelpSupportPage = () => {
               <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mx-auto mb-3">
                 <MessageSquareMore size={20} className="text-gray-300" />
               </div>
-              <h3 className="text-[13px] font-semibold text-gray-600">No queries yet</h3>
-              <p className="text-[11px] text-gray-400 mt-1">Click "Raise a Query" to submit your first support request</p>
+              <h3 className="text-sm font-semibold text-gray-600">No queries yet</h3>
+              <p className="text-xs text-gray-400 mt-1">Click "Raise a Query" to submit your first support request</p>
             </div>
           ) : (
             <div className="space-y-2.5">
@@ -339,14 +339,14 @@ const HelpSupportPage = () => {
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-[13px] font-semibold text-gray-900 truncate">{query.subject}</h3>
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border ${sc.bg} ${sc.text} ${sc.border}`}>
+                          <h3 className="text-sm font-semibold text-gray-900 truncate">{query.subject}</h3>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold border ${sc.bg} ${sc.text} ${sc.border}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
                             {sc.label}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 text-[11px] text-gray-400">
-                          <span className="px-1.5 py-0.5 rounded bg-gray-100 text-[10px] font-medium text-gray-500">{query.category}</span>
+                        <div className="flex items-center gap-3 text-xs text-gray-400">
+                          <span className="px-1.5 py-0.5 rounded bg-gray-100 text-xs font-medium text-gray-500">{query.category}</span>
                           <span>{dateStr}</span>
                           {query.assignedTo && (
                             <span className="flex items-center gap-1 text-violet-600">
@@ -362,23 +362,23 @@ const HelpSupportPage = () => {
                     {isExpanded && (
                       <div className="px-4 pb-4 border-t border-gray-100 space-y-3">
                         <div className="mt-3">
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Your Description</p>
-                          <p className="text-[12px] text-gray-700 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Your Description</p>
+                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
                             {query.description}
                           </p>
                         </div>
 
                         {query.adminReply && (
                           <div>
-                            <p className="text-[10px] font-bold text-violet-500 uppercase tracking-wider mb-1">Admin Response</p>
-                            <p className="text-[12px] text-gray-700 leading-relaxed whitespace-pre-wrap bg-violet-50 rounded-lg px-3 py-2.5 border border-violet-100">
+                            <p className="text-xs font-bold text-violet-500 uppercase tracking-wider mb-1">Admin Response</p>
+                            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap bg-violet-50 rounded-lg px-3 py-2.5 border border-violet-100">
                               {query.adminReply}
                             </p>
                           </div>
                         )}
 
                         {!query.adminReply && query.status === 'OPEN' && (
-                          <div className="flex items-center gap-2 text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                          <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
                             <Clock size={12} />
                             <span>Awaiting admin response</span>
                           </div>

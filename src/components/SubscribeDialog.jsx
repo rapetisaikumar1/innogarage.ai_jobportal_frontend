@@ -130,13 +130,13 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
         <div className="relative px-10 pt-8 pb-4 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 mb-4 shadow-lg shadow-violet-200/40">
             <Crown size={13} className="text-amber-300" />
-            <span className="text-[10px] font-bold text-white tracking-widest uppercase">Upgrade Your Career</span>
+            <span className="text-xs font-bold text-white tracking-widest uppercase">Upgrade Your Career</span>
           </div>
-          <h2 className="text-[28px] font-extrabold text-gray-900 tracking-tight leading-tight">
+          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight leading-tight">
             Unlock Your Full Potential with{' '}
             <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">INNOGARAGE.ai</span>
           </h2>
-          <p className="text-[13px] text-gray-500 max-w-xl mx-auto leading-relaxed mt-2">
+          <p className="text-sm text-gray-500 max-w-xl mx-auto leading-relaxed mt-2">
             Choose the plan that accelerates your career — from smart job matching to personal mentorship, we've got you covered.
           </p>
 
@@ -145,7 +145,7 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
             {highlights.map(({ icon: Icon, label }) => (
               <div key={label} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/70 backdrop-blur-sm border border-gray-200/50 shadow-sm">
                 <Icon size={12} className="text-indigo-500" />
-                <span className="text-[10px] font-semibold text-gray-600">{label}</span>
+                <span className="text-xs font-semibold text-gray-600">{label}</span>
               </div>
             ))}
           </div>
@@ -169,7 +169,7 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
                 >
                   {/* Badge */}
                   {plan.badge && (
-                    <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-wider text-white bg-gradient-to-r ${plan.accent} whitespace-nowrap shadow-lg`}>
+                    <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-xs font-bold tracking-wider text-white bg-gradient-to-r ${plan.accent} whitespace-nowrap shadow-lg`}>
                       {plan.badge}
                     </div>
                   )}
@@ -180,15 +180,15 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
                       <div className={`w-12 h-12 rounded-2xl ${plan.accentBg} flex items-center justify-center mb-3 shadow-sm`}>
                         <PlanIcon size={22} className={plan.accentCheck} />
                       </div>
-                      <h3 className="font-extrabold text-[17px] text-gray-900">
+                      <h3 className="font-extrabold text-lg text-gray-900">
                         {plan.name}
                       </h3>
                     </div>
 
                     {/* Price */}
                     <div className="flex items-baseline justify-center gap-1 mt-1 mb-4">
-                      <span className={`text-[36px] font-black tracking-tight leading-none bg-gradient-to-r ${plan.accent} bg-clip-text text-transparent`}>{plan.price}</span>
-                      <span className="text-[13px] text-gray-400 font-medium">{plan.period}</span>
+                      <span className={`text-4xl font-black tracking-tight leading-none bg-gradient-to-r ${plan.accent} bg-clip-text text-transparent`}>{plan.price}</span>
+                      <span className="text-sm text-gray-400 font-medium">{plan.period}</span>
                     </div>
 
                     {/* Divider */}
@@ -201,7 +201,7 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
                           <div className={`w-5 h-5 rounded-full ${plan.accentBg} flex items-center justify-center shrink-0 mt-0.5`}>
                             <Check size={11} className={plan.accentCheck} strokeWidth={3} />
                           </div>
-                          <span className="text-[13px] text-gray-700 leading-snug">{feature}</span>
+                          <span className="text-sm text-gray-700 leading-snug">{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -210,7 +210,7 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
                     <button
                       onClick={() => handleCheckout(plan.key)}
                       disabled={loadingPlan !== null}
-                      className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-bold tracking-wide transition-all duration-300 mt-5 bg-gradient-to-r ${plan.accentBtn} text-white shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed`}
+                      className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 mt-5 bg-gradient-to-r ${plan.accentBtn} text-white shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
                       {loadingPlan === plan.key ? (
                         <>
@@ -235,13 +235,13 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
         <div className="relative px-10 pt-2 pb-6 text-center">
           <button
             onClick={onClose}
-            className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors font-medium"
+            className="text-sm text-gray-400 hover:text-gray-600 transition-colors font-medium"
           >
             Maybe later — continue to dashboard
           </button>
           <div className="flex items-center justify-center gap-2 mt-2">
             <Shield size={12} className="text-gray-400" />
-            <span className="text-[11px] text-gray-400 font-medium">Secure Payment · Cancel Anytime</span>
+            <span className="text-xs text-gray-400 font-medium">Secure Payment · Cancel Anytime</span>
           </div>
         </div>
       </div>

@@ -145,17 +145,17 @@ const ProfilePage = () => {
     <div>
       {/* Page Header */}
       <div className="mb-5">
-        <h1 className="text-[18px] font-bold text-gray-900">Profile Settings</h1>
-        <p className="text-[11px] text-gray-400 mt-0.5">Manage your account information and security</p>
+        <h1 className="text-xl font-bold text-gray-900">Profile Settings</h1>
+        <p className="text-xs text-gray-400 mt-0.5">Manage your account information and security</p>
       </div>
 
       {/* Registration Number */}
       {profile?.registrationNumber && (
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center gap-3">
-          <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-[11px]">ID</div>
+          <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xs">ID</div>
           <div>
-            <p className="text-[10px] text-blue-600 font-medium">Registration Number</p>
-            <p className="text-[15px] font-bold text-blue-800 tracking-wide">{profile.registrationNumber}</p>
+            <p className="text-xs text-blue-600 font-medium">Registration Number</p>
+            <p className="text-base font-bold text-blue-800 tracking-wide">{profile.registrationNumber}</p>
           </div>
         </div>
       )}
@@ -167,7 +167,7 @@ const ProfilePage = () => {
           {/* Section Header */}
           <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
             <User size={15} className="text-gray-500" />
-            <span className="text-[13px] font-bold text-gray-800">Basic Information</span>
+            <span className="text-sm font-bold text-gray-800">Basic Information</span>
           </div>
 
           {/* Avatar + Info */}
@@ -176,9 +176,9 @@ const ProfilePage = () => {
               {profile?.fullName?.charAt(0)?.toUpperCase() || 'S'}
             </div>
             <div className="min-w-0">
-              <p className="text-[14px] font-bold text-gray-900">{profile?.fullName}</p>
-              <p className="text-[11px] text-gray-400 truncate">{profile?.email}</p>
-              <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] font-medium text-emerald-600">
+              <p className="text-base font-bold text-gray-900">{profile?.fullName}</p>
+              <p className="text-xs text-gray-400 truncate">{profile?.email}</p>
+              <span className="inline-flex items-center gap-1 mt-0.5 text-xs font-medium text-emerald-600">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 Student
               </span>
@@ -190,23 +190,23 @@ const ProfilePage = () => {
             {/* Basic Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[11px] font-medium text-gray-500 mb-1 block">Full Name</label>
-                <input type="text" className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Full Name</label>
+                <input type="text" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
               </div>
               <div>
-                <label className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 mb-1">Email <Mail size={11} className="text-gray-400" /></label>
-                <input type="email" className="w-full text-[13px] text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 cursor-not-allowed" value={profile?.email || ''} disabled />
+                <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">Email <Mail size={11} className="text-gray-400" /></label>
+                <input type="email" className="w-full text-sm text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 cursor-not-allowed" value={profile?.email || ''} disabled />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[11px] font-medium text-gray-500 mb-1 block">Phone</label>
-                <input type="tel" className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Phone</label>
+                <input type="tel" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
               </div>
               <div>
-                <label className="text-[11px] font-medium text-gray-500 mb-1 block">Role</label>
-                <div className="w-full text-[13px] text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 flex items-center gap-1.5">
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Role</label>
+                <div className="w-full text-sm text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   Student
                 </div>
@@ -215,25 +215,25 @@ const ProfilePage = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 mb-1">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
                   <Linkedin size={11} className="text-gray-400" /> LinkedIn Profile
                 </label>
-                <input type="url" className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all placeholder-gray-400" placeholder="https://linkedin.com/in/..." value={form.linkedinProfile} onChange={(e) => setForm({ ...form, linkedinProfile: e.target.value })} />
+                <input type="url" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all placeholder-gray-400" placeholder="https://linkedin.com/in/..." value={form.linkedinProfile} onChange={(e) => setForm({ ...form, linkedinProfile: e.target.value })} />
               </div>
               <div>
-                <label className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 mb-1">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
                   <GraduationCap size={11} className="text-gray-400" /> Education
                 </label>
-                <input type="text" className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
+                <input type="text" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
               </div>
             </div>
 
             <div>
-              <label className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 mb-1">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
                 <Briefcase size={11} className="text-gray-400" /> Years of Experience
               </label>
               <select
-                className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all cursor-pointer"
+                className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all cursor-pointer"
                 value={form.experience}
                 onChange={(e) => setForm({ ...form, experience: e.target.value })}
               >
@@ -246,20 +246,20 @@ const ProfilePage = () => {
 
             {/* Job Search Fields */}
             <div className="border border-violet-200/80 bg-violet-50/40 rounded-lg p-4 space-y-3">
-              <p className="text-[10px] font-bold text-violet-600 uppercase tracking-wider">Job Search Info</p>
+              <p className="text-xs font-bold text-violet-600 uppercase tracking-wider">Job Search Info</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 mb-1">
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
                     <Target size={11} className="text-gray-400" /> Job Role
                   </label>
-                  <input type="text" className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all placeholder-gray-400" placeholder="e.g. Frontend Developer" value={form.jobRole} onChange={(e) => setForm({ ...form, jobRole: e.target.value })} />
+                  <input type="text" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all placeholder-gray-400" placeholder="e.g. Frontend Developer" value={form.jobRole} onChange={(e) => setForm({ ...form, jobRole: e.target.value })} />
                 </div>
                 <div>
-                  <label className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 mb-1">
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
                     <MapPin size={11} className="text-gray-400" /> Preferred Location
                   </label>
                   <select
-                    className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all cursor-pointer"
+                    className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all cursor-pointer"
                     value={form.location}
                     onChange={(e) => setForm({ ...form, location: e.target.value })}
                   >
@@ -269,22 +269,22 @@ const ProfilePage = () => {
                 </div>
               </div>
               <div>
-                <label className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 mb-1">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
                   <Tag size={11} className="text-gray-400" /> Key Skills (comma separated)
                 </label>
-                <input type="text" className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all placeholder-gray-400" placeholder="e.g. React, Node.js, Python" value={form.keySkills} onChange={(e) => setForm({ ...form, keySkills: e.target.value })} />
+                <input type="text" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all placeholder-gray-400" placeholder="e.g. React, Node.js, Python" value={form.keySkills} onChange={(e) => setForm({ ...form, keySkills: e.target.value })} />
               </div>
               <div>
-                <label className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 mb-1">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
                   <FileText size={11} className="text-gray-400" /> Resume
                 </label>
                 {profile?.resumeUrl && (
                   <div className="flex items-center gap-2 mb-2">
-                    <a href={profile.resumeUrl} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-blue-600 hover:text-blue-700 hover:underline" target="_blank" rel="noopener noreferrer">
+                    <a href={profile.resumeUrl} className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline" target="_blank" rel="noopener noreferrer">
                       <FileText size={11} /> View Current Resume
                     </a>
                     <span className="text-gray-300">|</span>
-                    <span className="text-[10px] text-gray-400">Upload new to replace</span>
+                    <span className="text-xs text-gray-400">Upload new to replace</span>
                   </div>
                 )}
                 <label className="flex items-center gap-3 w-full border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50/30 rounded-lg px-4 py-3 cursor-pointer transition-all group">
@@ -292,15 +292,15 @@ const ProfilePage = () => {
                     <Upload size={15} className="text-blue-500" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[12px] font-semibold text-gray-700 group-hover:text-blue-700 transition-colors">Click to upload resume</p>
-                    <p className="text-[10px] text-gray-400">PDF, Word (.doc, .docx, .rtf) &mdash; max 10MB</p>
+                    <p className="text-sm font-semibold text-gray-700 group-hover:text-blue-700 transition-colors">Click to upload resume</p>
+                    <p className="text-xs text-gray-400">PDF, Word (.doc, .docx, .rtf) &mdash; max 10MB</p>
                   </div>
                   <input type="file" accept=".pdf,.doc,.docx,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleResumeUpload} />
                 </label>
               </div>
             </div>
 
-            <button type="submit" className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-semibold rounded-lg transition-colors disabled:opacity-40" disabled={saving}>
+            <button type="submit" className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40" disabled={saving}>
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </form>
@@ -309,7 +309,7 @@ const ProfilePage = () => {
           <div className="px-5 py-4 border-t border-gray-100">
             <div className="flex items-center gap-2 mb-3">
               <FileText size={15} className="text-gray-500" />
-              <span className="text-[13px] font-bold text-gray-800">Identity Documents</span>
+              <span className="text-sm font-bold text-gray-800">Identity Documents</span>
             </div>
             <div className="grid grid-cols-3 gap-3">
               {[
@@ -325,7 +325,7 @@ const ProfilePage = () => {
                   <div key={doc.key} className={`border border-${doc.color}-200 bg-${doc.color}-50/30 rounded-lg p-3`}>
                     <div className="flex items-center gap-1.5 mb-2">
                       <doc.icon size={13} className={`text-${doc.color}-500`} />
-                      <span className="text-[11px] font-semibold text-gray-700">{doc.label}</span>
+                      <span className="text-xs font-semibold text-gray-700">{doc.label}</span>
                     </div>
                     {doc.url ? (
                       <div className="space-y-2">
@@ -349,13 +349,13 @@ const ProfilePage = () => {
                             className="flex flex-col items-center justify-center h-24 border border-gray-200 rounded-md bg-gray-50 hover:bg-gray-100 transition-colors group"
                           >
                             <FileText size={22} className="text-gray-400 group-hover:text-blue-500 mb-1 transition-colors" />
-                            <span className="text-[10px] text-gray-500 group-hover:text-blue-600 font-medium transition-colors">
+                            <span className="text-xs text-gray-500 group-hover:text-blue-600 font-medium transition-colors">
                               {meta?.name || `${doc.label}.${ext}`}
                             </span>
-                            <span className="text-[9px] text-gray-400 mt-0.5 uppercase">{ext} · Click to open</span>
+                            <span className="text-xs text-gray-400 mt-0.5 uppercase">{ext} · Click to open</span>
                           </a>
                         )}
-                        <label className="flex items-center justify-center gap-1 text-[10px] font-medium text-gray-500 hover:text-blue-600 cursor-pointer transition-colors">
+                        <label className="flex items-center justify-center gap-1 text-xs font-medium text-gray-500 hover:text-blue-600 cursor-pointer transition-colors">
                           <Upload size={10} /> Replace
                           <input type="file" accept={ACCEPT} className="hidden" onChange={(e) => handleDocUpload(e, doc.key)} disabled={uploadingDoc === doc.key} />
                         </label>
@@ -367,8 +367,8 @@ const ProfilePage = () => {
                         ) : (
                           <>
                             <Upload size={16} className="text-gray-400 mb-1" />
-                            <span className="text-[10px] text-gray-400">Upload {doc.label}</span>
-                            <span className="text-[9px] text-gray-300 mt-0.5">PDF, Word, Image…</span>
+                            <span className="text-xs text-gray-400">Upload {doc.label}</span>
+                            <span className="text-xs text-gray-300 mt-0.5">PDF, Word, Image…</span>
                           </>
                         )}
                         <input type="file" accept={ACCEPT} className="hidden" onChange={(e) => handleDocUpload(e, doc.key)} disabled={uploadingDoc === doc.key} />
@@ -387,12 +387,12 @@ const ProfilePage = () => {
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Lock size={14} className="text-gray-500" />
-              <span className="text-[13px] font-bold text-gray-800">Change Password</span>
+              <span className="text-sm font-bold text-gray-800">Change Password</span>
             </div>
             {!showPasswordSection && (
               <button
                 onClick={() => setShowPasswordSection(true)}
-                className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
               >
                 Update
               </button>
@@ -402,22 +402,22 @@ const ProfilePage = () => {
           {showPasswordSection ? (
             <form onSubmit={handleChangePassword} className="px-5 py-4 space-y-3">
               <div>
-                <label className="text-[11px] font-medium text-gray-500 mb-1 block">Current Password</label>
-                <input type="password" className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" placeholder="Enter current password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} required />
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Current Password</label>
+                <input type="password" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" placeholder="Enter current password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} required />
               </div>
               <div>
-                <label className="text-[11px] font-medium text-gray-500 mb-1 block">New Password</label>
-                <input type="password" className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" placeholder="Min 8 characters" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} required minLength={8} />
+                <label className="text-xs font-medium text-gray-500 mb-1 block">New Password</label>
+                <input type="password" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" placeholder="Min 8 characters" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} required minLength={8} />
               </div>
               <div>
-                <label className="text-[11px] font-medium text-gray-500 mb-1 block">Confirm Password</label>
-                <input type="password" className="w-full text-[13px] text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" placeholder="Re-enter new password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} required />
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Confirm Password</label>
+                <input type="password" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" placeholder="Re-enter new password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} required />
               </div>
               <div className="flex items-center gap-2 pt-1">
-                <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold rounded-lg transition-colors disabled:opacity-40" disabled={changingPassword}>
+                <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-40" disabled={changingPassword}>
                   {changingPassword ? 'Changing...' : 'Update Password'}
                 </button>
-                <button type="button" onClick={() => { setShowPasswordSection(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }} className="px-4 py-2 text-[11px] font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                <button type="button" onClick={() => { setShowPasswordSection(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }} className="px-4 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">
                   Cancel
                 </button>
               </div>
@@ -427,7 +427,7 @@ const ProfilePage = () => {
               <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center mx-auto mb-2">
                 <Lock size={18} className="text-gray-300" />
               </div>
-              <p className="text-[11px] text-gray-400">Click "Update" to change your password</p>
+              <p className="text-xs text-gray-400">Click "Update" to change your password</p>
             </div>
           )}
         </div>
@@ -438,7 +438,7 @@ const ProfilePage = () => {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setPreviewDoc(null)}>
           <div className="relative bg-white rounded-xl max-w-lg w-full p-2" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-3 py-2">
-              <span className="text-[13px] font-bold text-gray-800">{previewDoc.label}</span>
+              <span className="text-sm font-bold text-gray-800">{previewDoc.label}</span>
               <button onClick={() => setPreviewDoc(null)} className="p-1 hover:bg-gray-100 rounded-md transition-colors"><X size={16} className="text-gray-500" /></button>
             </div>
             {previewDoc.isImage ? (
@@ -446,8 +446,8 @@ const ProfilePage = () => {
             ) : (
               <div className="flex flex-col items-center justify-center py-10 gap-3">
                 <FileText size={40} className="text-gray-300" />
-                <p className="text-[13px] text-gray-500">Preview not available for this file type.</p>
-                <a href={previewDoc.url} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-blue-600 text-white text-[12px] font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                <p className="text-sm text-gray-500">Preview not available for this file type.</p>
+                <a href={previewDoc.url} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">
                   Open / Download
                 </a>
               </div>
