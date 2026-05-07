@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { Users, Calendar, BookOpen, MessageSquare } from 'lucide-react';
+import { Users, Calendar, BookOpen, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 const DonutChart = ({ value, max, color, trackColor = '#e0e7ff', size = 80, strokeWidth = 8 }) => {
   const radius = (size - strokeWidth) / 2;
@@ -44,6 +44,9 @@ const AdminDashboard = () => {
 
   const upcomingBookings = slots.filter(s => s.isBooked && s.booking && new Date(s.startTime) > new Date());
   const totalBooked = slots.filter(s => s.isBooked).length;
+  const availableSlots = slots.filter(s => !s.isBooked).length;
+  const completedSessions = slots.filter(s => s.booking?.status === 'COMPLETED').length;
+  const cancelledSessions = slots.filter(s => s.booking?.status === 'CANCELLED').length;
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div></div>;
@@ -60,14 +63,10 @@ const AdminDashboard = () => {
     { label: 'Assigned Students', value: students.length, icon: Users, light: 'bg-blue-50', text: 'text-blue-600' },
     { label: 'Total Slots', value: slots.length, icon: Calendar, light: 'bg-violet-50', text: 'text-violet-600' },
     { label: 'Upcoming Sessions', value: upcomingBookings.length, icon: BookOpen, light: 'bg-emerald-50', text: 'text-emerald-600' },
-    { label: 'Total Bookings', value: totalBooked, icon: MessageSquare, light: 'bg-orange-50', text: 'text-orange-600' },
-  ];
-
-  const quickActions = [
-    { to: '/admin/students', icon: Users, label: 'My Students', iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600' },
-    { to: '/admin/slots', icon: Calendar, label: 'Manage Slots', iconBg: 'bg-gradient-to-br from-violet-500 to-violet-600' },
-    { to: '/admin/bookings', icon: BookOpen, label: 'Bookings', iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600' },
-    { to: '/admin/chat', icon: MessageSquare, label: 'Messages', iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600' },
+    { label: 'Total Bookings', value: totalBooked, icon: Calendar, light: 'bg-orange-50', text: 'text-orange-600' },
+    { label: 'Available Slots', value: availableSlots, icon: Clock, light: 'bg-sky-50', text: 'text-sky-600' },
+    { label: 'Completed Sessions', value: completedSessions, icon: CheckCircle2, light: 'bg-green-50', text: 'text-green-600' },
+    { label: 'Cancelled Sessions', value: cancelledSessions, icon: XCircle, light: 'bg-red-50', text: 'text-red-500' },
   ];
 
   return (
@@ -162,25 +161,6 @@ const AdminDashboard = () => {
               </div>
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-[13px] font-bold text-gray-800 mb-3">Quick Actions</h2>
-        <div className="flex flex-wrap items-center gap-3">
-          {quickActions.map(({ to, icon: Icon, label, iconBg }) => (
-            <Link
-              key={to}
-              to={to}
-              className="flex items-center gap-2.5 px-4 py-2.5 bg-white border border-gray-200/60 rounded-xl hover:shadow-md hover:border-gray-300 transition-all duration-300 group"
-            >
-              <div className={`w-8 h-8 ${iconBg} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
-                <Icon size={15} className="text-white" strokeWidth={2} />
-              </div>
-              <span className="text-[12px] font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">{label}</span>
-            </Link>
-          ))}
         </div>
       </div>
 
