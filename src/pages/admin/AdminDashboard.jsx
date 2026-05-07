@@ -42,9 +42,10 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
-  const upcomingBookings = slots.filter(s => s.isBooked && s.booking && new Date(s.startTime) > new Date());
+  const now = new Date();
+  const upcomingBookings = slots.filter(s => s.isBooked && s.booking && new Date(s.startTime) > now);
   const totalBooked = slots.filter(s => s.isBooked).length;
-  const availableSlots = slots.filter(s => !s.isBooked).length;
+  const availableSlots = slots.filter(s => !s.isBooked && new Date(s.startTime) > now).length;
   const completedSessions = slots.filter(s => s.booking?.status === 'COMPLETED').length;
   const cancelledSessions = slots.filter(s => s.booking?.status === 'CANCELLED').length;
 
