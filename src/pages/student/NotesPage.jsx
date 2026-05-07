@@ -88,150 +88,170 @@ const NotesPage = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[16px] font-bold text-gray-900">My Notes</h1>
-          <p className="text-[11px] text-gray-400 mt-0.5">Write and manage your training notes</p>
-        </div>
-        <button
-          onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ title: '', content: '', category: '' }); }}
-          className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-[12px]"
-        >
-          <Plus size={14} /> New Note
-        </button>
-      </div>
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
 
-      {/* Form */}
-      {showForm && (
-        <div className="bg-white border border-gray-200 rounded-lg p-5">
-          <form onSubmit={handleSave} className="space-y-3">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-[13px] font-semibold text-gray-900">{editingId ? 'Edit Note' : 'New Note'}</h3>
-              <button type="button" onClick={() => setShowForm(false)} className="p-1 rounded-md text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors">
-                <X size={14} />
-              </button>
-            </div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[16px] font-bold text-gray-900">My Notes</h1>
+          {notes.length > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold">
+              <StickyNote size={12} />
+              {notes.length} notes
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="bg-white rounded-xl border border-gray-100 px-4 py-2.5 flex items-center gap-2 shadow-sm w-64">
+            <Search size={14} className="text-gray-400 shrink-0" />
             <input
               type="text"
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-[12px] text-gray-800 placeholder-gray-400 outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-colors"
-              placeholder="Note title"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              required
+              className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-800"
+              placeholder="Search notes..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
-            <select
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-[12px] text-gray-700 outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-colors"
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-            >
-              <option value="">Select category</option>
-              <option value="Interview Prep">Interview Prep</option>
-              <option value="Technical Notes">Technical Notes</option>
-              <option value="Career Development">Career Development</option>
-              <option value="General">General</option>
-            </select>
-            <textarea
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-[12px] text-gray-800 placeholder-gray-400 outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-colors resize-none"
-              rows={5}
-              placeholder="Write your notes here..."
-              value={form.content}
-              onChange={(e) => setForm({ ...form, content: e.target.value })}
-              required
-            />
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-[12px]"
-            >
-              <Save size={13} /> {editingId ? 'Update' : 'Save'} Note
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* Search */}
-      {notes.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 flex items-center gap-2 w-full sm:w-64">
-          <Search size={13} className="text-gray-400 shrink-0" />
-          <input
-            type="text"
-            className="flex-1 text-[12px] bg-transparent outline-none placeholder-gray-400 text-gray-700"
-            placeholder="Search notes..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      )}
-
-      {/* Notes */}
-      {filtered.length === 0 && !showForm ? (
-        <div className="bg-white border border-gray-200 rounded-lg text-center py-16">
-          <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mx-auto mb-3">
-            <StickyNote size={20} className="text-gray-300" />
+            {search && (
+              <button onClick={() => setSearch('')} className="text-gray-300 hover:text-gray-500">
+                <X size={13} />
+              </button>
+            )}
           </div>
-          <h3 className="text-[13px] font-semibold text-gray-600">
-            {notes.length === 0 ? 'No notes yet' : 'No matching notes'}
-          </h3>
-          <p className="text-[11px] text-gray-400 mt-1">
-            {notes.length === 0 ? 'Start writing your training notes' : 'Try a different search term'}
-          </p>
+          <button
+            onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ title: '', content: '', category: '' }); }}
+            className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm whitespace-nowrap"
+          >
+            <Plus size={15} /> {showForm ? 'Close' : 'New Note'}
+          </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filtered.map((note) => {
-            const cs = CATEGORY_STYLE[note.category] || CATEGORY_STYLE.General;
-            const dateStr = new Date(note.updatedAt).toLocaleDateString('en-US', {
-              month: 'short', day: 'numeric', year: 'numeric'
-            });
+      </div>
 
-            return (
-              <div
-                key={note.id}
-                className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors group"
+      {/* Body: side-by-side when form is open, full-width grid otherwise */}
+      <div className="flex gap-5 flex-1 min-h-0">
+
+        {/* Form Panel */}
+        {showForm && (
+          <div className="w-80 shrink-0 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+              <h3 className="text-sm font-bold text-gray-900">{editingId ? 'Edit Note' : 'New Note'}</h3>
+              <button
+                type="button"
+                onClick={() => { setShowForm(false); setEditingId(null); setForm({ title: '', content: '', category: '' }); }}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
               >
-                {/* Title + Actions */}
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="text-[13px] font-semibold text-gray-900 leading-snug">{note.title}</h3>
-                  <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => handleEdit(note)}
-                      className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                    >
-                      <Edit3 size={13} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(note.id)}
-                      className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
+                <X size={15} />
+              </button>
+            </div>
+            <form onSubmit={handleSave} className="flex flex-col flex-1 p-5 gap-3 min-h-0">
+              <input
+                type="text"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 transition-colors"
+                placeholder="Note title"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                required
+              />
+              <select
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 transition-colors"
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+              >
+                <option value="">Select category</option>
+                <option value="Interview Prep">Interview Prep</option>
+                <option value="Technical Notes">Technical Notes</option>
+                <option value="Career Development">Career Development</option>
+                <option value="General">General</option>
+              </select>
+              <textarea
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 transition-colors resize-none flex-1"
+                style={{ minHeight: '180px' }}
+                placeholder="Write your notes here..."
+                value={form.content}
+                onChange={(e) => setForm({ ...form, content: e.target.value })}
+                required
+              />
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm"
+              >
+                <Save size={14} /> {editingId ? 'Update' : 'Save'} Note
+              </button>
+            </form>
+          </div>
+        )}
 
-                {/* Category */}
-                {note.category && (
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border ${cs.bg} ${cs.text} ${cs.border} mb-2`}>
-                    <Tag size={9} />
-                    {note.category}
-                  </span>
-                )}
-
-                {/* Content */}
-                <p className="text-[11px] text-gray-600 leading-relaxed whitespace-pre-wrap mt-1 max-h-28 overflow-y-auto line-clamp-4">
-                  {note.content}
-                </p>
-
-                {/* Date */}
-                <div className="flex items-center gap-1 mt-3 pt-2.5 border-t border-gray-100">
-                  <Clock size={10} className="text-gray-300" />
-                  <span className="text-[10px] text-gray-400">{dateStr}</span>
-                </div>
+        {/* Notes Grid */}
+        <div className="flex-1 overflow-hidden bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col">
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center flex-1 text-center py-16">
+              <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <StickyNote size={24} className="text-gray-300" />
               </div>
-            );
-          })}
+              <h3 className="text-sm font-semibold text-gray-500">
+                {notes.length === 0 ? 'No notes yet' : 'No matching notes'}
+              </h3>
+              <p className="text-xs text-gray-400 mt-1">
+                {notes.length === 0 ? 'Click "New Note" to start writing' : 'Try a different search term'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-y-auto flex-1 p-5">
+              <div className={`grid gap-4 ${showForm ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+                {filtered.map((note) => {
+                  const cs = CATEGORY_STYLE[note.category] || CATEGORY_STYLE.General;
+                  const dateStr = new Date(note.updatedAt).toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric', year: 'numeric'
+                  });
+                  return (
+                    <div
+                      key={note.id}
+                      className="border border-gray-100 rounded-xl p-4 hover:border-gray-200 hover:shadow-sm transition-all group flex flex-col"
+                    >
+                      {/* Title + Actions */}
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <h3 className="text-sm font-semibold text-gray-900 leading-snug">{note.title}</h3>
+                        <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleEdit(note)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          >
+                            <Edit3 size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(note.id)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Category */}
+                      {note.category && (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium border ${cs.bg} ${cs.text} ${cs.border} mb-2`}>
+                          <Tag size={9} />
+                          {note.category}
+                        </span>
+                      )}
+
+                      {/* Content */}
+                      <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap mt-1 flex-1 line-clamp-5">
+                        {note.content}
+                      </p>
+
+                      {/* Date */}
+                      <div className="flex items-center gap-1 mt-3 pt-2.5 border-t border-gray-100">
+                        <Clock size={10} className="text-gray-300" />
+                        <span className="text-xs text-gray-400">{dateStr}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
