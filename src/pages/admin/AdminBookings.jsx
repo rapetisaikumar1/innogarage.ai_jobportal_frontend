@@ -130,14 +130,15 @@ const AdminBookings = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Pending', value: pending.length },
-          { label: 'Confirmed', value: confirmed.length },
-          { label: 'Completed', value: completed.length },
-          { label: 'Cancelled', value: cancelled.length },
+          { label: 'Pending', value: pending.length, icon: <AlertCircle size={17} />, color: 'text-amber-600', bg: 'bg-amber-50', ring: 'ring-amber-100' },
+          { label: 'Confirmed', value: confirmed.length, icon: <CheckCircle2 size={17} />, color: 'text-blue-600', bg: 'bg-blue-50', ring: 'ring-blue-100' },
+          { label: 'Completed', value: completed.length, icon: <CheckCircle2 size={17} />, color: 'text-emerald-600', bg: 'bg-emerald-50', ring: 'ring-emerald-100' },
+          { label: 'Cancelled', value: cancelled.length, icon: <XCircle size={17} />, color: 'text-red-500', bg: 'bg-red-50', ring: 'ring-red-100' },
         ].map((s, i) => (
-          <div key={i} className="rounded-xl border border-gray-200 bg-white px-4 py-3 flex items-center gap-3">
+          <div key={i} className={`rounded-xl border border-gray-100 bg-white p-4 ring-1 ${s.ring}`}>
+            <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center ${s.color} mb-2`}>{s.icon}</div>
             <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-            <p className="text-[12px] text-gray-500">{s.label}</p>
+            <p className="text-[12px] text-gray-500 mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
@@ -158,90 +159,108 @@ const AdminBookings = () => {
 
       {/* Bookings List */}
       {currentList.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 text-center py-12">
-          <Calendar size={28} className="mx-auto text-gray-300 mb-2" />
+        <div className="bg-white rounded-xl border border-gray-200 text-center py-14">
+          <Calendar size={32} className="mx-auto text-gray-300 mb-3" />
           <p className="text-sm font-medium text-gray-500">No {tab} bookings</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          {currentList.map((b, idx) => {
-            const isPast = new Date(b.startTime) <= now;
-            return (
-              <div key={b.id} className={`flex items-center justify-between px-4 py-3 gap-4 hover:bg-gray-50/60 transition-colors ${idx < currentList.length - 1 ? 'border-b border-gray-100' : ''} ${isPast ? 'opacity-50' : ''}`}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${
-                    b.status === 'PENDING' ? 'bg-gray-100 text-gray-600' :
-                    b.status === 'CONFIRMED' ? 'bg-gray-800 text-white' :
-                    b.status === 'CANCELLED' ? 'bg-gray-100 text-gray-500' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>
-                    {getInitials(b.student?.fullName)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-gray-900 truncate">{b.student?.fullName}</p>
-                    <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-400 flex-wrap">
-                      <span className="flex items-center gap-0.5"><Calendar size={10} /> {getDateLabel(b.startTime)}</span>
-                      <span className="flex items-center gap-0.5"><Clock size={10} /> {format(new Date(b.startTime), 'h:mm a')} – {format(new Date(b.endTime), 'h:mm a')}</span>
-                      {b.student?.email && <span className="hidden md:inline truncate max-w-[180px]">{b.student.email}</span>}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className={`hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                    b.status === 'PENDING' ? 'bg-gray-100 text-gray-500' :
-                    b.status === 'CONFIRMED' ? 'bg-gray-800 text-white' :
-                    b.status === 'CANCELLED' ? 'bg-gray-100 text-gray-500' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>
-                    {b.status}
-                  </span>
-
-                  {b.status === 'PENDING' && !isPast && (
-                    <>
-                      <button
-                        onClick={() => { setConfirmModal(b); setMeetLink(''); }}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-[11px] font-semibold hover:bg-gray-700 transition-colors"
-                      >
-                        <CheckCircle2 size={12} /> Confirm
-                      </button>
-                      <button
-                        onClick={() => { setCancelModal(b); setCancelReason(''); }}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-500 text-[11px] font-semibold hover:bg-gray-100 transition-colors"
-                      >
-                        <XCircle size={12} /> Decline
-                      </button>
-                    </>
-                  )}
-
-                  {b.status === 'CONFIRMED' && !isPast && (
-                    <>
-                      {b.meetLink && (
-                        <a
-                          href={b.meetLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-[11px] font-semibold hover:bg-gray-700 transition-colors"
-                        >
-                          <Video size={12} /> Join Meet
-                        </a>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Student</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Date & Time</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {currentList.map(b => {
+                const isPast = new Date(b.startTime) <= now;
+                return (
+                  <tr key={b.id} className={`hover:bg-gray-50/60 transition-colors ${isPast ? 'opacity-50' : ''}`}>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                          b.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                          b.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-700' :
+                          b.status === 'CANCELLED' ? 'bg-red-100 text-red-600' :
+                          'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {getInitials(b.student?.fullName)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{b.student?.fullName}</p>
+                          <p className="text-xs text-gray-400 truncate hidden sm:block">{b.student?.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <p className="text-xs font-medium text-gray-700">{getDateLabel(b.startTime)}</p>
+                      <p className="text-xs text-gray-400">{format(new Date(b.startTime), 'h:mm a')} – {format(new Date(b.endTime), 'h:mm a')}</p>
+                    </td>
+                    <td className="px-4 py-3.5 hidden md:table-cell">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        b.status === 'PENDING' ? 'bg-amber-50 text-amber-600' :
+                        b.status === 'CONFIRMED' ? 'bg-blue-50 text-blue-600' :
+                        b.status === 'CANCELLED' ? 'bg-red-50 text-red-500' :
+                        'bg-emerald-50 text-emerald-600'
+                      }`}>
+                        {b.status === 'PENDING' && <AlertCircle size={10} />}
+                        {b.status === 'CONFIRMED' && <CheckCircle2 size={10} />}
+                        {b.status === 'CANCELLED' && <XCircle size={10} />}
+                        {b.status === 'COMPLETED' && <CheckCircle2 size={10} />}
+                        {b.status}
+                      </span>
+                      {b.status === 'CANCELLED' && b.notes && (
+                        <p className="text-xs text-gray-400 mt-0.5 max-w-[180px] truncate" title={b.notes}>{b.notes}</p>
                       )}
-                      <button
-                        onClick={() => { setCancelModal(b); setCancelReason(''); }}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-500 text-[11px] font-semibold hover:bg-gray-100 transition-colors"
-                      >
-                        <XCircle size={12} /> Cancel
-                      </button>
-                    </>
-                  )}
-
-                  {b.status === 'CANCELLED' && b.notes && (
-                    <span className="text-[10px] text-gray-400 max-w-[160px] truncate hidden md:inline" title={b.notes}>{b.notes}</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-2 justify-end">
+                        {b.status === 'PENDING' && !isPast && (
+                          <>
+                            <button
+                              onClick={() => { setConfirmModal(b); setMeetLink(''); }}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors"
+                            >
+                              <CheckCircle2 size={12} /> Confirm
+                            </button>
+                            <button
+                              onClick={() => { setCancelModal(b); setCancelReason(''); }}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-red-500 text-xs font-semibold hover:bg-red-50 border border-red-200 transition-colors"
+                            >
+                              <XCircle size={12} /> Decline
+                            </button>
+                          </>
+                        )}
+                        {b.status === 'CONFIRMED' && !isPast && (
+                          <>
+                            {b.meetLink && (
+                              <a
+                                href={b.meetLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors"
+                              >
+                                <Video size={12} /> Join Meet
+                              </a>
+                            )}
+                            <button
+                              onClick={() => { setCancelModal(b); setCancelReason(''); }}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-red-500 text-xs font-semibold hover:bg-red-50 border border-red-200 transition-colors"
+                            >
+                              <XCircle size={12} /> Cancel
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 

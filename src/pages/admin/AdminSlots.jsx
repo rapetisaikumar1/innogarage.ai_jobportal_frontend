@@ -286,10 +286,10 @@ const AdminSlots = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Total Slots', value: stats.total, icon: <Calendar size={17} />, color: 'text-gray-600', bg: 'bg-gray-50', ring: 'ring-gray-100' },
-          { label: 'Available', value: stats.available, icon: <Clock size={17} />, color: 'text-gray-600', bg: 'bg-gray-50', ring: 'ring-gray-100' },
-          { label: 'Booked', value: stats.booked, icon: <Users size={17} />, color: 'text-gray-600', bg: 'bg-gray-50', ring: 'ring-gray-100' },
-          { label: 'Expired', value: stats.expired, icon: <AlertCircle size={17} />, color: 'text-gray-400', bg: 'bg-gray-50', ring: 'ring-gray-100' },
+          { label: 'Total Slots', value: stats.total, icon: <Calendar size={17} />, color: 'text-slate-600', bg: 'bg-slate-50', ring: 'ring-slate-100' },
+          { label: 'Available', value: stats.available, icon: <Clock size={17} />, color: 'text-blue-600', bg: 'bg-blue-50', ring: 'ring-blue-100' },
+          { label: 'Booked', value: stats.booked, icon: <Users size={17} />, color: 'text-emerald-600', bg: 'bg-emerald-50', ring: 'ring-emerald-100' },
+          { label: 'Expired', value: stats.expired, icon: <AlertCircle size={17} />, color: 'text-gray-500', bg: 'bg-gray-50', ring: 'ring-gray-100' },
         ].map((s, i) => (
           <div key={i} className={`rounded-xl border border-gray-100 bg-white p-4 ring-1 ${s.ring}`}>
             <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center ${s.color} mb-2`}>{s.icon}</div>
@@ -339,22 +339,22 @@ const AdminSlots = () => {
             const todayOrTomorrow = isToday(new Date(dateKey + 'T00:00:00')) || isTomorrow(new Date(dateKey + 'T00:00:00'));
 
             return (
-              <div key={dateKey} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div key={dateKey} className={`bg-white rounded-xl border overflow-hidden ${todayOrTomorrow ? 'border-blue-200 ring-1 ring-blue-50' : 'border-gray-200'}`}>
                 {/* Date Header */}
                 <button
                   onClick={() => toggleDate(dateKey)}
                   className="w-full px-5 py-3.5 flex items-center justify-between hover:bg-gray-50/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-gray-50 text-gray-500 flex items-center justify-center">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${todayOrTomorrow ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-500'}`}>
                       <Calendar size={16} />
                     </div>
                     <div className="text-left">
-                      <p className="text-[13px] font-semibold text-gray-900">{dateLabel}</p>
+                      <p className={`text-[13px] font-semibold ${todayOrTomorrow ? 'text-blue-900' : 'text-gray-900'}`}>{dateLabel}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[11px] text-gray-500">{dateSlots.length} slot{dateSlots.length > 1 ? 's' : ''}</span>
-                        {availableCount > 0 && <span className="text-[11px] text-gray-600 font-medium">{availableCount} available</span>}
-                        {bookedCount > 0 && <span className="text-[11px] text-gray-600 font-medium">{bookedCount} booked</span>}
+                        {availableCount > 0 && <span className="text-[11px] text-blue-600 font-medium">{availableCount} available</span>}
+                        {bookedCount > 0 && <span className="text-[11px] text-emerald-600 font-medium">{bookedCount} booked</span>}
                         {expiredCount > 0 && <span className="text-[11px] text-gray-400">{expiredCount} expired</span>}
                       </div>
                     </div>
@@ -362,7 +362,6 @@ const AdminSlots = () => {
                   {expanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
                 </button>
 
-                {/* Slots Grid */}
                 {expanded && (
                   <div className="px-5 pb-4 pt-1">
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
@@ -373,9 +372,9 @@ const AdminSlots = () => {
                         // Expired
                         if (slot.expired) {
                           return (
-                            <div key={slot.id} className="relative rounded-lg border border-gray-200 bg-gray-50 p-3 opacity-50">
-                              <p className="text-[12px] font-semibold text-gray-400">{startF}</p>
-                              <p className="text-[10px] text-gray-400">to {endF}</p>
+                            <div key={slot.id} className="rounded-lg border border-gray-100 bg-white p-3 opacity-40">
+                              <p className="text-xs font-semibold text-gray-600">{startF}</p>
+                              <p className="text-[11px] text-gray-400">to {endF}</p>
                               <span className="mt-2 inline-flex items-center gap-1 text-[10px] text-gray-400 font-medium">
                                 <XCircle size={10} /> Expired
                               </span>
@@ -386,39 +385,43 @@ const AdminSlots = () => {
                         // Booked - PENDING
                         if (slot.booked && slot.booking?.status === 'PENDING') {
                           return (
-                            <div key={slot.id} className="relative rounded-lg border border-gray-200 bg-white p-3">
-                              <p className="text-[12px] font-semibold text-gray-800">{startF}</p>
-                              <p className="text-[10px] text-gray-500">to {endF}</p>
+                            <div key={slot.id} className="rounded-lg border border-gray-200 bg-white p-3">
+                              <p className="text-xs font-semibold text-gray-800">{startF}</p>
+                              <p className="text-[11px] text-gray-400">to {endF}</p>
                               <div className="mt-2">
-                                <span className="inline-flex items-center gap-1 text-[10px] text-gray-600 font-semibold">
-                                  <AlertCircle size={10} /> Pending
+                                <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-semibold bg-amber-50 px-1.5 py-0.5 rounded">
+                                  <AlertCircle size={9} /> Pending
                                 </span>
                                 {slot.booking?.student?.fullName && (
-                                  <p className="text-[10px] text-gray-500 mt-0.5 truncate" title={slot.booking.student.fullName}>
+                                  <p className="text-[10px] text-gray-500 mt-1 truncate" title={slot.booking.student.fullName}>
                                     {slot.booking.student.fullName}
                                   </p>
                                 )}
-                                <p className="text-[9px] text-gray-400 mt-1">Confirm in Bookings tab</p>
                               </div>
                             </div>
                           );
                         }
 
-                        // Booked - CONFIRMED or COMPLETED
+                        // Booked - CONFIRMED, COMPLETED, or CANCELLED
                         if (slot.booked) {
                           const isConfirmed = slot.booking?.status === 'CONFIRMED';
                           const isCancelled = slot.booking?.status === 'CANCELLED';
+                          const statusLabel = isCancelled ? 'Cancelled' : isConfirmed ? 'Confirmed' : 'Completed';
+                          const statusClass = isCancelled
+                            ? 'text-red-500 bg-red-50'
+                            : isConfirmed ? 'text-emerald-600 bg-emerald-50'
+                            : 'text-blue-600 bg-blue-50';
                           return (
-                            <div key={slot.id} className={`relative rounded-lg border border-gray-200 bg-white p-3 ${slot.pastBooked ? 'opacity-40' : ''}`}>
-                              <p className="text-[12px] font-semibold text-gray-800">{startF}</p>
-                              <p className="text-[10px] text-gray-500">to {endF}</p>
+                            <div key={slot.id} className={`rounded-lg border border-gray-200 bg-white p-3 ${slot.pastBooked ? 'opacity-40' : ''}`}>
+                              <p className="text-xs font-semibold text-gray-800">{startF}</p>
+                              <p className="text-[11px] text-gray-400">to {endF}</p>
                               <div className="mt-2">
-                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-gray-600">
-                                  {isCancelled ? <XCircle size={10} /> : <CheckCircle2 size={10} />}
-                                  {isCancelled ? 'Cancelled' : isConfirmed ? 'Confirmed' : 'Completed'}
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${statusClass}`}>
+                                  {isCancelled ? <XCircle size={9} /> : <CheckCircle2 size={9} />}
+                                  {statusLabel}
                                 </span>
                                 {slot.booking?.student?.fullName && (
-                                  <p className="text-[10px] mt-0.5 truncate text-gray-500" title={slot.booking.student.fullName}>
+                                  <p className="text-[10px] text-gray-500 mt-1 truncate" title={slot.booking.student.fullName}>
                                     {slot.booking.student.fullName}
                                   </p>
                                 )}
@@ -427,9 +430,9 @@ const AdminSlots = () => {
                                     href={slot.booking.meetLink}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="mt-1.5 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-800 text-white text-[10px] font-semibold hover:bg-gray-900 transition-colors"
+                                    className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-600 text-white text-[10px] font-semibold hover:bg-green-700 transition-colors"
                                   >
-                                    <Video size={10} /> Join Meet
+                                    <Video size={9} /> Join
                                   </a>
                                 )}
                               </div>
@@ -440,17 +443,17 @@ const AdminSlots = () => {
                         // Available
                         return (
                           <div key={slot.id} className="group relative rounded-lg border border-gray-200 bg-white p-3 hover:border-gray-300 hover:shadow-sm transition-all">
-                            <p className="text-[12px] font-semibold text-gray-700">{startF}</p>
-                            <p className="text-[10px] text-gray-400">to {endF}</p>
-                            <span className="mt-2 inline-flex items-center gap-1 text-[10px] text-gray-500 font-medium">
-                              <Clock size={10} /> Available
+                            <p className="text-xs font-semibold text-gray-800">{startF}</p>
+                            <p className="text-[11px] text-gray-400">to {endF}</p>
+                            <span className="mt-2 inline-flex items-center gap-1 text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded">
+                              <Clock size={9} /> Available
                             </span>
                             <button
                               onClick={() => handleDelete(slot.id)}
                               className="absolute top-2 right-2 p-1 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
                               title="Delete slot"
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size={11} />
                             </button>
                           </div>
                         );

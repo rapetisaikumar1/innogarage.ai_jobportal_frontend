@@ -5,7 +5,7 @@ import { BookOpen, Plus, Edit, Trash2, FileText, Video, Link as LinkIcon, Extern
 
 const CATEGORIES = ['Interview Prep', 'Career Development', 'Technical Skills', 'Soft Skills'];
 
-const CAT_ICONS = {
+const CAT_ICON = {
   'Interview Prep': '🎯',
   'Career Development': '🚀',
   'Technical Skills': '💻',
@@ -219,10 +219,10 @@ const AdminTraining = () => {
 
   const typeConfig = (type) => {
     switch (type) {
-      case 'PDF': return { icon: FileText, label: 'PDF' };
-      case 'VIDEO': return { icon: Video, label: 'Video' };
-      case 'LINK': return { icon: LinkIcon, label: 'Link' };
-      default: return { icon: BookOpen, label: 'Document' };
+      case 'PDF': return { icon: FileText, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'PDF' };
+      case 'VIDEO': return { icon: Video, color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-100', label: 'Video' };
+      case 'LINK': return { icon: LinkIcon, color: 'text-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Link' };
+      default: return { icon: BookOpen, color: 'text-indigo-500', bg: 'bg-indigo-50', border: 'border-indigo-100', label: 'Document' };
     }
   };
 
@@ -236,32 +236,32 @@ const AdminTraining = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Training Materials</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Upload documents and assign to your students by category</p>
+          <h1 className="text-lg font-bold text-gray-900">Training Materials</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Upload documents and assign to your students by category</p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+        <button onClick={() => { resetForm(); setShowForm(true); }} className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm">
           <Plus size={14} /> Add Material
         </button>
       </div>
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-3">
-          <h3 className="text-base font-bold text-gray-900">{editId ? 'Edit Material' : 'Add New Material'}</h3>
+          <h3 className="text-sm font-bold text-gray-900">{editId ? 'Edit Material' : 'Add New Material'}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-              <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" required />
+              <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+              <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Category *</label>
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white">
                 <option value="">Select Category</option>
                 {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
-              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Type *</label>
+              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white">
                 <option value="PDF">PDF</option>
                 <option value="VIDEO">Video</option>
                 <option value="LINK">Link</option>
@@ -269,42 +269,42 @@ const AdminTraining = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">URL (for Video/Link)</label>
-              <input type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="https://..." />
+              <label className="block text-xs font-medium text-gray-700 mb-1">URL (for Video/Link)</label>
+              <input type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="https://..." />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all resize-none" rows="2" />
+            <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all resize-none" rows="2" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Upload File</label>
-            <input type="file" onChange={(e) => setFile(e.target.files[0])} className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 file:cursor-pointer cursor-pointer" accept=".pdf,.doc,.docx,.ppt,.pptx" />
+            <label className="block text-xs font-medium text-gray-700 mb-1">Upload File</label>
+            <input type="file" onChange={(e) => setFile(e.target.files[0])} className="w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer" accept=".pdf,.doc,.docx,.ppt,.pptx" />
           </div>
           <div className="flex gap-2">
-            <button type="submit" disabled={submitting} className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">{submitting ? 'Saving...' : (editId ? 'Update' : 'Create')}</button>
-            <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">Cancel</button>
+            <button type="submit" disabled={submitting} className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">{submitting ? 'Saving...' : (editId ? 'Update' : 'Create')}</button>
+            <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">Cancel</button>
           </div>
         </form>
       )}
 
       {/* Category Filter Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        <button onClick={() => setFilterCategory('')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${!filterCategory ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+        <button onClick={() => setFilterCategory('')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${!filterCategory ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
           All ({categoryCounts.All})
         </button>
         {CATEGORIES.map(cat => {
           const count = categoryCounts[cat] || 0;
           if (count === 0) return null;
           return (
-            <button key={cat} onClick={() => setFilterCategory(filterCategory === cat ? '' : cat)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap flex items-center gap-1.5 ${filterCategory === cat ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-              <span>{CAT_ICONS[cat]}</span> {cat} ({count})
+            <button key={cat} onClick={() => setFilterCategory(filterCategory === cat ? '' : cat)} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap flex items-center gap-1.5 ${filterCategory === cat ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              <span>{CAT_ICON[cat]}</span> {cat} ({count})
             </button>
           );
         })}
         {(categoryCounts['Uncategorized'] || 0) > 0 && (
-          <button onClick={() => setFilterCategory(filterCategory === 'Uncategorized' ? '' : 'Uncategorized')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${filterCategory === 'Uncategorized' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-            Uncategorized ({categoryCounts['Uncategorized']})
+          <button onClick={() => setFilterCategory(filterCategory === 'Uncategorized' ? '' : 'Uncategorized')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${filterCategory === 'Uncategorized' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            📁 Uncategorized ({categoryCounts['Uncategorized']})
           </button>
         )}
       </div>
@@ -320,47 +320,48 @@ const AdminTraining = () => {
       ) : (
         <div className="space-y-5">
           {grouped.map(([category, items]) => {
+            const catIcon = CAT_ICON[category] || '📁';
             const isCollapsed = collapsed[category];
             const totalAssigned = items.reduce((sum, m) => sum + (m.assignments || []).length, 0);
             return (
-              <div key={category} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-                <div className="flex items-center justify-between px-5 py-3.5 bg-gray-50 border-b border-gray-100">
+              <div key={category} className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                <div className="flex items-center justify-between px-5 py-3.5 bg-gray-50 border-b border-gray-200">
                   <button onClick={() => toggleCollapse(category)} className="flex items-center gap-3 flex-1 text-left">
-                    <span className="text-lg">{CAT_ICONS[category] || '📁'}</span>
+                    <span className="text-base">{catIcon}</span>
                     <div>
-                      <h2 className="text-sm font-bold text-gray-800">{category}</h2>
-                      <p className="text-xs text-gray-500">{items.length} material{items.length !== 1 ? 's' : ''} · {totalAssigned} assignment{totalAssigned !== 1 ? 's' : ''}</p>
+                      <h2 className="text-sm font-bold text-gray-900">{category}</h2>
+                      <p className="text-xs text-gray-400 mt-0.5">{items.length} material{items.length !== 1 ? 's' : ''} · {totalAssigned} assigned</p>
                     </div>
-                    {isCollapsed ? <ChevronRight size={16} className="text-gray-400 ml-2" /> : <ChevronDown size={16} className="text-gray-400 ml-2" />}
+                    {isCollapsed ? <ChevronRight size={15} className="text-gray-400 ml-2" /> : <ChevronDown size={15} className="text-gray-400 ml-2" />}
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); openCategoryAssign(category); }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-600 rounded-lg text-xs font-semibold transition-colors border border-gray-200"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold transition-colors border border-gray-200"
                   >
-                    <Layers size={13} /> Assign Category
+                    <Layers size={13} /> Assign All
                   </button>
                 </div>
 
                 {!isCollapsed && (
-                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {items.map((mat) => {
                       const tc = typeConfig(mat.type);
                       const TypeIcon = tc.icon;
                       return (
-                        <div key={mat.id} className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 group overflow-hidden">
-                          <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <TypeIcon size={14} className="text-gray-500" />
-                              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">{tc.label}</span>
+                        <div key={mat.id} className="bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-200 group overflow-hidden">
+                          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                            <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md ${tc.bg} border ${tc.border}`}>
+                              <TypeIcon size={12} className={tc.color} />
+                              <span className={`text-xs font-semibold ${tc.color}`}>{tc.label}</span>
                             </div>
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => openAssignModal(mat)} className="p-1.5 rounded-lg hover:bg-white/70 text-gray-500 hover:text-violet-600 transition-colors" title="Assign Students">
+                              <button onClick={() => openAssignModal(mat)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-violet-600 transition-colors" title="Assign Students">
                                 <UserPlus size={13} />
                               </button>
-                              <button onClick={() => handleEdit(mat)} className="p-1.5 rounded-lg hover:bg-white/70 text-gray-500 hover:text-blue-600 transition-colors" title="Edit">
+                              <button onClick={() => handleEdit(mat)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors" title="Edit">
                                 <Edit size={13} />
                               </button>
-                              <button onClick={() => handleDelete(mat.id)} className="p-1.5 rounded-lg hover:bg-white/70 text-gray-500 hover:text-red-500 transition-colors" title="Delete">
+                              <button onClick={() => handleDelete(mat.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
                                 <Trash2 size={13} />
                               </button>
                             </div>
@@ -371,7 +372,7 @@ const AdminTraining = () => {
                             {!mat.description && <div className="mb-3" />}
                             <div className="flex items-center gap-2 flex-wrap mb-3">
                               {mat.url && (
-                                <a href={mat.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-semibold hover:bg-gray-200 transition-colors">
+                                <a href={mat.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 text-gray-600 rounded-md text-xs font-medium hover:bg-gray-100 transition-colors border border-gray-200">
                                   <ExternalLink size={11} /> Open
                                 </a>
                               )}
@@ -393,18 +394,18 @@ const AdminTraining = () => {
                                       })
                                       .catch(() => alert('Failed to download file'));
                                   }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-semibold hover:bg-gray-200 transition-colors">
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 text-gray-600 rounded-md text-xs font-medium hover:bg-gray-100 transition-colors border border-gray-200">
                                   <Download size={11} /> Download
                                 </a>
                               )}
-                              <button onClick={() => openAssignModal(mat)} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-semibold hover:bg-gray-200 transition-colors">
-                                <Users size={11} /> {(mat.assignments || []).length}
+                              <button onClick={() => openAssignModal(mat)} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 text-gray-600 rounded-md text-xs font-medium hover:bg-gray-100 transition-colors border border-gray-200">
+                                <Users size={11} /> {(mat.assignments || []).length} assigned
                               </button>
                             </div>
-                            <div className="flex items-center text-xs text-gray-400 pt-2 border-t border-gray-100">
-                              <Calendar size={11} className="mr-1" />
+                            <p className="text-xs text-gray-400 flex items-center gap-1">
+                              <Calendar size={11} />
                               {new Date(mat.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                            </div>
+                            </p>
                           </div>
                         </div>
                       );
