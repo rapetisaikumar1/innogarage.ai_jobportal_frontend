@@ -342,13 +342,13 @@ const MyApplications = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="pl-4 pr-5 py-3.5 w-80">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="pl-4 pr-5 py-3.5 w-[380px]">
+                        <div className="flex items-center justify-end gap-2 flex-nowrap">
                           {fullJob && (
                             <>
                               <button
                                 onClick={() => setResumeJob(fullJob)}
-                                className={`inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border transition-colors shadow-sm ${
+                                className={`inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border transition-colors shadow-sm whitespace-nowrap ${
                                   fullJob.resume_text
                                     ? 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
                                     : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
@@ -361,13 +361,13 @@ const MyApplications = () => {
                               </button>
                               <button
                                 onClick={() => setDetailJob(fullJob)}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm"
+                                className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
                               >
                                 <Info size={13} /> Details
                               </button>
                             </>
                           )}
-                          <span className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50">
+                          <span className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 whitespace-nowrap">
                             <CheckCircle2 size={13} /> Applied
                           </span>
                           {app.jobLink && (
@@ -375,7 +375,7 @@ const MyApplications = () => {
                               href={app.jobLink}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm"
+                              className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
                               title="Open job posting"
                             >
                               <RotateCcw size={13} /> Re-apply
