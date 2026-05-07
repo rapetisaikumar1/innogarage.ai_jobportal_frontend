@@ -30,9 +30,11 @@ const ChatPage = () => {
   const [chatMode, setChatMode] = useState('direct');
   const [groupUnread, setGroupUnread] = useState(0);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const fileInputRef = useRef(null);
   const matchRefs = useRef({});
   const inputRef = useRef(null);
+  const activeContactRef = useRef(null);
 
   useEffect(() => {
     const newSocket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
@@ -42,14 +44,16 @@ const ChatPage = () => {
     setSocket(newSocket);
 
     newSocket.on('newMessage', (msg) => {
-      if (msg.senderId === activeContact?.id || msg.receiverId === activeContact?.id) {
+      const current = activeContactRef.current;
+      if (current && (msg.senderId === current.id || msg.receiverId === current.id)) {
         setMessages((prev) => [...prev, msg]);
       }
       fetchContacts();
     });
 
     return () => newSocket.disconnect();
-  }, [activeContact]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);  // run once — uses activeContactRef to avoid stale closure
 
   useEffect(() => { fetchContacts(); fetchGroupUnread(); }, []);
 
@@ -61,11 +65,21 @@ const ChatPage = () => {
     } catch {}
   };
 
+  // Sync activeContactRef so socket handler always sees current contact
   useEffect(() => {
-    if (!searchOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
+    activeContactRef.current = activeContact;
+  }, [activeContact]);
+
+  // Scroll messages container to bottom without touching page scroll
+  const scrollToBottom = (smooth = true) => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    container.scrollTo({ top: container.scrollHeight, behavior: smooth ? 'smooth' : 'instant' });
+  };
+
+  useEffect(() => {
+    if (!searchOpen) scrollToBottom();
+  }, [messages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Search match indices
   const searchMatches = useMemo(() => {
@@ -105,11 +119,15 @@ const ChatPage = () => {
 
   const selectContact = async (contact) => {
     setActiveContact(contact);
+    activeContactRef.current = contact;
     setShowMobileSidebar(false);
     setLoadingMessages(true);
+    setMessages([]);
     try {
       const res = await api.get(`/chat/messages/${contact.id}`);
       setMessages(res.data);
+      // Jump to bottom immediately when loading a conversation (no animation)
+      setTimeout(() => scrollToBottom(false), 0);
     } catch (err) {
       toast.error('Failed to load messages');
     } finally {
@@ -484,7 +502,7 @@ const ChatPage = () => {
           )}
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 bg-gray-50/40">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-5 py-4 bg-gray-50/40">
             {loadingMessages ? (
               <div className="flex justify-center py-12">
                 <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
