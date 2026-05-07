@@ -475,6 +475,27 @@ const extractResumeRoleTitle = (resumeText, candidateName, sheetCandidateName) =
   return '';
 };
 
+const JOBS_CACHE_KEY = 'cachedMatchedJobs';
+const JOBS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+const readJobsCache = () => {
+  try {
+    const raw = sessionStorage.getItem(JOBS_CACHE_KEY);
+    if (!raw) return null;
+    const { jobs, expiry } = JSON.parse(raw);
+    if (Date.now() > expiry) { sessionStorage.removeItem(JOBS_CACHE_KEY); return null; }
+    return jobs;
+  } catch { return null; }
+};
+
+const writeJobsCache = (jobs) => {
+  try {
+    sessionStorage.setItem(JOBS_CACHE_KEY, JSON.stringify({ jobs, expiry: Date.now() + JOBS_CACHE_TTL_MS }));
+  } catch { /* storage full — ignore */ }
+};
+
+const clearJobsCache = () => { try { sessionStorage.removeItem(JOBS_CACHE_KEY); } catch { /* ignore */ } };
+
 const JobListings = () => {
   const { user: authUser } = useAuth();
   const navigate = useNavigate();
@@ -594,13 +615,28 @@ const JobListings = () => {
     } catch { /* ignore */ }
   };
 
-  const fetchMatchedJobs = async () => {
+  const fetchMatchedJobs = async ({ forceRefresh = false } = {}) => {
     try {
+      // Serve stale cache immediately so the page feels instant
+      if (!forceRefresh) {
+        const cached = readJobsCache();
+        if (cached && cached.length > 0) {
+          setJobs(cached);
+          setLoading(false);
+          // Revalidate silently in the background
+          api.get('/jobs/matched').then(({ data }) => {
+            const fresh = data.jobs || [];
+            if (fresh.length > 0) { setJobs(fresh); writeJobsCache(fresh); }
+          }).catch(() => {});
+          return;
+        }
+      }
       setLoading(true);
-      const { data } = await api.get('/jobs/matched', { params: { t: Date.now() } });
+      const { data } = await api.get('/jobs/matched');
       const fetchedJobs = data.jobs || [];
       setJobs(fetchedJobs);
       if (fetchedJobs.length > 0) {
+        writeJobsCache(fetchedJobs);
         setWaitingForJobs(false);
         sessionStorage.removeItem('waitingForJobs');
       }
@@ -649,7 +685,8 @@ const JobListings = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchMatchedJobs(), fetchAppliedStatus(), fetchUsage()]);
+    clearJobsCache();
+    await Promise.all([fetchMatchedJobs({ forceRefresh: true }), fetchAppliedStatus(), fetchUsage()]);
     setRefreshing(false);
     toast.success('Job listings refreshed!');
   };
@@ -666,6 +703,7 @@ const JobListings = () => {
     setTriggeringSearch(true);
     setWaitingForJobs(true);
     sessionStorage.setItem('waitingForJobs', 'true');
+    clearJobsCache(); // force fresh fetch after new search completes
     try {
       const { data } = await api.post('/jobs/search', { days: String(days) });
       toast.success(data.message || 'Job search triggered!');
@@ -674,6 +712,7 @@ const JobListings = () => {
 
       if (Array.isArray(data.jobs)) {
         setJobs(data.jobs);
+        writeJobsCache(data.jobs);
         await fetchAppliedStatus();
       }
     } catch (error) {

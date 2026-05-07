@@ -39,6 +39,7 @@ const ProfilePage = () => {
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(null);
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [docMeta, setDocMeta] = useState({ passport: null, drivingLicence: null, visa: null });
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -125,6 +126,9 @@ const ProfilePage = () => {
     try {
       const { data } = await api.put('/users/profile/document', formData);
       setProfile(prev => ({ ...prev, ...data }));
+      if (data.fileName) {
+        setDocMeta(prev => ({ ...prev, [docType]: { name: data.fileName, ext: data.ext } }));
+      }
       toast.success(`${docType === 'drivingLicence' ? 'Driving Licence' : docType.charAt(0).toUpperCase() + docType.slice(1)} uploaded!`);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to upload document');
@@ -289,9 +293,9 @@ const ProfilePage = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[12px] font-semibold text-gray-700 group-hover:text-blue-700 transition-colors">Click to upload resume</p>
-                    <p className="text-[10px] text-gray-400">PDF, Word (.doc, .docx) &mdash; max 10MB</p>
+                    <p className="text-[10px] text-gray-400">PDF, Word (.doc, .docx, .rtf) &mdash; max 10MB</p>
                   </div>
-                  <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleResumeUpload} />
+                  <input type="file" accept=".pdf,.doc,.docx,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleResumeUpload} />
                 </label>
               </div>
             </div>
@@ -312,45 +316,67 @@ const ProfilePage = () => {
                 { key: 'passport', label: 'Passport', icon: CreditCard, color: 'blue', url: profile?.passportUrl },
                 { key: 'drivingLicence', label: 'Driving Licence', icon: Car, color: 'emerald', url: profile?.drivingLicenceUrl },
                 { key: 'visa', label: 'Visa', icon: Plane, color: 'violet', url: profile?.visaUrl },
-              ].map(doc => (
-                <div key={doc.key} className={`border border-${doc.color}-200 bg-${doc.color}-50/30 rounded-lg p-3`}>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <doc.icon size={13} className={`text-${doc.color}-500`} />
-                    <span className="text-[11px] font-semibold text-gray-700">{doc.label}</span>
-                  </div>
-                  {doc.url ? (
-                    <div className="space-y-2">
-                      <div className="relative group">
-                        <img
-                          src={doc.url}
-                          alt={doc.label}
-                          className="w-full h-24 object-cover rounded-md border border-gray-200 cursor-pointer"
-                          onClick={() => setPreviewDoc({ url: doc.url, label: doc.label })}
-                        />
-                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center">
-                          <Eye size={16} className="text-white" />
-                        </div>
-                      </div>
-                      <label className="flex items-center justify-center gap-1 text-[10px] font-medium text-gray-500 hover:text-blue-600 cursor-pointer transition-colors">
-                        <Upload size={10} /> Replace
-                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={(e) => handleDocUpload(e, doc.key)} disabled={uploadingDoc === doc.key} />
-                      </label>
+              ].map(doc => {
+                const meta = docMeta[doc.key];
+                const ext = meta?.ext || (doc.url ? doc.url.split('.').pop().split('?')[0].toLowerCase() : '');
+                const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+                const ACCEPT = '.jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.rtf,.odt,.xls,.xlsx,.ppt,.pptx,.txt';
+                return (
+                  <div key={doc.key} className={`border border-${doc.color}-200 bg-${doc.color}-50/30 rounded-lg p-3`}>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <doc.icon size={13} className={`text-${doc.color}-500`} />
+                      <span className="text-[11px] font-semibold text-gray-700">{doc.label}</span>
                     </div>
-                  ) : (
-                    <label className={`flex flex-col items-center justify-center h-24 border-2 border-dashed border-${doc.color}-200 rounded-md cursor-pointer hover:border-${doc.color}-400 hover:bg-${doc.color}-50/50 transition-all ${uploadingDoc === doc.key ? 'opacity-50 pointer-events-none' : ''}`}>
-                      {uploadingDoc === doc.key ? (
-                        <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <Upload size={16} className="text-gray-400 mb-1" />
-                          <span className="text-[10px] text-gray-400">Upload {doc.label}</span>
-                        </>
-                      )}
-                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={(e) => handleDocUpload(e, doc.key)} disabled={uploadingDoc === doc.key} />
-                    </label>
-                  )}
-                </div>
-              ))}
+                    {doc.url ? (
+                      <div className="space-y-2">
+                        {isImage ? (
+                          <div className="relative group">
+                            <img
+                              src={doc.url}
+                              alt={doc.label}
+                              className="w-full h-24 object-cover rounded-md border border-gray-200 cursor-pointer"
+                              onClick={() => setPreviewDoc({ url: doc.url, label: doc.label, isImage: true })}
+                            />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center">
+                              <Eye size={16} className="text-white" />
+                            </div>
+                          </div>
+                        ) : (
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col items-center justify-center h-24 border border-gray-200 rounded-md bg-gray-50 hover:bg-gray-100 transition-colors group"
+                          >
+                            <FileText size={22} className="text-gray-400 group-hover:text-blue-500 mb-1 transition-colors" />
+                            <span className="text-[10px] text-gray-500 group-hover:text-blue-600 font-medium transition-colors">
+                              {meta?.name || `${doc.label}.${ext}`}
+                            </span>
+                            <span className="text-[9px] text-gray-400 mt-0.5 uppercase">{ext} · Click to open</span>
+                          </a>
+                        )}
+                        <label className="flex items-center justify-center gap-1 text-[10px] font-medium text-gray-500 hover:text-blue-600 cursor-pointer transition-colors">
+                          <Upload size={10} /> Replace
+                          <input type="file" accept={ACCEPT} className="hidden" onChange={(e) => handleDocUpload(e, doc.key)} disabled={uploadingDoc === doc.key} />
+                        </label>
+                      </div>
+                    ) : (
+                      <label className={`flex flex-col items-center justify-center h-24 border-2 border-dashed border-${doc.color}-200 rounded-md cursor-pointer hover:border-${doc.color}-400 hover:bg-${doc.color}-50/50 transition-all ${uploadingDoc === doc.key ? 'opacity-50 pointer-events-none' : ''}`}>
+                        {uploadingDoc === doc.key ? (
+                          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <Upload size={16} className="text-gray-400 mb-1" />
+                            <span className="text-[10px] text-gray-400">Upload {doc.label}</span>
+                            <span className="text-[9px] text-gray-300 mt-0.5">PDF, Word, Image…</span>
+                          </>
+                        )}
+                        <input type="file" accept={ACCEPT} className="hidden" onChange={(e) => handleDocUpload(e, doc.key)} disabled={uploadingDoc === doc.key} />
+                      </label>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -415,7 +441,17 @@ const ProfilePage = () => {
               <span className="text-[13px] font-bold text-gray-800">{previewDoc.label}</span>
               <button onClick={() => setPreviewDoc(null)} className="p-1 hover:bg-gray-100 rounded-md transition-colors"><X size={16} className="text-gray-500" /></button>
             </div>
-            <img src={previewDoc.url} alt={previewDoc.label} className="w-full rounded-lg object-contain max-h-[70vh]" />
+            {previewDoc.isImage ? (
+              <img src={previewDoc.url} alt={previewDoc.label} className="w-full rounded-lg object-contain max-h-[70vh]" />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10 gap-3">
+                <FileText size={40} className="text-gray-300" />
+                <p className="text-[13px] text-gray-500">Preview not available for this file type.</p>
+                <a href={previewDoc.url} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-blue-600 text-white text-[12px] font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                  Open / Download
+                </a>
+              </div>
+            )}
           </div>
         </div>
       )}
