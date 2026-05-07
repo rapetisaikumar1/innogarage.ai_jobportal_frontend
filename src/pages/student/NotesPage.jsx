@@ -4,10 +4,10 @@ import toast from 'react-hot-toast';
 import { StickyNote, Plus, Edit3, Trash2, Save, X, Search, Clock } from 'lucide-react';
 
 const CATEGORY_STYLE = {
-  'Interview Prep':    { bg: 'bg-violet-50',  text: 'text-violet-700',  border: 'border-violet-200',  accent: 'border-l-violet-400',  dot: 'bg-violet-400'  },
-  'Technical Notes':   { bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200',    accent: 'border-l-blue-400',    dot: 'bg-blue-400'    },
-  'Career Development':{ bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', accent: 'border-l-emerald-400', dot: 'bg-emerald-400' },
-  'General':           { bg: 'bg-gray-100',   text: 'text-gray-600',   border: 'border-gray-200',   accent: 'border-l-gray-400',   dot: 'bg-gray-400'   },
+  'Interview Prep':    { strip: 'bg-violet-400',  badge: 'bg-violet-50 text-violet-700',  dot: 'bg-violet-400'  },
+  'Technical Notes':   { strip: 'bg-blue-400',    badge: 'bg-blue-50 text-blue-700',      dot: 'bg-blue-400'    },
+  'Career Development':{ strip: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-400' },
+  'General':           { strip: 'bg-gray-300',    badge: 'bg-gray-100 text-gray-600',     dot: 'bg-gray-400'    },
 };
 
 const NotesPage = () => {
@@ -196,7 +196,7 @@ const NotesPage = () => {
             </div>
           ) : (
             <div className="overflow-y-auto flex-1 p-5">
-              <div className={`grid gap-4 ${showForm ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+              <div className={`grid gap-5 ${showForm ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
                 {filtered.map((note) => {
                   const cs = CATEGORY_STYLE[note.category] || CATEGORY_STYLE.General;
                   const dateStr = new Date(note.updatedAt).toLocaleDateString('en-US', {
@@ -205,48 +205,53 @@ const NotesPage = () => {
                   return (
                     <div
                       key={note.id}
-                      className={`border border-l-4 ${cs.accent} border-gray-100 rounded-xl p-5 hover:shadow-md transition-all group flex flex-col bg-white`}
+                      className="rounded-xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow group flex flex-col"
                     >
-                      {/* Title + Actions */}
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <h3 className="text-base font-bold text-gray-900 leading-snug flex-1">{note.title}</h3>
-                        <div className="flex gap-0.5 shrink-0">
-                          <button
-                            onClick={() => handleEdit(note)}
-                            title="Edit"
-                            className="p-2 rounded-lg text-gray-300 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(note.id)}
-                            title="Delete"
-                            className="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
+                      {/* Colored top strip */}
+                      <div className={`h-1.5 w-full shrink-0 ${cs.strip}`} />
 
-                      {/* Category */}
-                      {note.category && (
-                        <div className="mb-3">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${cs.bg} ${cs.text}`}>
+                      {/* Card body */}
+                      <div className="flex flex-col flex-1 p-5">
+
+                        {/* Title row */}
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <h3 className="text-[15px] font-semibold text-gray-900 leading-snug flex-1">{note.title}</h3>
+                          <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => handleEdit(note)}
+                              title="Edit"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(note.id)}
+                              title="Delete"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Category badge */}
+                        {note.category && (
+                          <span className={`inline-flex items-center gap-1.5 self-start px-2 py-0.5 rounded-md text-xs font-medium mb-3 ${cs.badge}`}>
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cs.dot}`} />
                             {note.category}
                           </span>
+                        )}
+
+                        {/* Content */}
+                        <p className="text-sm text-gray-500 leading-relaxed whitespace-pre-wrap flex-1 line-clamp-5">
+                          {note.content}
+                        </p>
+
+                        {/* Footer */}
+                        <div className="flex items-center gap-1.5 mt-4 pt-3 border-t border-gray-100">
+                          <Clock size={11} className="text-gray-300 shrink-0" />
+                          <span className="text-xs text-gray-400">{dateStr}</span>
                         </div>
-                      )}
-
-                      {/* Content */}
-                      <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap flex-1 line-clamp-6">
-                        {note.content}
-                      </p>
-
-                      {/* Date */}
-                      <div className="flex items-center gap-1.5 mt-4 pt-3 border-t border-gray-100">
-                        <Clock size={11} className="text-gray-300 shrink-0" />
-                        <span className="text-xs text-gray-400">Updated {dateStr}</span>
                       </div>
                     </div>
                   );
