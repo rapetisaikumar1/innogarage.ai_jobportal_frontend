@@ -280,7 +280,16 @@ const MyApplications = () => {
             <table className="w-full">
               <tbody>
                 {filtered.map((app, idx) => {
-                  const fullJob = app.fullJob || (app.jobLink ? sheetJobsMap[app.jobLink] : null);
+                  const fullJob = app.fullJob
+                    || (app.jobLink ? sheetJobsMap[app.jobLink] : null)
+                    // Synthesize a minimal job object so Resume/Details always render
+                    || (app.title || app.company ? {
+                        job_title: app.title,
+                        employer_name: app.company,
+                        job_apply_link: app.jobLink || null,
+                        resume_text: null,
+                        _synthetic: true,
+                      } : null);
                   const score = parseInt(app.matchScore) || (fullJob ? parseInt(fullJob.match_score) || 0 : 0);
                   const role = app.title || (fullJob ? extractRole(fullJob) : 'Job Application');
                   const company = app.company || '—';
@@ -412,6 +421,13 @@ const MyApplications = () => {
               </button>
             </div>
             <div className="overflow-y-auto flex-1 px-6 py-5">
+              {detailJob._synthetic ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Info size={32} className="text-gray-300 mb-3" />
+                  <p className="text-sm font-semibold text-gray-500">Detailed job data unavailable</p>
+                  <p className="text-xs text-gray-400 mt-1">This job was applied before full details were indexed. Use Re-apply to view the original listing.</p>
+                </div>
+              ) : (<>
               {/* Technologies */}
               <div className="mb-5">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Technologies & Skills</h3>
@@ -492,7 +508,7 @@ const MyApplications = () => {
                   <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{detailJob.jd}</p>
                 </div>
               ) : null}
-            </div>
+            </div>)}
             {/* Footer */}
             <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0 bg-white">
               <button onClick={() => { setDetailJob(null); setResumeJob(detailJob); }} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-violet-700 bg-violet-50 border border-violet-200 hover:bg-violet-100 transition-colors">
