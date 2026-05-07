@@ -11,7 +11,7 @@ body{margin:0;background:#fff;color:#111827;font-family:Arial,Helvetica,sans-ser
 .resume-section-title{margin:0 0 4px;padding-bottom:4px;border-bottom:1.5px solid #111827;font-size:13px;line-height:1.2;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#111827}
 .resume-section-body{font-size:11.5px;line-height:1.46;color:#111827}
 .resume-paragraph{margin:0 0 4px}
-.resume-job-line{margin:8px 0 3px;font-size:11.8px;font-weight:800;color:#4c1d95}
+.resume-job-line{margin:8px 0 3px;font-size:11.8px;font-weight:800;color:#111827}
 .resume-subheading{margin:5px 0 2px;font-size:11.7px;font-weight:800;color:#111827}
 .resume-bullet{display:flex;gap:8px;margin:0 0 3px;padding-left:8px;page-break-inside:avoid;font-weight:700}
 .resume-bullet-dot{width:5px;height:5px;border-radius:999px;background:#111827;flex:0 0 auto;margin-top:6px}
@@ -26,10 +26,9 @@ export const RESUME_TEMPLATES = [
   { id: 'tech', name: 'Tech Premium', accent: '#0891b2' },
 ];
 
-const getTemplateTheme = (template = 'modern') => {
-  if (template === 'enterprise') return { accent: '#111827', headingBg: '#ffffff', headingColor: '#111827', border: '#111827' };
-  if (template === 'tech') return { accent: '#0891b2', headingBg: '#ecfeff', headingColor: '#155e75', border: '#0891b2' };
-  return { accent: '#7c3aed', headingBg: '#f5f3ff', headingColor: '#4c1d95', border: '#7c3aed' };
+const getTemplateTheme = () => {
+  // Single fixed enterprise theme — same for all users
+  return { accent: '#111827', headingBg: '#ffffff', headingColor: '#111827', border: '#111827' };
 };
 
 const isBulletLine = (line) => /^[-*]\s+/.test(line) || /^\d+[.)]\s+/.test(line) || /^[•○◦▪●]\s*/.test(line);
@@ -86,15 +85,14 @@ const ResumeDocument = forwardRef(function ResumeDocument({
   linkedinProfile,
   sections = [],
   rawText = '',
-  template = 'modern',
+  template,       // kept for API compatibility; ignored — always uses enterprise style
   highlightKeywords = [],
 }, ref) {
   const cleanName = (displayName || 'Resume').trim();
-  // Only show LinkedIn/GitHub URLs — never chatgpt.com or other non-professional URLs
   const safeLinkedin = linkedinProfile && /linkedin\.com|github\.com/i.test(linkedinProfile) ? linkedinProfile : null;
   const contacts = [...contactItems, safeLinkedin].filter(Boolean);
   const hasSections = Array.isArray(sections) && sections.length > 0;
-  const theme = getTemplateTheme(template);
+  const theme = getTemplateTheme();
 
   return (
     <div
@@ -130,7 +128,7 @@ const ResumeDocument = forwardRef(function ResumeDocument({
 
       {hasSections ? sections.map((section, sectionIndex) => (
         <section key={`${section.heading}-${sectionIndex}`} className="resume-section" style={{ margin: '0 0 13px', pageBreakInside: 'avoid' }}>
-          <h2 className="resume-section-title" style={{ margin: '0 0 4px', padding: template === 'enterprise' ? '0 0 4px' : '4px 7px', borderBottom: `1.5px solid ${theme.border}`, fontSize: '13px', lineHeight: 1.2, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', color: theme.headingColor, background: template === 'enterprise' ? 'transparent' : theme.headingBg }}>
+          <h2 className="resume-section-title" style={{ margin: '0 0 4px', padding: '0 0 4px', borderBottom: `1.5px solid ${theme.border}`, fontSize: '11px', lineHeight: 1.2, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.headingColor, background: 'transparent' }}>
             {cleanHeading(section.heading)}
           </h2>
           <div className="resume-section-body" style={{ fontSize: '11.5px', lineHeight: 1.46, color: '#111827' }}>
@@ -148,7 +146,7 @@ const ResumeDocument = forwardRef(function ResumeDocument({
               }
 
               if (isJobHeaderLine(text)) {
-                return <p key={lineIndex} className="resume-job-line" style={{ margin: '8px 0 3px', fontSize: '11.8px', fontWeight: 800, color: theme.accent }}>{renderHighlightedText(text, highlightKeywords)}</p>;
+                return <p key={lineIndex} className="resume-job-line" style={{ margin: '8px 0 3px', fontSize: '11.8px', fontWeight: 800, color: '#111827' }}>{renderHighlightedText(text, highlightKeywords)}</p>;
               }
 
               if (isSubHeadingLine(text)) {

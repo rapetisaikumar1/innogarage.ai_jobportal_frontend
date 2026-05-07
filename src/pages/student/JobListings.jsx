@@ -514,7 +514,8 @@ const JobListings = () => {
   const [resumeConfirmJob, setResumeConfirmJob] = useState(null);
   const [creatingResume, setCreatingResume] = useState(false);
   const [resumeViewMode, setResumeViewMode] = useState(false);
-  const [resumeTemplate, setResumeTemplate] = useState('modern');
+  // Fixed to enterprise template — same layout for all users
+  const resumeTemplate = 'enterprise';
   const [resumeDarkMode, setResumeDarkMode] = useState(false);
   const [resumeEditMode, setResumeEditMode] = useState(false);
   const [resumeDraft, setResumeDraft] = useState('');
@@ -663,7 +664,7 @@ const JobListings = () => {
   useEffect(() => {
     setResumeDraft(resumeJob?.resume_text || '');
     setResumeEditMode(false);
-    setResumeTemplate('modern');
+    // template is fixed — no reset needed
     setResumeDarkMode(false);
     setResumeSectionOrder([]);
     setDraggedSectionIndex(null);
@@ -897,31 +898,39 @@ const JobListings = () => {
 
       {/* ATS Resume Confirmation */}
       {resumeConfirmJob && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45" onClick={() => { if (!creatingResume) setResumeConfirmJob(null); }}>
-          <div className="bg-white/85 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/60 p-6 w-[420px] space-y-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0">
-                <FileText size={20} />
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => { if (!creatingResume) setResumeConfirmJob(null); }}>
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-7 w-[440px]" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <FileText size={18} />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Create ATS Resume?</h3>
-                <p className="text-sm text-gray-600 mt-1 leading-relaxed">
-                  This will create a full ATS-friendly resume for
-                  <span className="font-semibold text-gray-800"> {extractRole(resumeConfirmJob)}</span>
-                  {resumeConfirmJob.employer_name ? <span> at <span className="font-semibold text-gray-800">{resumeConfirmJob.employer_name}</span></span> : null}.
-                </p>
+                <h3 className="text-base font-bold text-gray-900">Generate ATS Resume</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Tailored to this specific job description</p>
               </div>
             </div>
 
-            <div className="rounded-xl border border-violet-100 bg-violet-50/80 px-4 py-3 text-sm text-violet-900 leading-relaxed">
-              The resume will use your uploaded profile resume as the source and tailor the full resume to this job description. Once created, it will be saved and reused for future viewing/downloads.
+            {/* Job info */}
+            <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 mb-5">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Target Position</p>
+              <p className="text-sm font-bold text-gray-900">{extractRole(resumeConfirmJob)}</p>
+              {resumeConfirmJob.employer_name && <p className="text-sm text-gray-500 mt-0.5">{resumeConfirmJob.employer_name}</p>}
             </div>
 
-            <div className="flex gap-3 pt-1">
+            {/* Info note */}
+            <div className="flex items-start gap-2.5 mb-6">
+              <span className="mt-0.5 w-4 h-4 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-[10px] font-bold">i</span>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Your uploaded profile resume will be used as the base. The AI will preserve all your original content and add job-specific enhancements. The result is saved and can be downloaded as PDF or Word.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
               <button
                 onClick={() => setResumeConfirmJob(null)}
                 disabled={creatingResume}
-                className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -930,8 +939,8 @@ const JobListings = () => {
                 disabled={creatingResume}
                 className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
               >
-                {creatingResume ? <RefreshCw size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                {creatingResume ? 'Creating...' : 'Create Resume'}
+                {creatingResume ? <RefreshCw size={15} className="animate-spin" /> : <FileText size={15} />}
+                {creatingResume ? 'Generating...' : 'Generate Resume'}
               </button>
             </div>
           </div>
@@ -953,7 +962,7 @@ const JobListings = () => {
         const matchedKeywords = intelligence.matchedKeywords || [];
         const missingKeywords = intelligence.missingKeywords || intelligence.missingSkills || [];
         const visualScore = Math.max(0, Math.min(100, parseInt(intelligence.score || resumeJob.match_score, 10) || 0));
-        const selectedTemplate = RESUME_TEMPLATES.find(template => template.id === resumeTemplate) || RESUME_TEMPLATES[0];
+        // template is fixed to 'enterprise' — no dynamic selection needed
 
         const handleSectionDrop = (targetIndex) => {
           if (draggedSectionIndex == null || draggedSectionIndex === targetIndex) return;
@@ -1008,9 +1017,8 @@ ${RESUME_WORD_STYLES}
               <div className="px-5 py-4 border-b border-slate-200/70 flex items-center justify-between shrink-0">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-violet-600 text-white"><Sparkles size={16} /></span>
-                    <h3 className="text-base font-bold">AI Resume Builder</h3>
-                    <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-violet-100 text-violet-700">{selectedTemplate.name}</span>
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white"><FileText size={16} /></span>
+                    <h3 className="text-base font-bold">ATS Resume</h3>
                   </div>
                   <p className={`text-xs mt-1 ${resumeDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{jdRole} {resumeJob.employer_name ? `at ${resumeJob.employer_name}` : ''}</p>
                 </div>
@@ -1213,9 +1221,15 @@ ${RESUME_WORD_STYLES}
             <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0 bg-white">
               <button
                 onClick={() => handleResumeClick(detailJob, { closeDetails: true })}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  hasCompleteGeneratedResume(detailJob.resume_text)
+                    ? 'text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100'
+                    : 'text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100'
+                }`}
               >
-                <FileText size={15} />
+                {hasCompleteGeneratedResume(detailJob.resume_text)
+                  ? <CheckCircle2 size={15} />
+                  : <FileText size={15} />}
                 Resume
               </button>
               {detailJob.job_apply_link?.startsWith('http') && (
@@ -1462,8 +1476,15 @@ ${RESUME_WORD_STYLES}
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => handleResumeClick(job)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
-                              <FileText size={13} /> Resume
+                              className={`relative inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border transition-colors shadow-sm ${
+                                hasCompleteGeneratedResume(job.resume_text)
+                                  ? 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                                  : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
+                              }`}>
+                              {hasCompleteGeneratedResume(job.resume_text)
+                                ? <CheckCircle2 size={13} className="text-emerald-500" />
+                                : <FileText size={13} />}
+                              Resume
                             </button>
                             <button
                               onClick={() => setDetailJob(job)}
