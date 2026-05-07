@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import html2pdf from 'html2pdf.js';
 import { downloadResumeAsDocx } from '../../utils/resumeDocx';
 import {
-  Search, Briefcase, Bot, FileText, CheckCircle2,
+  Search, Briefcase, Bot, FileText, CheckCircle2, RotateCcw,
   X, ExternalLink, Eye, Download, AlertTriangle, Info
 } from 'lucide-react';
 
@@ -367,14 +367,19 @@ const MyApplications = () => {
                               </button>
                             </>
                           )}
-                          {app.jobLink ? (
-                            <span className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50">
-                              <CheckCircle2 size={13} /> Applied
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-blue-200 text-blue-700 bg-blue-50">
-                              <CheckCircle2 size={13} /> Applied
-                            </span>
+                          <span className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50">
+                            <CheckCircle2 size={13} /> Applied
+                          </span>
+                          {app.jobLink && (
+                            <a
+                              href={app.jobLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm"
+                              title="Open job posting"
+                            >
+                              <RotateCcw size={13} /> Re-apply
+                            </a>
                           )}
                         </div>
                       </td>
