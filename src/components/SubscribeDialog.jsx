@@ -152,8 +152,8 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
         </div>
 
         {/* Plans Grid */}
-        <div className="relative px-10 pb-2 pt-1">
-          <div className="grid grid-cols-3 gap-4">
+        <div className="relative px-8 pb-3 pt-2">
+          <div className="grid grid-cols-3 gap-5">
             {plans.map((plan, idx) => {
               const PlanIcon = plan.icon;
               return (
@@ -174,34 +174,34 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
                     </div>
                   )}
 
-                  <div className="px-5 pt-5 pb-4 flex flex-col flex-1">
+                  <div className="px-4 pt-5 pb-4 flex flex-col flex-1">
                     {/* Plan Icon + Name */}
-                    <div className="flex flex-col items-center mb-1.5">
-                      <div className={`w-10 h-10 rounded-xl ${plan.accentBg} flex items-center justify-center mb-2 shadow-sm`}>
-                        <PlanIcon size={18} className={plan.accentCheck} />
+                    <div className="flex flex-col items-center mb-2">
+                      <div className={`w-9 h-9 rounded-xl ${plan.accentBg} flex items-center justify-center mb-1.5 shadow-sm`}>
+                        <PlanIcon size={16} className={plan.accentCheck} />
                       </div>
-                      <h3 className="font-extrabold text-base text-gray-900">
+                      <h3 className="font-extrabold text-sm text-gray-900">
                         {plan.name}
                       </h3>
                     </div>
 
                     {/* Price */}
-                    <div className="flex items-baseline justify-center gap-1 mt-0.5 mb-3">
-                      <span className={`text-3xl font-black tracking-tight leading-none bg-gradient-to-r ${plan.accent} bg-clip-text text-transparent`}>{plan.price}</span>
-                      <span className="text-sm text-gray-400 font-medium">{plan.period}</span>
+                    <div className="flex items-baseline justify-center gap-1 mb-2.5">
+                      <span className={`text-2xl font-black tracking-tight leading-none bg-gradient-to-r ${plan.accent} bg-clip-text text-transparent`}>{plan.price}</span>
+                      <span className="text-xs text-gray-400 font-medium">{plan.period}</span>
                     </div>
 
                     {/* Divider */}
-                    <div className={`h-px bg-gradient-to-r ${plan.accent} opacity-20 mb-3`} />
+                    <div className={`h-px bg-gradient-to-r ${plan.accent} opacity-20 mb-2.5`} />
 
                     {/* Features */}
-                    <ul className="space-y-2 flex-1">
+                    <ul className="space-y-1.5 flex-1">
                       {plan.features.map((feature) => (
                         <li key={feature} className="flex items-start gap-2">
-                          <div className={`w-4 h-4 rounded-full ${plan.accentBg} flex items-center justify-center shrink-0 mt-0.5`}>
-                            <Check size={10} className={plan.accentCheck} strokeWidth={3} />
+                          <div className={`w-3.5 h-3.5 rounded-full ${plan.accentBg} flex items-center justify-center shrink-0 mt-0.5`}>
+                            <Check size={9} className={plan.accentCheck} strokeWidth={3} />
                           </div>
-                          <span className="text-sm text-gray-700 leading-snug">{feature}</span>
+                          <span className="text-xs text-gray-700 leading-snug">{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -210,7 +210,7 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
                     <button
                       onClick={() => handleCheckout(plan.key)}
                       disabled={loadingPlan !== null}
-                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 mt-4 bg-gradient-to-r ${plan.accentBtn} text-white shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed`}
+                      className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-300 mt-3 bg-gradient-to-r ${plan.accentBtn} text-white shadow-md hover:shadow-lg hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
                       {loadingPlan === plan.key ? (
                         <>
@@ -232,7 +232,7 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
         </div>
 
         {/* Footer */}
-        <div className="relative px-10 pt-1 pb-4 text-center">
+        <div className="relative px-10 pt-2 pb-4 text-center">
           <button
             onClick={onClose}
             className="text-sm text-gray-400 hover:text-gray-600 transition-colors font-medium"
