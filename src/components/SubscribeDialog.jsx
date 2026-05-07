@@ -115,7 +115,7 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
       <div className="absolute inset-0 bg-black/50 backdrop-blur-md" onClick={onClose} />
 
       {/* Dialog */}
-      <div className="relative z-10 w-full max-w-[1120px] max-h-[calc(100vh-4rem)] bg-white rounded-3xl shadow-2xl overflow-y-auto border border-gray-100">
+      <div className="relative z-10 w-full max-w-[1100px] bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
         {/* Decorative blobs removed for clean white background */}
 
         {/* Close */}
@@ -127,24 +127,24 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
         </button>
 
         {/* Header */}
-        <div className="relative px-10 pt-8 pb-4 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 mb-4 shadow-lg shadow-violet-200/40">
-            <Crown size={13} className="text-amber-300" />
+        <div className="relative px-10 pt-5 pb-3 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 mb-2 shadow-lg shadow-violet-200/40">
+            <Crown size={12} className="text-amber-300" />
             <span className="text-xs font-bold text-white tracking-widest uppercase">Upgrade Your Career</span>
           </div>
-          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight leading-tight">
+          <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight leading-tight">
             Unlock Your Full Potential with{' '}
             <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">INNOGARAGE.ai</span>
           </h2>
-          <p className="text-sm text-gray-500 max-w-xl mx-auto leading-relaxed mt-2">
+          <p className="text-sm text-gray-500 max-w-xl mx-auto leading-snug mt-1">
             Choose the plan that accelerates your career — from smart job matching to personal mentorship, we've got you covered.
           </p>
 
           {/* Feature Highlights */}
-          <div className="flex flex-wrap items-center justify-center gap-2.5 mt-4">
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
             {highlights.map(({ icon: Icon, label }) => (
-              <div key={label} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/70 backdrop-blur-sm border border-gray-200/50 shadow-sm">
-                <Icon size={12} className="text-indigo-500" />
+              <div key={label} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/70 backdrop-blur-sm border border-gray-200/50 shadow-sm">
+                <Icon size={11} className="text-indigo-500" />
                 <span className="text-xs font-semibold text-gray-600">{label}</span>
               </div>
             ))}
@@ -152,8 +152,8 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
         </div>
 
         {/* Plans Grid */}
-        <div className="relative px-10 pb-4 pt-2">
-          <div className="grid grid-cols-3 gap-5">
+        <div className="relative px-10 pb-2 pt-1">
+          <div className="grid grid-cols-3 gap-4">
             {plans.map((plan, idx) => {
               const PlanIcon = plan.icon;
               return (
@@ -174,32 +174,32 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
                     </div>
                   )}
 
-                  <div className="px-6 pt-7 pb-6 flex flex-col flex-1">
+                  <div className="px-5 pt-5 pb-4 flex flex-col flex-1">
                     {/* Plan Icon + Name */}
-                    <div className="flex flex-col items-center mb-2">
-                      <div className={`w-12 h-12 rounded-2xl ${plan.accentBg} flex items-center justify-center mb-3 shadow-sm`}>
-                        <PlanIcon size={22} className={plan.accentCheck} />
+                    <div className="flex flex-col items-center mb-1.5">
+                      <div className={`w-10 h-10 rounded-xl ${plan.accentBg} flex items-center justify-center mb-2 shadow-sm`}>
+                        <PlanIcon size={18} className={plan.accentCheck} />
                       </div>
-                      <h3 className="font-extrabold text-lg text-gray-900">
+                      <h3 className="font-extrabold text-base text-gray-900">
                         {plan.name}
                       </h3>
                     </div>
 
                     {/* Price */}
-                    <div className="flex items-baseline justify-center gap-1 mt-1 mb-4">
-                      <span className={`text-4xl font-black tracking-tight leading-none bg-gradient-to-r ${plan.accent} bg-clip-text text-transparent`}>{plan.price}</span>
+                    <div className="flex items-baseline justify-center gap-1 mt-0.5 mb-3">
+                      <span className={`text-3xl font-black tracking-tight leading-none bg-gradient-to-r ${plan.accent} bg-clip-text text-transparent`}>{plan.price}</span>
                       <span className="text-sm text-gray-400 font-medium">{plan.period}</span>
                     </div>
 
                     {/* Divider */}
-                    <div className={`h-px bg-gradient-to-r ${plan.accent} opacity-20 mb-4`} />
+                    <div className={`h-px bg-gradient-to-r ${plan.accent} opacity-20 mb-3`} />
 
                     {/* Features */}
-                    <ul className="space-y-3 flex-1">
+                    <ul className="space-y-2 flex-1">
                       {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-2.5">
-                          <div className={`w-5 h-5 rounded-full ${plan.accentBg} flex items-center justify-center shrink-0 mt-0.5`}>
-                            <Check size={11} className={plan.accentCheck} strokeWidth={3} />
+                        <li key={feature} className="flex items-start gap-2">
+                          <div className={`w-4 h-4 rounded-full ${plan.accentBg} flex items-center justify-center shrink-0 mt-0.5`}>
+                            <Check size={10} className={plan.accentCheck} strokeWidth={3} />
                           </div>
                           <span className="text-sm text-gray-700 leading-snug">{feature}</span>
                         </li>
@@ -210,7 +210,7 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
                     <button
                       onClick={() => handleCheckout(plan.key)}
                       disabled={loadingPlan !== null}
-                      className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 mt-5 bg-gradient-to-r ${plan.accentBtn} text-white shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed`}
+                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold tracking-wide transition-all duration-300 mt-4 bg-gradient-to-r ${plan.accentBtn} text-white shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
                       {loadingPlan === plan.key ? (
                         <>
@@ -232,7 +232,7 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
         </div>
 
         {/* Footer */}
-        <div className="relative px-10 pt-2 pb-6 text-center">
+        <div className="relative px-10 pt-1 pb-4 text-center">
           <button
             onClick={onClose}
             className="text-sm text-gray-400 hover:text-gray-600 transition-colors font-medium"
