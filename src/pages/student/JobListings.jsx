@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { getTokenForRole } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,6 +7,15 @@ import html2pdf from 'html2pdf.js';
 import { saveAs } from 'file-saver';
 import ResumeDocument, { RESUME_TEMPLATES } from '../../components/resume/ResumeDocument';
 import { downloadResumeAsDocx } from '../../utils/resumeDocx';
+import {
+  STUDENT_PORTAL_MODE,
+  buildPortalRequestConfig,
+  getPortalEndpoint,
+  getPortalResumeViewPath,
+  getPortalRolePrefix,
+  getPortalStorageKey,
+  isAdminPortalView,
+} from '../../utils/studentPortalView';
 import {
   Search, ExternalLink, Briefcase, RefreshCw, X, FileText, AlertTriangle,
   Clock, Sparkles, MapPin, Building2, Bookmark, ChevronLeft, ChevronRight, Info, CheckCircle2,
@@ -477,30 +486,55 @@ const extractResumeRoleTitle = (resumeText, candidateName, sheetCandidateName) =
   return '';
 };
 
-const JOBS_CACHE_KEY = 'cachedMatchedJobs';
 const JOBS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-const readJobsCache = () => {
+const readJobsCache = (storageKey) => {
   try {
-    const raw = sessionStorage.getItem(JOBS_CACHE_KEY);
+    const raw = sessionStorage.getItem(storageKey);
     if (!raw) return null;
     const { jobs, expiry } = JSON.parse(raw);
-    if (Date.now() > expiry) { sessionStorage.removeItem(JOBS_CACHE_KEY); return null; }
+    if (Date.now() > expiry) { sessionStorage.removeItem(storageKey); return null; }
     return jobs;
   } catch { return null; }
 };
 
-const writeJobsCache = (jobs) => {
+const writeJobsCache = (jobs, storageKey) => {
   try {
-    sessionStorage.setItem(JOBS_CACHE_KEY, JSON.stringify({ jobs, expiry: Date.now() + JOBS_CACHE_TTL_MS }));
+    sessionStorage.setItem(storageKey, JSON.stringify({ jobs, expiry: Date.now() + JOBS_CACHE_TTL_MS }));
   } catch { /* storage full — ignore */ }
 };
 
-const clearJobsCache = () => { try { sessionStorage.removeItem(JOBS_CACHE_KEY); } catch { /* ignore */ } };
+const clearJobsCache = (storageKey) => { try { sessionStorage.removeItem(storageKey); } catch { /* ignore */ } };
 
-const JobListings = () => {
+const JobListings = ({
+  portalMode = STUDENT_PORTAL_MODE.STUDENT,
+  studentId = null,
+  viewerUser = null,
+  embedded = false,
+}) => {
   const { user: authUser } = useAuth();
   const navigate = useNavigate();
+  const portalUser = viewerUser || authUser;
+  const getPortalUrl = useCallback(
+    (endpointKey) => getPortalEndpoint(endpointKey, { portalMode, studentId }),
+    [portalMode, studentId]
+  );
+  const requestConfig = useCallback(
+    (config = {}) => buildPortalRequestConfig(portalMode, config),
+    [portalMode]
+  );
+  const jobsCacheKey = useMemo(
+    () => getPortalStorageKey('cachedMatchedJobs', { portalMode, studentId }),
+    [portalMode, studentId]
+  );
+  const pendingAppliedKey = useMemo(
+    () => getPortalStorageKey('pendingApplied', { portalMode, studentId }),
+    [portalMode, studentId]
+  );
+  const waitingForJobsKey = useMemo(
+    () => getPortalStorageKey('waitingForJobs', { portalMode, studentId }),
+    [portalMode, studentId]
+  );
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -571,103 +605,103 @@ const JobListings = () => {
         status: 'APPLIED',
         appliedMethod: 'MANUAL',
       };
-      const pending = JSON.parse(sessionStorage.getItem('pendingApplied') || '[]');
+      const pending = JSON.parse(sessionStorage.getItem(pendingAppliedKey) || '[]');
       if (!pending.find(p => p.jobLink === link)) {
-        sessionStorage.setItem('pendingApplied', JSON.stringify([entry, ...pending]));
+        sessionStorage.setItem(pendingAppliedKey, JSON.stringify([entry, ...pending]));
       }
     } catch { /* ignore sessionStorage errors */ }
     // Save to backend — if it fails, remove from sessionStorage so counts stay accurate
     try {
-      await api.post('/jobs/external/mark-applied', {
+      await api.post(getPortalUrl('markExternalApplied'), {
         jobLink: link,
         employerName: job.employer_name,
         matchScore: job.match_score,
         jobTitle: extractRole(job),
-      });
+      }, requestConfig());
     } catch {
       // API failed — revert optimistic sessionStorage entry so counts don't stay inflated
       try {
-        const pending = JSON.parse(sessionStorage.getItem('pendingApplied') || '[]');
-        sessionStorage.setItem('pendingApplied', JSON.stringify(pending.filter(p => p.jobLink !== link)));
+        const pending = JSON.parse(sessionStorage.getItem(pendingAppliedKey) || '[]');
+        sessionStorage.setItem(pendingAppliedKey, JSON.stringify(pending.filter(p => p.jobLink !== link)));
       } catch { /* ignore */ }
       // Also revert the optimistic UI mark
       setAppliedLinks(prev => { const next = new Set(prev); next.delete(link); return next; });
     }
   };
 
-  const fetchAppliedStatus = async () => {
+  const fetchAppliedStatus = useCallback(async () => {
     try {
-      const { data } = await api.get('/jobs/external-applied-status', { params: { t: Date.now() } });
+      const { data } = await api.get(getPortalUrl('externalAppliedStatus'), requestConfig({ params: { t: Date.now() } }));
       const apps = data.applications || [];
       const apiLinks = new Set(apps.map(a => a.jobLink));
       // Merge pendingApplied from sessionStorage — covers the case where the user
       // navigated back before the mark-applied API call was confirmed by the server
       const PENDING_TTL_MS = 10 * 60 * 1000; // 10 minutes
       const now = Date.now();
-      const pending = (() => { try { return JSON.parse(sessionStorage.getItem('pendingApplied') || '[]'); } catch { return []; } })()
+      const pending = (() => { try { return JSON.parse(sessionStorage.getItem(pendingAppliedKey) || '[]'); } catch { return []; } })()
         .filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
       // Clean up any pending entries that the API now confirms
       const stillPending = pending.filter(p => !apiLinks.has(p.jobLink));
       if (stillPending.length !== pending.length) {
-        try { sessionStorage.setItem('pendingApplied', JSON.stringify(stillPending)); } catch { /* ignore */ }
+        try { sessionStorage.setItem(pendingAppliedKey, JSON.stringify(stillPending)); } catch { /* ignore */ }
       }
       const allAppliedLinks = new Set([...apiLinks, ...stillPending.map(p => p.jobLink)]);
       setAppliedLinks(allAppliedLinks);
       setAdminAppliedLinks(new Set(apps.filter(a => a.appliedById).map(a => a.jobLink)));
     } catch { /* ignore */ }
-  };
+  }, [getPortalUrl, pendingAppliedKey, requestConfig]);
 
-  const fetchUsage = async () => {
+  const fetchUsage = useCallback(async () => {
     try {
-      const { data } = await api.get('/jobs/usage', { params: { t: Date.now() } });
+      const { data } = await api.get(getPortalUrl('usage'), requestConfig({ params: { t: Date.now() } }));
       setUsage(data);
     } catch { /* ignore */ }
-  };
+  }, [getPortalUrl, requestConfig]);
 
-  const fetchMatchedJobs = async ({ forceRefresh = false } = {}) => {
+  const fetchMatchedJobs = useCallback(async ({ forceRefresh = false } = {}) => {
     try {
       // Serve stale cache immediately so the page feels instant
       if (!forceRefresh) {
-        const cached = readJobsCache();
+        const cached = readJobsCache(jobsCacheKey);
         if (cached && cached.length > 0) {
           setJobs(cached);
           setLoading(false);
           // Revalidate with ?refresh=1 to always bypass server cache
-          api.get('/jobs/matched', { params: { refresh: '1' } }).then(({ data }) => {
+          api.get(getPortalUrl('matchedJobs'), requestConfig({ params: { refresh: '1' } })).then(({ data }) => {
             const fresh = data.jobs || [];
             setJobs(fresh);
-            if (fresh.length > 0) { writeJobsCache(fresh); }
-            else { clearJobsCache(); } // DB is empty — clear stale frontend cache
+            if (fresh.length > 0) { writeJobsCache(fresh, jobsCacheKey); }
+            else { clearJobsCache(jobsCacheKey); } // DB is empty — clear stale frontend cache
           }).catch(() => {});
           return;
         }
       }
       setLoading(true);
-      const { data } = await api.get('/jobs/matched', { params: { refresh: forceRefresh ? '1' : undefined } });
+      const { data } = await api.get(getPortalUrl('matchedJobs'), requestConfig({ params: { refresh: forceRefresh ? '1' : undefined } }));
       const fetchedJobs = data.jobs || [];
       setJobs(fetchedJobs);
       if (fetchedJobs.length > 0) {
-        writeJobsCache(fetchedJobs);
+        writeJobsCache(fetchedJobs, jobsCacheKey);
         setWaitingForJobs(false);
-        sessionStorage.removeItem('waitingForJobs');
+        sessionStorage.removeItem(waitingForJobsKey);
       } else {
-        clearJobsCache(); // DB empty — don't cache empty result but don't keep stale
+        clearJobsCache(jobsCacheKey); // DB empty — don't cache empty result but don't keep stale
       }
     } catch (error) {
       toast.error('Failed to load job listings');
     } finally {
       setLoading(false);
     }
-  };
+  }, [getPortalUrl, jobsCacheKey, requestConfig, waitingForJobsKey]);
 
   useEffect(() => {
-    if (sessionStorage.getItem('waitingForJobs') === 'true') {
+    if (sessionStorage.getItem(waitingForJobsKey) === 'true') {
       setWaitingForJobs(true);
     }
     fetchMatchedJobs();
     fetchAppliedStatus();
     fetchUsage();
-  }, []);
+  }, [fetchAppliedStatus, fetchMatchedJobs, fetchUsage, waitingForJobsKey]);
 
   useEffect(() => {
     setResumeDraft(resumeJob?.resume_text || '');
@@ -683,22 +717,22 @@ const JobListings = () => {
     if (!resumeJob?.jd || !resumeJob?.resume_text) return;
     let active = true;
     setAnalyzingResume(true);
-    api.post('/jobs/match-score', {
+    api.post(getPortalUrl('matchScore'), {
       jd: resumeJob.jd,
       resume_text: resumeJob.resume_text,
       match_score: resumeJob.match_score,
-      skills: authUser?.keySkills || [],
-    })
+      skills: portalUser?.keySkills || [],
+    }, requestConfig())
       .then(({ data }) => { if (active) setResumeAnalysis(data); })
       .catch(() => { if (active) setResumeAnalysis(null); })
       .finally(() => { if (active) setAnalyzingResume(false); });
 
     return () => { active = false; };
-  }, [resumeJob?.id, resumeJob?.resume_text, resumeJob?.jd, resumeJob?.match_score, authUser?.keySkills]);
+  }, [getPortalUrl, portalUser?.keySkills, requestConfig, resumeJob?.id, resumeJob?.resume_text, resumeJob?.jd, resumeJob?.match_score]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    clearJobsCache();
+    clearJobsCache(jobsCacheKey);
     await Promise.all([fetchMatchedJobs({ forceRefresh: true }), fetchAppliedStatus(), fetchUsage()]);
     setRefreshing(false);
     toast.success('Job listings refreshed!');
@@ -732,16 +766,16 @@ const JobListings = () => {
     setTriggeringSearch(true);
     setWaitingForJobs(true);
     setSearchStatusMsg('Starting job search based on your profile…');
-    sessionStorage.setItem('waitingForJobs', 'true');
-    clearJobsCache();
+    sessionStorage.setItem(waitingForJobsKey, 'true');
+    clearJobsCache(jobsCacheKey);
 
     const arrivedThisSession = []; // accumulate jobs found during this stream
 
     try {
-      const token = getTokenForRole('STUDENT');
+      const token = getTokenForRole(getPortalRolePrefix(portalMode));
       const apiBase = import.meta.env.VITE_API_URL || '/api';
       const response = await fetch(
-        `${apiBase}/jobs/search/stream?days=${encodeURIComponent(String(days))}`,
+        `${apiBase}${getPortalUrl('searchStream')}?days=${encodeURIComponent(String(days))}`,
         {
           method: 'GET',
           headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' },
@@ -785,7 +819,7 @@ const JobListings = () => {
             // Append the new job to the FRONT of the existing list immediately
             setJobs(prev => {
               const updated = [job, ...prev];
-              writeJobsCache(updated);
+              writeJobsCache(updated, jobsCacheKey);
               return updated;
             });
 
@@ -827,7 +861,7 @@ const JobListings = () => {
       toast.error(error.message || 'Failed to trigger job search');
     } finally {
       setWaitingForJobs(false);
-      sessionStorage.removeItem('waitingForJobs');
+      sessionStorage.removeItem(waitingForJobsKey);
       setTriggeringSearch(false);
       setSearchStatusMsg('');
       streamAbortRef.current = null;
@@ -874,7 +908,7 @@ const JobListings = () => {
 
     setCreatingResume(true);
     try {
-      const { data } = await api.post('/jobs/resume/generate', resumeConfirmJob);
+      const { data } = await api.post(getPortalUrl('resumeGenerate'), resumeConfirmJob, requestConfig());
       const updatedJob = data.job;
 
       if (updatedJob) {
@@ -895,11 +929,11 @@ const JobListings = () => {
     if (!resumeJob || savingResumeDraft) return;
     setSavingResumeDraft(true);
     try {
-      const { data } = await api.post('/jobs/resume/save', {
+      const { data } = await api.post(getPortalUrl('resumeSave'), {
         id: resumeJob.id,
         job_apply_link: resumeJob.job_apply_link,
         resume_text: resumeDraft,
-      });
+      }, requestConfig());
       if (data.job) {
         syncUpdatedJob(data.job);
         setResumeJob(data.job);
@@ -959,7 +993,7 @@ const JobListings = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className={embedded ? 'flex flex-col h-full min-h-0' : 'flex flex-col h-[calc(100vh-4rem)]'}>
 
       {/* Days Popup */}
       {showDaysPopup && (
@@ -1038,7 +1072,7 @@ const JobListings = () => {
         const resumeText = resumeJob.resume_text || '';
         const effectiveResumeText = resumeDraft || resumeText;
         const candidateName = resumeJob.candidate_name || '';
-        const { sections } = parseResumeSections(effectiveResumeText, authUser?.fullName || candidateName, resumeJob.candidate_name);
+        const { sections } = parseResumeSections(effectiveResumeText, portalUser?.fullName || candidateName, resumeJob.candidate_name);
         const orderedSections = resumeSectionOrder.length === sections.length
           ? resumeSectionOrder.map(index => sections[index]).filter(Boolean)
           : sections;
@@ -1064,7 +1098,7 @@ const JobListings = () => {
           if (!el) return;
           html2pdf().set({
             margin: [10, 10, 10, 10],
-            filename: `${(authUser?.fullName || candidateName).replace(/\s+/g, '_')}_Resume.pdf`,
+            filename: `${(portalUser?.fullName || candidateName).replace(/\s+/g, '_')}_Resume.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -1072,20 +1106,21 @@ const JobListings = () => {
         };
 
         const handleDownloadWord = () => {
-          downloadResumeAsDocx(effectiveResumeText, authUser?.fullName || candidateName);
+          downloadResumeAsDocx(effectiveResumeText, portalUser?.fullName || candidateName);
         };
 
         const handleViewFullPage = () => {
           setResumeJob(null);
           setResumeViewMode(false);
-          navigate('/dashboard/resume-view', {
+          navigate(getPortalResumeViewPath({ portalMode, studentId }), {
             state: {
               sections: orderedSections,
-              candidateName: authUser?.fullName || candidateName,
+              candidateName: portalUser?.fullName || candidateName,
               headline: jdRole,
               resumeText: effectiveResumeText,
               template: resumeTemplate,
               highlightKeywords: jdKeywords,
+              viewerUser: portalUser,
             },
           });
         };
@@ -1119,10 +1154,10 @@ const JobListings = () => {
                       <div className="mx-auto max-w-[800px] border border-slate-200 rounded-lg bg-white shadow-xl overflow-hidden">
                         <ResumeDocument
                           ref={resumeRef}
-                          displayName={authUser?.fullName || candidateName || 'Resume'}
+                          displayName={portalUser?.fullName || candidateName || 'Resume'}
                           headline={jdRole}
-                          contactItems={[authUser?.phone, authUser?.email].filter(Boolean)}
-                          linkedinProfile={authUser?.linkedinProfile}
+                          contactItems={[portalUser?.phone, portalUser?.email].filter(Boolean)}
+                          linkedinProfile={portalUser?.linkedinProfile}
                           sections={orderedSections}
                           rawText={effectiveResumeText}
                           template={resumeTemplate}

@@ -3,6 +3,15 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import {
+  STUDENT_PORTAL_MODE,
+  buildPortalRequestConfig,
+  getPortalEndpoint,
+  getPortalSectionRoute,
+  getPortalStorageKey,
+  isAdminPortalView,
+  navigatePortalSection,
+} from '../../utils/studentPortalView';
+import {
   Briefcase, FileText, Calendar, Clock,
   XCircle, Search, ArrowRight
 } from 'lucide-react';
@@ -141,10 +150,34 @@ const extractResumeRoleTitle = (resumeText, candidateName, sheetCandidateName) =
   return '';
 };
 
-const StudentDashboard = () => {
-  const { user } = useAuth();
+const PortalLink = ({ portalMode, section, navigate, onPortalNavigate, className, children }) => {
+  if (isAdminPortalView(portalMode)) {
+    return (
+      <button
+        type="button"
+        onClick={() => navigatePortalSection({ portalMode, section, navigate, onPortalNavigate })}
+        className={className}
+      >
+        {children}
+      </button>
+    );
+  }
+
+  return <Link to={getPortalSectionRoute(section)} className={className}>{children}</Link>;
+};
+
+const StudentDashboard = ({
+  portalMode = STUDENT_PORTAL_MODE.STUDENT,
+  studentId = null,
+  viewerUser = null,
+  onPortalNavigate = null,
+}) => {
+  const { user: authUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const user = viewerUser || authUser;
+  const isAdminView = isAdminPortalView(portalMode);
+  const pendingAppliedKey = getPortalStorageKey('pendingApplied', { portalMode, studentId });
   const [stats, setStats] = useState(null);
   const [recentApps, setRecentApps] = useState([]);
   const [recentJobs, setRecentJobs] = useState([]);
@@ -152,7 +185,76 @@ const StudentDashboard = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      const [statsRes, appsRes, jobsRes, sheetAppliedRes] = await Promise.all([
+      if (isAdminView) {
+        if (!studentId) {
+          setStats(null);
+          setRecentApps([]);
+          setRecentJobs([]);
+          return;
+        }
+
+        const [dashboardRes, jobsRes] = await Promise.all([
+          api.get(
+            getPortalEndpoint('dashboardData', { portalMode, studentId }),
+            buildPortalRequestConfig(portalMode, { params: { t: Date.now() } })
+          ),
+          api.get(
+            getPortalEndpoint('matchedJobs', { portalMode, studentId }),
+            buildPortalRequestConfig(portalMode)
+          ),
+        ]);
+
+        const allJobs = jobsRes.data.jobs || [];
+        const sheetApplied = dashboardRes.data.sheetApplications || [];
+        const dashboardStats = dashboardRes.data.stats || {};
+
+        setStats({
+          ...dashboardStats,
+          totalSheetJobs: dashboardStats.totalSheetJobs ?? allJobs.length,
+          sheetAppliedCount: dashboardStats.sheetAppliedCount ?? sheetApplied.length,
+        });
+
+        const jobsMap = {};
+        allJobs.forEach(j => { if (j.job_apply_link) jobsMap[j.job_apply_link] = j; });
+
+        const dbApps = (dashboardRes.data.recentApplications || []).map(app => ({
+          id: app.id,
+          title: app.job?.title || 'Untitled',
+          company: app.job?.company || '—',
+          status: app.status,
+          appliedAt: app.appliedAt,
+          jobLink: null,
+          matchScore: null,
+          source: 'db',
+          fullJob: null,
+        }));
+
+        const sheetApps = sheetApplied.map(app => {
+          const fullJob = jobsMap[app.jobLink];
+          return {
+            id: app.jobLink,
+            title: app.jobTitle || app.employerName || 'Job Application',
+            company: app.employerName || '—',
+            status: app.status || 'APPLIED',
+            appliedAt: app.createdAt,
+            matchScore: app.matchScore,
+            jobLink: app.jobLink,
+            source: 'sheet',
+            fullJob,
+          };
+        });
+
+        const seenLinks = new Set(dbApps.map(a => a.jobLink).filter(Boolean));
+        const uniqueSheet = sheetApps.filter(a => !seenLinks.has(a.jobLink));
+        const allApps = [...dbApps, ...uniqueSheet].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
+        setRecentApps(allApps.slice(0, 5));
+        setRecentJobs(
+          [...allJobs]
+            .sort((a, b) => new Date(b.saved_at || 0) - new Date(a.saved_at || 0))
+            .slice(0, 5)
+        );
+      } else {
+        const [statsRes, appsRes, jobsRes, sheetAppliedRes] = await Promise.all([
           api.get('/jobs/stats?refresh=1'),
           api.get('/jobs/applications/mine?limit=5'),
           api.get('/jobs/matched'),
@@ -166,12 +268,12 @@ const StudentDashboard = () => {
         const PENDING_TTL_MS = 10 * 60 * 1000; // 10 minutes
         const now = Date.now();
         const pendingApplied = (() => {
-          try { return JSON.parse(sessionStorage.getItem('pendingApplied') || '[]'); } catch { return []; }
+          try { return JSON.parse(sessionStorage.getItem(pendingAppliedKey) || '[]'); } catch { return []; }
         })().filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
         const apiJobLinks = new Set(sheetApplied.map(a => a.jobLink));
         const stillPending = pendingApplied.filter(p => !apiJobLinks.has(p.jobLink));
         if (stillPending.length !== pendingApplied.length) {
-          try { sessionStorage.setItem('pendingApplied', JSON.stringify(stillPending)); } catch { /* ignore */ }
+          try { sessionStorage.setItem(pendingAppliedKey, JSON.stringify(stillPending)); } catch { /* ignore */ }
         }
         const combinedSheetApplied = [
           ...sheetApplied,
@@ -237,12 +339,13 @@ const StudentDashboard = () => {
             .sort((a, b) => new Date(b.saved_at || 0) - new Date(a.saved_at || 0))
             .slice(0, 5)
         );
+      }
       } catch (error) {
         console.error('Failed to load dashboard:', error);
       } finally {
         setLoading(false);
       }
-  }, []);
+  }, [isAdminView, pendingAppliedKey, portalMode, studentId]);
 
   useEffect(() => {
     fetchData();
@@ -321,7 +424,7 @@ const StudentDashboard = () => {
           <p className="text-[13px] font-medium text-gray-500 mt-0.5">Here's your career progress at a glance</p>
         </div>
         <button
-          onClick={() => navigate('/dashboard/jobs')}
+          onClick={() => navigatePortalSection({ portalMode, section: 'jobs', navigate, onPortalNavigate })}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-[13px] font-semibold rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Search size={12} strokeWidth={2.5} />
@@ -358,9 +461,9 @@ const StudentDashboard = () => {
                 Recent Applications
               </h2>
               {recentApps.length > 0 && (
-                <Link to="/dashboard/applications" className="text-[12px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
+                <PortalLink portalMode={portalMode} section="applications" navigate={navigate} onPortalNavigate={onPortalNavigate} className="text-[12px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
                   View All <ArrowRight size={10} />
-                </Link>
+                </PortalLink>
               )}
             </div>
             {recentApps.length === 0 ? (
@@ -368,7 +471,7 @@ const StudentDashboard = () => {
                 <Briefcase size={20} className="text-gray-200 shrink-0" />
                 <div>
                   <p className="text-[13px] font-medium text-gray-500">No applications yet</p>
-                  <Link to="/dashboard/jobs" className="text-[12px] text-indigo-500 hover:underline">Browse jobs to get started →</Link>
+                  <PortalLink portalMode={portalMode} section="jobs" navigate={navigate} onPortalNavigate={onPortalNavigate} className="text-[12px] text-indigo-500 hover:underline">Browse jobs to get started →</PortalLink>
                 </div>
               </div>
             ) : (
@@ -414,9 +517,9 @@ const StudentDashboard = () => {
                 Recent Job Listings
               </h2>
               {recentJobs.length > 0 && (
-                <Link to="/dashboard/jobs" className="text-[12px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
+                <PortalLink portalMode={portalMode} section="jobs" navigate={navigate} onPortalNavigate={onPortalNavigate} className="text-[12px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
                   View All <ArrowRight size={10} />
-                </Link>
+                </PortalLink>
               )}
             </div>
             {recentJobs.length === 0 ? (
@@ -441,7 +544,11 @@ const StudentDashboard = () => {
                       const title = resumeRole || extractRole(job);
                       const score = parseInt(job.match_score) || 0;
                       return (
-                        <tr key={job.id} className="border-t border-gray-50/80 hover:bg-gray-50/40 cursor-pointer transition-colors" onClick={() => navigate('/dashboard/jobs')}>
+                        <tr
+                          key={job.id}
+                          className="border-t border-gray-50/80 hover:bg-gray-50/40 cursor-pointer transition-colors"
+                          onClick={() => navigatePortalSection({ portalMode, section: 'jobs', navigate, onPortalNavigate })}
+                        >
                           <td className="px-4 py-2">
                             <p className="text-[13px] font-semibold text-gray-800 truncate max-w-[180px]">{title}</p>
                           </td>

@@ -1,9 +1,15 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import html2pdf from 'html2pdf.js';
 import { downloadResumeAsDocx } from '../../utils/resumeDocx';
+import {
+  STUDENT_PORTAL_MODE,
+  buildPortalRequestConfig,
+  getPortalEndpoint,
+  getPortalStorageKey,
+} from '../../utils/studentPortalView';
 import {
   Search, Briefcase, Bot, FileText, CheckCircle2, RotateCcw,
   X, ExternalLink, Eye, Download, AlertTriangle, Info
@@ -109,8 +115,26 @@ const extractRole = (job) => {
   return job.employer_name || 'View Details';
 };
 
-const MyApplications = () => {
+const MyApplications = ({
+  portalMode = STUDENT_PORTAL_MODE.STUDENT,
+  studentId = null,
+  viewerUser = null,
+  embedded = false,
+}) => {
   const { user: authUser } = useAuth();
+  const portalUser = viewerUser || authUser;
+  const getPortalUrl = useCallback(
+    (endpointKey) => getPortalEndpoint(endpointKey, { portalMode, studentId }),
+    [portalMode, studentId]
+  );
+  const requestConfig = useCallback(
+    (config = {}) => buildPortalRequestConfig(portalMode, config),
+    [portalMode]
+  );
+  const pendingAppliedKey = useMemo(
+    () => getPortalStorageKey('pendingApplied', { portalMode, studentId }),
+    [portalMode, studentId]
+  );
   const [applications, setApplications] = useState([]);
   const [sheetJobsMap, setSheetJobsMap] = useState({});  // jobLink -> full job data
   const [loading, setLoading] = useState(true);
@@ -119,18 +143,17 @@ const MyApplications = () => {
   const [resumeJob, setResumeJob] = useState(null);
   const resumeRef = useRef(null);
 
-  useEffect(() => {
-    fetchApplications();
-  }, []);
-
-  const fetchApplications = async () => {
+  const fetchApplications = useCallback(async () => {
     try {
       // Use allSettled so one slow or failed endpoint does not block this page.
       // does not break the entire My Applications page.
       const results = await Promise.allSettled([
-        api.get('/jobs/applications/mine?status=APPLIED'),
-        api.get('/jobs/external-applied-status'),
-        api.get('/jobs/matched'),
+        api.get(
+          portalMode === STUDENT_PORTAL_MODE.ADMIN_VIEW ? getPortalUrl('applications') : '/jobs/applications/mine?status=APPLIED',
+          portalMode === STUDENT_PORTAL_MODE.ADMIN_VIEW ? requestConfig({ params: { status: 'APPLIED', t: Date.now() } }) : undefined
+        ),
+        api.get(getPortalUrl('externalAppliedStatus'), requestConfig()),
+        api.get(getPortalUrl('matchedJobs'), requestConfig()),
       ]);
       const dbRes = results[0].status === 'fulfilled' ? results[0].value : { data: { applications: [] } };
       const sheetRes = results[1].status === 'fulfilled' ? results[1].value : { data: { applications: [] } };
@@ -175,12 +198,12 @@ const MyApplications = () => {
       const PENDING_TTL_MS = 10 * 60 * 1000;
       const now = Date.now();
       const pendingApplied = (() => {
-        try { return JSON.parse(sessionStorage.getItem('pendingApplied') || '[]'); } catch { return []; }
+        try { return JSON.parse(sessionStorage.getItem(pendingAppliedKey) || '[]'); } catch { return []; }
       })().filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
       const apiJobLinks = new Set((sheetRes.data.applications || []).map(a => a.jobLink));
       const stillPending = pendingApplied.filter(p => !apiJobLinks.has(p.jobLink));
       if (stillPending.length !== pendingApplied.length) {
-        try { sessionStorage.setItem('pendingApplied', JSON.stringify(stillPending)); } catch { /* ignore */ }
+        try { sessionStorage.setItem(pendingAppliedKey, JSON.stringify(stillPending)); } catch { /* ignore */ }
       }
       const pendingSheetApps = stillPending.map(p => ({
         id: p.jobLink,
@@ -204,7 +227,11 @@ const MyApplications = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getPortalUrl, pendingAppliedKey, portalMode, requestConfig]);
+
+  useEffect(() => {
+    fetchApplications();
+  }, [fetchApplications]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return applications;
@@ -232,7 +259,7 @@ const MyApplications = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className={embedded ? 'flex flex-col h-full min-h-0' : 'flex flex-col h-[calc(100vh-4rem)]'}>
 
       {/* Header bar */}
       <div className="flex items-center justify-between mb-4 shrink-0">
@@ -528,7 +555,7 @@ const MyApplications = () => {
       {/* ═══ Resume Modal ═══ */}
       {resumeJob && (() => {
         const resumeText = resumeJob.resume_text || '';
-        const candidateName = authUser?.fullName || '';
+        const candidateName = portalUser?.fullName || '';
         const sheetCandidateName = resumeJob.candidate_name || '';
         const { roleTitle, sections } = parseResumeSections(resumeText, candidateName, sheetCandidateName);
 
@@ -550,14 +577,14 @@ const MyApplications = () => {
                 {resumeText ? (
                   <div ref={resumeRef} className="border border-gray-200 rounded-xl bg-white shadow-sm">
                     <div className="px-10 py-8" style={{ fontFamily: 'Georgia, serif' }}>
-                      <h1 className="text-2xl font-bold text-center" style={{ color: '#1e3a5f', textTransform: 'capitalize' }}>{authUser?.fullName || 'Resume'}</h1>
+                      <h1 className="text-2xl font-bold text-center" style={{ color: '#1e3a5f', textTransform: 'capitalize' }}>{portalUser?.fullName || 'Resume'}</h1>
                       {(roleTitle || extractRole(resumeJob) !== 'View Details') && (
                         <p className="text-center text-sm font-medium mt-1" style={{ color: '#2d3748' }}>{roleTitle || extractRole(resumeJob)}</p>
                       )}
-                      {(authUser?.phone || authUser?.email) && (
-                        <p className="text-center text-xs mt-2 leading-relaxed" style={{ color: '#4a5568' }}>{[authUser?.phone, authUser?.email].filter(Boolean).join(' | ')}</p>
+                      {(portalUser?.phone || portalUser?.email) && (
+                        <p className="text-center text-xs mt-2 leading-relaxed" style={{ color: '#4a5568' }}>{[portalUser?.phone, portalUser?.email].filter(Boolean).join(' | ')}</p>
                       )}
-                      {authUser?.linkedinProfile && <p className="text-center text-xs mt-1" style={{ color: '#4a5568' }}>{authUser.linkedinProfile}</p>}
+                      {portalUser?.linkedinProfile && <p className="text-center text-xs mt-1" style={{ color: '#4a5568' }}>{portalUser.linkedinProfile}</p>}
                       <div className="mt-5 mb-4" style={{ borderBottom: '2px solid #cbd5e0' }} />
                       {sections.map((section, si) => (
                         <div key={si} className="mb-4">

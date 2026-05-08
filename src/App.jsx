@@ -116,6 +116,7 @@ function App() {
         <Route index element={<AdminDashboard />} />
         <Route path="students" element={<AdminStudents />} />
         <Route path="students/:studentId/view" element={<AdminStudentView />} />
+        <Route path="students/:studentId/view/resume-view" element={<ResumeViewPage />} />
         <Route path="training" element={<AdminTraining />} />
         <Route path="slots" element={<AdminSlots />} />
         <Route path="bookings" element={<AdminBookings />} />

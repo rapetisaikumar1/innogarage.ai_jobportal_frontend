@@ -13,7 +13,8 @@ const ResumeViewPage = () => {
   const resumeRef = useRef(null);
 
   const { sections = [], candidateName = '', headline = '', resumeText = '', template = 'modern', highlightKeywords = [] } = location.state || {};
-  const displayName = authUser?.fullName || candidateName || 'Resume';
+  const viewerUser = location.state?.viewerUser || authUser;
+  const displayName = viewerUser?.fullName || candidateName || 'Resume';
 
   const handleDownloadPDF = () => {
     const el = resumeRef.current;
@@ -75,8 +76,8 @@ const ResumeViewPage = () => {
             ref={resumeRef}
             displayName={displayName}
             headline={headline}
-            contactItems={[authUser?.phone, authUser?.email].filter(Boolean)}
-            linkedinProfile={authUser?.linkedinProfile}
+            contactItems={[viewerUser?.phone, viewerUser?.email].filter(Boolean)}
+            linkedinProfile={viewerUser?.linkedinProfile}
             sections={sections}
             rawText={resumeText}
             template={template}
