@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
-import { BookOpen, FileText, Link as LinkIcon, Search, ExternalLink, Play, GraduationCap, Download } from 'lucide-react';
+import { BookOpen, FileText, Link as LinkIcon, Search, ExternalLink, Play, GraduationCap, Download, StickyNote } from 'lucide-react';
 
 const CATEGORIES = ['Interview Prep', 'Career Development', 'Technical Skills', 'Soft Skills'];
 
@@ -13,7 +13,7 @@ const CAT_STYLE = {
 const DEFAULT_STYLE = { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200', icon: '📁' };
 
 const TrainingPage = () => {
-  const [materials, setMaterials] = useState([]);
+  const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
@@ -22,7 +22,7 @@ const TrainingPage = () => {
     (async () => {
       try {
         const { data } = await api.get('/training/materials');
-        setMaterials(data);
+        setAllItems(data);
       } catch {
         // fetch failed silently
       } finally {
@@ -30,6 +30,9 @@ const TrainingPage = () => {
       }
     })();
   }, []);
+
+  const notes = useMemo(() => allItems.filter(m => m.type === 'NOTE'), [allItems]);
+  const materials = useMemo(() => allItems.filter(m => m.type !== 'NOTE'), [allItems]);
 
   const getIcon = (type) => {
     switch ((type || '').toUpperCase()) {
@@ -84,10 +87,10 @@ const TrainingPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col min-h-0 space-y-4">
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 shrink-0">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-[16px] font-bold text-gray-900">Training Materials</h1>
           {materials.length > 0 && (
@@ -110,7 +113,7 @@ const TrainingPage = () => {
       </div>
 
       {/* Category Filter Tabs */}
-      <div className="flex items-center gap-2 mb-4 shrink-0 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
         {['All', ...CATEGORIES].map(cat => {
           const style = CAT_STYLE[cat];
           const count = categoryCounts[cat] ?? 0;
@@ -136,7 +139,7 @@ const TrainingPage = () => {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-hidden bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col" style={{ minHeight: '320px' }}>
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center flex-1 text-center py-16">
             <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -148,7 +151,7 @@ const TrainingPage = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-y-auto flex-1 p-5">
+          <div className="p-5">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filtered.map((material) => {
                 const typeBadge = getTypeBadge(material.type);
@@ -240,6 +243,37 @@ const TrainingPage = () => {
           </div>
         )}
       </div>
+
+      {/* Notes Section */}
+      {notes.length > 0 && (
+        <div className="mt-4">
+          <div className="border border-amber-100 rounded-xl overflow-hidden bg-white shadow-sm">
+            <div className="flex items-center gap-3 px-5 py-3.5 bg-amber-50 border-b border-amber-100">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-amber-100 text-base">📝</div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-900">Notes from your mentor</h2>
+                <p className="text-xs text-gray-400">{notes.length} note{notes.length !== 1 ? 's' : ''} shared with you</p>
+              </div>
+            </div>
+            <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {notes.map((note) => (
+                <div key={note.id} className="bg-amber-50/70 rounded-xl border border-amber-100 hover:border-amber-200 hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col">
+                  <div className="px-4 py-2.5 border-b border-amber-100 flex items-center gap-1.5">
+                    <StickyNote size={12} className="text-amber-500" />
+                    <span className="text-xs font-semibold text-amber-600">Note</span>
+                  </div>
+                  <div className="p-4 flex-1 flex flex-col">
+                    <h3 className="text-sm font-bold text-gray-900 mb-1.5 line-clamp-1">{note.title}</h3>
+                    {note.description && (
+                      <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line flex-1">{note.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
