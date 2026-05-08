@@ -263,6 +263,7 @@ const AdminStudentView = () => {
   const [generatingResume, setGeneratingResume] = useState(false);
   const resumeRef = useRef(null);
   const [filterType, setFilterType] = useState('all');
+  const [jobSortOrder, setJobSortOrder] = useState('default');
 
   // Applications state
   const [applications, setApplications] = useState([]);
@@ -289,8 +290,11 @@ const AdminStudentView = () => {
   // Fetch tab data
   useEffect(() => {
     if (!studentId) return;
-    if (activeTab === 'dashboard') fetchDashboard();
-    else if (activeTab === 'jobs') { fetchJobs(); fetchAppliedStatus(); }
+    if (activeTab === 'dashboard') {
+      fetchDashboard();
+      // Also fetch jobs so "Recent Job Listings" on the dashboard is populated
+      if (sheetJobs.length === 0) { fetchJobs(); fetchAppliedStatus(); }
+    } else if (activeTab === 'jobs') { fetchJobs(); fetchAppliedStatus(); }
     else if (activeTab === 'applications') fetchApplications();
   }, [activeTab, studentId]);
 
@@ -486,12 +490,10 @@ const AdminStudentView = () => {
     }
     if (filterType === 'applied') filtered = filtered.filter(j => !!(j.job_apply_link && appliedLinks.has(j.job_apply_link)));
     if (filterType === 'not_applied') filtered = filtered.filter(j => j.job_apply_link && !appliedLinks.has(j.job_apply_link));
-    // Sort by score, then push applied to bottom
-    const sorted = [...filtered].sort((a, b) => (parseInt(b.match_score) || 0) - (parseInt(a.match_score) || 0));
-    const notApplied = sorted.filter(j => !(j.job_apply_link && appliedLinks.has(j.job_apply_link)));
-    const applied = sorted.filter(j => !!(j.job_apply_link && appliedLinks.has(j.job_apply_link)));
-    return [...notApplied, ...applied];
-  }, [sheetJobs, jobSearch, filterType, appliedLinks]);
+    if (jobSortOrder === 'score-desc') return [...filtered].sort((a, b) => (parseInt(b.match_score) || 0) - (parseInt(a.match_score) || 0));
+    if (jobSortOrder === 'score-asc') return [...filtered].sort((a, b) => (parseInt(a.match_score) || 0) - (parseInt(b.match_score) || 0));
+    return filtered;
+  }, [sheetJobs, jobSearch, filterType, appliedLinks, jobSortOrder]);
 
   const paginatedJobs = useMemo(() => {
     const start = (jobPage - 1) * PAGE_SIZE;
@@ -500,7 +502,7 @@ const AdminStudentView = () => {
 
   const totalJobPages = Math.max(1, Math.ceil(filteredJobs.length / PAGE_SIZE));
 
-  useEffect(() => { setJobPage(1); }, [jobSearch, filterType]);
+  useEffect(() => { setJobPage(1); }, [jobSearch, filterType, jobSortOrder]);
 
   // Applications: merge DB + Sheet
   const mergedApps = useMemo(() => {
@@ -925,7 +927,7 @@ const AdminStudentView = () => {
       )}
 
       {/* Tab Content */}
-      {activeTab === 'dashboard' && <DashboardTab data={dashData} loading={dashLoading} onRefresh={fetchDashboard} />}
+      {activeTab === 'dashboard' && <DashboardTab data={dashData} loading={dashLoading} onRefresh={fetchDashboard} recentJobs={sheetJobs.slice(0, 5)} />}
       {activeTab === 'jobs' && (
         <JobsTab
           jobs={paginatedJobs}
@@ -948,6 +950,8 @@ const AdminStudentView = () => {
           onFilterChange={setFilterType}
           onViewDetail={setDetailJob}
           onViewResume={handleResumeClick}
+          sortOrder={jobSortOrder}
+          onSortChange={setJobSortOrder}
         />
       )}
       {activeTab === 'applications' && (
@@ -964,7 +968,7 @@ const AdminStudentView = () => {
 };
 
 /* ═══ Dashboard Tab ═══ */
-const DashboardTab = ({ data, loading, onRefresh }) => {
+const DashboardTab = ({ data, loading, onRefresh, recentJobs = [] }) => {
   if (loading || !data) {
     return (
       <div className="flex items-center justify-center h-48">
@@ -981,165 +985,222 @@ const DashboardTab = ({ data, loading, onRefresh }) => {
   const offerCount = stats.offerReceived || 0;
   const adminApplyCount = stats.adminApplyCount || 0;
   const candidateApplyCount = stats.candidateApplyCount || 0;
-  // totalSheetJobs = student's matched jobs (savedJobResult count); fall back to totalJobs for compat
   const totalSheetJobs = stats.totalSheetJobs || stats.totalJobs || 0;
   const jobsToApply = Math.max(totalSheetJobs - sheetAppliedCount, 0);
+  const totalCount = totalApplied;
 
-  const statCards = [
-    { label: 'Applied', value: totalApplied, color: 'bg-blue-50 text-blue-700 ring-blue-200', icon: <FileText size={18} className="text-blue-600" /> },
-    { label: 'Interviews', value: interviewCount, color: 'bg-amber-50 text-amber-700 ring-amber-200', icon: <Calendar size={18} className="text-amber-600" /> },
-    { label: 'Offers', value: offerCount, color: 'bg-violet-50 text-violet-700 ring-violet-200', icon: <CheckCircle2 size={18} className="text-violet-600" /> },
-    { label: 'Rejected', value: rejectedCount, color: 'bg-red-50 text-red-700 ring-red-200', icon: <XCircle size={18} className="text-red-600" /> },
-    { label: 'Jobs to Apply', value: jobsToApply, color: 'bg-emerald-50 text-emerald-700 ring-emerald-200', icon: <Briefcase size={18} className="text-emerald-600" /> },
-  ];
-
-  /* Donut chart helper */
-  const Donut = ({ value, max, color = '#1e40af', size = 80 }) => {
-    const pct = max > 0 ? Math.min(value / max, 1) : 0;
-    const r = 30, c = 2 * Math.PI * r;
+  /* Donut Chart — identical to student portal */
+  const DonutChart = ({ value, max, color, trackColor = '#e0e7ff', size = 88, strokeWidth = 9 }) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const percentage = max > 0 ? Math.min(value / max, 1) : 0;
+    const offset = circumference - percentage * circumference;
     return (
-      <div className="flex flex-col items-center">
-        <svg width={size} height={size} viewBox="0 0 80 80">
-          <circle cx="40" cy="40" r={r} fill="none" stroke="#e5e7eb" strokeWidth="8" />
-          <circle cx="40" cy="40" r={r} fill="none" stroke={color} strokeWidth="8" strokeDasharray={c} strokeDashoffset={c * (1 - pct)} strokeLinecap="round" transform="rotate(-90 40 40)" />
-          <text x="40" y="44" textAnchor="middle" className="text-[14px] font-bold" fill="#111827">{value}</text>
-        </svg>
-      </div>
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={trackColor} strokeWidth={strokeWidth} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth}
+          strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
+          className="transition-all duration-700 ease-out" />
+      </svg>
     );
   };
 
+  const statCards = [
+    { label: 'Applied',       value: totalApplied,   icon: FileText, light: 'bg-blue-50',    text: 'text-blue-600' },
+    { label: 'Interviews',    value: interviewCount, icon: Calendar, light: 'bg-violet-50',  text: 'text-violet-600' },
+    { label: 'Jobs to Apply', value: jobsToApply,    icon: Briefcase,light: 'bg-emerald-50', text: 'text-emerald-600' },
+    { label: 'Rejected',      value: rejectedCount,  icon: XCircle,  light: 'bg-red-50',     text: 'text-red-600' },
+  ];
+
+  const getStatusLabel = (status) => {
+    const map = { APPLIED: 'Applied', INTERVIEW_SCHEDULED: 'Interview', REJECTED: 'Rejected', OFFER_RECEIVED: 'Offer' };
+    return map[status] || status;
+  };
+  const getStatusStyle = (status) => {
+    if (status === 'INTERVIEW_SCHEDULED') return 'bg-cyan-50 text-cyan-700 border-cyan-200';
+    if (status === 'REJECTED') return 'bg-red-50 text-red-600 border-red-200';
+    if (status === 'OFFER_RECEIVED') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    return 'bg-blue-50 text-blue-700 border-blue-200';
+  };
+
+  /* Merge DB + sheet apps */
+  const dbApps = (recentApplications || []).map(app => ({
+    id: app.id, title: app.job?.title || 'Untitled', company: app.job?.company || '—',
+    status: app.status, appliedAt: app.appliedAt, matchScore: null,
+  }));
+  const sheetApps = (sheetApplications || []).map(sa => ({
+    id: sa.jobLink, title: sa.jobTitle || sa.employerName || 'Job Application',
+    company: sa.employerName || '—', status: sa.status, appliedAt: sa.createdAt, matchScore: sa.matchScore,
+  }));
+  const seenTitles = new Set(dbApps.map(a => a.title));
+  const recentApps = [...dbApps, ...sheetApps.filter(a => !seenTitles.has(a.title))]
+    .sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt)).slice(0, 5);
+
   return (
-    <div className="space-y-5">
-      {/* Header row with Refresh button */}
+    <div className="space-y-3">
+      {/* Refresh */}
       {onRefresh && (
         <div className="flex justify-end">
-          <button
-            onClick={onRefresh}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors bg-white shadow-sm"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            Refresh
+          <button onClick={onRefresh}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors bg-white shadow-sm">
+            <RefreshCw size={13} /> Refresh
           </button>
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-        {statCards.map((s, i) => (
-          <div key={i} className={`rounded-xl border p-4 shadow-sm ${s.color}`}>
-            <div className="w-8 h-8 bg-white/60 rounded-lg flex items-center justify-center mb-2 shadow-sm">{s.icon}</div>
-            <p className="text-[22px] font-extrabold leading-none">{s.value}</p>
-            <p className="text-[11px] mt-1 opacity-70 font-medium">{s.label}</p>
+      {/* KPI Strip — same as student portal */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+        {statCards.map(({ label, value, icon: Icon, light, text }) => (
+          <div key={label} className="bg-white/60 backdrop-blur-md border border-white/50 rounded-xl px-3.5 py-2.5 flex items-center gap-2.5 shadow-sm">
+            <div className={`w-8 h-8 ${light} rounded-lg flex items-center justify-center shrink-0`}>
+              <Icon size={14} className={text} strokeWidth={2} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[22px] font-extrabold text-gray-900 leading-none">{value}</p>
+              <p className="text-[12px] font-medium text-gray-600 mt-0.5 truncate">{label}</p>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Applications Overview */}
-        <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-5">
-          <h3 className="text-[13px] font-bold text-gray-800 mb-4">Applications Overview</h3>
-          <div className="flex items-center gap-5">
-            <Donut value={totalApplied} max={totalSheetJobs || 1} color="#1e40af" />
-            <div className="space-y-2 flex-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-gray-600">Applied</span>
-                <span className="text-[13px] font-bold text-gray-900">{totalApplied}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-gray-600">Candidate Apply</span>
-                <span className="text-[13px] font-bold text-gray-900">{candidateApplyCount}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-gray-600">Admin Apply</span>
-                <span className="text-[13px] font-bold text-gray-900">{adminApplyCount}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-gray-600">Jobs to Apply</span>
-                <span className="text-[13px] font-bold text-gray-900">{jobsToApply}</span>
-              </div>
+      {/* Main two-column grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3">
+
+        {/* Left: Recent Apps + Recent Jobs */}
+        <div className="space-y-3 min-w-0">
+
+          {/* Recent Applications */}
+          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 overflow-hidden shadow shadow-blue-50/20">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/40">
+              <h2 className="text-[14px] font-bold text-gray-700 flex items-center gap-1.5">
+                <Briefcase size={14} className="text-gray-400" /> Recent Applications
+              </h2>
+              <span className="text-[11px] font-medium text-gray-400">{recentApps.length} latest</span>
             </div>
+            {recentApps.length === 0 ? (
+              <div className="flex items-center gap-3 px-4 py-4">
+                <Briefcase size={20} className="text-gray-200 shrink-0" />
+                <p className="text-[13px] font-medium text-gray-500">No applications yet</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50/80 max-h-[280px] overflow-y-auto">
+                {recentApps.map((app) => {
+                  const dateStr = new Date(app.appliedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  const score = parseInt(app.matchScore) || 0;
+                  return (
+                    <div key={app.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
+                      <div className={`w-8 h-8 rounded-md ${avatarBg(app.company)} text-white flex items-center justify-center font-bold text-[12px] shrink-0`}>
+                        {app.company?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-1.5 min-w-0">
+                          <span className="text-[13px] font-semibold text-gray-900 truncate">{app.company || '—'}</span>
+                          <span className="text-[11px] font-medium text-violet-600 truncate hidden sm:block">{app.title}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[11px] font-medium text-gray-500 flex items-center gap-1"><Clock size={9} />{dateStr}</span>
+                          {score > 0 && <span className={`text-[11px] font-semibold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-blue-600' : 'text-amber-600'}`}>{score}% match</span>}
+                        </div>
+                      </div>
+                      <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${getStatusStyle(app.status)}`}>
+                        {getStatusLabel(app.status)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Recent Job Listings */}
+          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 overflow-hidden shadow shadow-indigo-50/20">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/40">
+              <h2 className="text-[14px] font-bold text-gray-700 flex items-center gap-1.5">
+                <Search size={14} className="text-gray-400" /> Recent Job Listings
+              </h2>
+            </div>
+            {recentJobs.length === 0 ? (
+              <div className="flex items-center gap-3 px-4 py-4">
+                <Search size={20} className="text-gray-200 shrink-0" />
+                <p className="text-[13px] font-medium text-gray-600">No matched jobs yet — switch to <span className="font-semibold text-gray-800">Job Listings</span> tab to search.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto max-h-[340px] overflow-y-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-[10px] text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-gray-50/60">
+                      <th className="px-4 py-2 font-semibold">Role</th>
+                      <th className="px-4 py-2 font-semibold">Company</th>
+                      <th className="px-4 py-2 font-semibold">Score</th>
+                      <th className="px-4 py-2 font-semibold">Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentJobs.map((job) => {
+                      const title = extractRole(job);
+                      const score = parseInt(job.match_score) || 0;
+                      return (
+                        <tr key={job.id} className="border-t border-gray-50/80 hover:bg-gray-50/40 transition-colors">
+                          <td className="px-4 py-2"><p className="text-[13px] font-semibold text-gray-800 truncate max-w-[180px]">{title}</p></td>
+                          <td className="px-4 py-2 text-[13px] font-medium text-gray-600 truncate max-w-[140px]">{job.employer_name || '—'}</td>
+                          <td className="px-4 py-2">
+                            {score > 0
+                              ? <span className={`text-[13px] font-bold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-blue-600' : 'text-amber-600'}`}>{score}%</span>
+                              : <span className="text-gray-300 text-[12px]">—</span>}
+                          </td>
+                          <td className="px-4 py-2">
+                            {job.job_employment_type
+                              ? <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[11px] font-medium rounded">{job.job_employment_type}</span>
+                              : <span className="text-gray-300 text-[12px]">—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Progress */}
-        <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-5">
-          <h3 className="text-[13px] font-bold text-gray-800 mb-4">Progress</h3>
-          <div className="flex items-center gap-5">
-            <Donut value={interviewCount} max={(totalApplied + interviewCount + rejectedCount) || 1} color="#7c3aed" />
-            <div className="space-y-2 flex-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-gray-600">Interviews</span>
-                <span className="text-[13px] font-bold text-gray-900">{interviewCount}</span>
+        {/* Right sidebar: Applications donut */}
+        <div className="space-y-3">
+          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-5 shadow shadow-blue-50/20">
+            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-4">Applications</h3>
+            <div className="flex items-center gap-4">
+              <div className="relative shrink-0">
+                <DonutChart value={totalApplied} max={totalSheetJobs || 1} color="#1e40af" trackColor="#d1fae5" size={88} strokeWidth={9} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-[17px] font-extrabold text-gray-900 leading-none">{totalCount}</span>
+                  <span className="text-[9px] font-medium text-gray-500">Total</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-gray-600">Offers</span>
-                <span className="text-[13px] font-bold text-gray-900">{offerCount}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-gray-600">Rejected</span>
-                <span className="text-[13px] font-bold text-gray-900">{rejectedCount}</span>
+              <div className="space-y-2 flex-1 min-w-0">
+                {[
+                  { dot: 'bg-blue-800',    label: 'Applied',    val: totalApplied },
+                  { dot: 'bg-cyan-500',    label: 'Candidate',  val: candidateApplyCount },
+                  { dot: 'bg-amber-500',   label: 'Admin',      val: adminApplyCount },
+                  { dot: 'bg-emerald-400', label: 'To Apply',   val: jobsToApply },
+                ].map(r => (
+                  <div key={r.label} className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`w-2 h-2 rounded-full ${r.dot} shrink-0`} />
+                      <span className="text-[12px] font-medium text-gray-600 truncate">{r.label}</span>
+                    </div>
+                    <span className="text-[13px] font-bold text-gray-800 ml-1">{r.val}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
+          {offerCount > 0 && (
+            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-center">
+              <p className="text-[28px] font-extrabold text-emerald-700 leading-none">{offerCount}</p>
+              <p className="text-[12px] font-medium text-emerald-600 mt-1">Offer{offerCount !== 1 ? 's' : ''} Received</p>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Recent Applications — merge DB + sheet, sorted newest first */}
-      {(() => {
-        const dbApps = (recentApplications || []).map(app => ({
-          key: app.id,
-          title: app.job?.title || 'Untitled',
-          company: app.job?.company || '',
-          location: app.job?.location || '',
-          status: app.status,
-          date: app.appliedAt,
-          via: null,
-        }));
-        const sheetApps = (sheetApplications || []).map(sa => ({
-          key: sa.jobLink,
-          title: sa.jobTitle || sa.employerName || 'Job Application',
-          company: sa.employerName || '',
-          location: '',
-          status: sa.status,
-          date: sa.createdAt,
-          via: sa.appliedMethod === 'BOT' ? 'Bot' : 'Manual',
-        }));
-        const seenTitles = new Set(dbApps.map(a => a.title));
-        const uniqueSheet = sheetApps.filter(a => !seenTitles.has(a.title));
-        const combined = [...dbApps, ...uniqueSheet].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8);
-        return (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-[13px] font-semibold text-gray-900 flex items-center gap-2">
-                <Briefcase size={15} className="text-blue-600" /> Recent Applications
-              </h3>
-              <span className="text-[11px] font-medium text-gray-400">{combined.length} latest</span>
-            </div>
-            <div className="divide-y divide-gray-50">
-              {combined.length > 0 ? combined.map(app => (
-                <div key={app.key} className="px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-gray-900 truncate">{app.title}</p>
-                      <p className="text-[12px] text-gray-500 mt-0.5">
-                        {app.company}{app.location ? ` · ${app.location}` : ''}{app.via ? ` · via ${app.via}` : ''}
-                      </p>
-                    </div>
-                    {statusBadge(app.status)}
-                  </div>
-                  <p className="text-[11px] text-gray-400 mt-1.5">{formatDate(app.date)}</p>
-                </div>
-              )) : (
-                <div className="px-5 py-8 text-center">
-                  <Briefcase size={20} className="mx-auto text-gray-300 mb-2" />
-                  <p className="text-[13px] text-gray-400">No applications yet</p>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 };
@@ -1147,7 +1208,7 @@ const DashboardTab = ({ data, loading, onRefresh }) => {
 /* ═══ Jobs Tab ═══ */
 const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, onPageChange, totalCount,
   appliedLinks, onMarkApplied, onTriggerSearch, onRefresh, triggeringSearch, applyingJob, studentName,
-  filterType, onFilterChange, onViewDetail, onViewResume }) => {
+  filterType, onFilterChange, onViewDetail, onViewResume, sortOrder, onSortChange }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48">
@@ -1159,13 +1220,28 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
   const appliedCount = allJobs.filter(j => j.job_apply_link && appliedLinks.has(j.job_apply_link)).length;
 
   return (
-    <div className="space-y-4">
-      {/* Header Row with Search Trigger + Refresh */}
+    <div className="flex flex-col gap-4">
+      {/* Search-in-progress banner */}
+      {triggeringSearch && (
+        <div className="flex items-center gap-4 px-5 py-4 rounded-xl bg-white border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-1.5 shrink-0">
+            {[0, 150, 300].map((delay) => (
+              <span key={delay} className="w-2.5 h-2.5 rounded-full bg-violet-500 animate-bounce" style={{ animationDelay: `${delay}ms` }} />
+            ))}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-violet-700">Searching for job matches for {studentName}…</p>
+            <p className="text-xs text-gray-400 mt-0.5">Jobs will appear below once found.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-gray-900">Job Listings</h3>
-          <p className="text-[12px] text-gray-400 mt-0.5">
-            {totalCount} job{totalCount !== 1 ? 's' : ''} · {appliedCount} applied
+          <h1 className="text-xl font-bold text-gray-900">Job Listings</h1>
+          <p className="text-sm text-gray-400 mt-0.5">
+            Showing {jobs.length} of {totalCount} jobs · {appliedCount} applied
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1188,27 +1264,45 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
         </div>
       </div>
 
-      {/* Search + Filter Row */}
+      {/* Search + Sort + Filter Row */}
       <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div className="flex-1 bg-white rounded-xl border border-gray-100 px-4 py-2.5 flex items-center gap-2 shadow-sm">
+          <Search size={16} className="text-gray-400 shrink-0" />
           <input
             type="text"
+            className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-800"
             placeholder="Search company, skills, location..."
             value={search}
             onChange={(e) => { onSearch(e.target.value); onPageChange(1); }}
-            className="w-full pl-9 pr-4 py-2 text-[13px] bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
           />
-          {search && (
-            <button onClick={() => onSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
-              <X size={14} />
-            </button>
-          )}
+          {search && <button onClick={() => onSearch('')} className="text-gray-300 hover:text-gray-500"><X size={14} /></button>}
         </div>
+
+        {/* Sort */}
+        <div className="flex items-center bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+          <span className="pl-3 pr-2 text-[11px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap select-none">Sort</span>
+          <div className="w-px h-5 bg-gray-100" />
+          {[
+            { value: 'default',    label: 'Default' },
+            { value: 'score-desc', label: 'Score ↑' },
+            { value: 'score-asc',  label: 'Score ↓' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => onSortChange(opt.value)}
+              className={`px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+                sortOrder === opt.value ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
         <select
           value={filterType}
           onChange={(e) => onFilterChange(e.target.value)}
-          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-[13px] text-gray-600 font-medium outline-none cursor-pointer hover:border-gray-300 transition-all"
+          className="bg-white border border-gray-100 rounded-xl px-4 py-2.5 text-sm text-gray-600 font-medium outline-none cursor-pointer hover:border-gray-200 hover:bg-gray-50 transition-all shadow-sm"
         >
           <option value="all">All Jobs</option>
           <option value="applied">Applied</option>
@@ -1216,152 +1310,167 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
         </select>
       </div>
 
-      {/* Jobs List */}
-      {jobs.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 text-center py-16">
-          <Briefcase size={32} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-sm font-medium text-gray-500">No matched jobs found</p>
-          <p className="text-[12px] text-gray-400 mt-1">Click "Search Jobs" to find jobs for this student</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {jobs.map((job, i) => {
-            const isApplied = job.job_apply_link && appliedLinks.has(job.job_apply_link);
-            const isApplying = applyingJob === job.job_apply_link;
-            const globalIdx = (page - 1) * PAGE_SIZE + i + 1;
+      {/* Jobs Table — identical layout to student JobListings */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        {jobs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Briefcase className="mx-auto text-gray-300 mb-3" size={32} />
+            <h3 className="text-base font-semibold text-gray-600">No jobs found</h3>
+            <p className="text-sm text-gray-400 mt-1">Click "Search Jobs" to find jobs for this student</p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-y-auto">
+              <table className="w-full">
+                <tbody>
+                  {jobs.map((job, idx) => {
+                    const globalIdx = (page - 1) * 10 + idx + 1;
+                    const isApplied = job.job_apply_link && appliedLinks.has(job.job_apply_link);
+                    const isApplying = applyingJob === job.job_apply_link;
+                    const role = extractRole(job);
+                    const score = parseInt(job.match_score) || 0;
+                    const logoDomain = (() => {
+                      if (job.employer_website) return job.employer_website.replace(/^https?:\/\//, '').split('/')[0];
+                      if (job.job_apply_link) return job.job_apply_link.replace(/^https?:\/\//, '').split('/')[0];
+                      return null;
+                    })();
 
-            return (
-              <div key={job.id || i} className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-shadow ${isApplied ? 'border-violet-200 bg-violet-50/30' : 'border-gray-200'}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[12px] text-gray-400 font-medium w-5 text-right">{globalIdx}</span>
-                      <div className={`w-10 h-10 rounded-lg ${avatarBg(job.employer_name)} flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0`}>
-                        {job.employer_name?.charAt(0) || '?'}
-                      </div>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-gray-900 truncate">{extractRole(job)}</p>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className="inline-flex items-center gap-1 text-[12px] text-gray-500">
-                          <Building2 size={11} /> {job.employer_name}
-                        </span>
-                        {job.job_city && (
-                          <span className="inline-flex items-center gap-1 text-[12px] text-gray-500">
-                            <MapPin size={11} /> {job.job_city}{job.job_state ? `, ${job.job_state}` : ''}
-                          </span>
-                        )}
-                        {job.job_employment_type && (
-                          <span className="text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                            {job.job_employment_type}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {job.match_score && parseInt(job.match_score) > 0 && (
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ring-1 ${
-                        parseInt(job.match_score) >= 80 ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' :
-                        parseInt(job.match_score) >= 60 ? 'bg-blue-50 text-blue-700 ring-blue-200' :
-                        'bg-amber-50 text-amber-700 ring-amber-200'
-                      }`}>
-                        <Star size={11} /> {job.match_score}%
-                      </span>
+                    return (
+                      <tr key={job.id || idx} className="border-b border-gray-50 hover:bg-gray-50/60 group">
+                        {/* # */}
+                        <td className="pl-5 pr-2 py-3.5 w-10">
+                          <span className="text-sm text-gray-400 font-medium">{globalIdx}</span>
+                        </td>
+                        {/* Logo + Info */}
+                        <td className="px-3 py-3.5">
+                          <div className="flex items-center gap-3.5">
+                            {logoDomain ? (
+                              <img
+                                src={`https://logo.clearbit.com/${logoDomain}`}
+                                alt={job.employer_name}
+                                className="w-10 h-10 rounded-xl object-contain bg-white border border-gray-100 shadow-sm shrink-0 p-0.5"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
+                              />
+                            ) : null}
+                            <div className={`w-10 h-10 rounded-xl ${avatarBg(job.employer_name)} text-white items-center justify-center font-bold text-sm shrink-0 shadow-sm ${logoDomain ? 'hidden' : 'flex'}`}>
+                              {job.employer_name?.charAt(0)?.toUpperCase() || '?'}
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="font-semibold text-[13px] text-gray-900 truncate leading-snug">{job.employer_name}</h3>
+                              <p className="text-[12px] text-gray-500 truncate mt-0.5 max-w-md font-medium">{role}</p>
+                              {/* Skill tags */}
+                              {(job.strong_matches || job.missing_skills) && (() => {
+                                const parse = (raw) => {
+                                  if (!raw) return [];
+                                  try { const a = JSON.parse(raw); return Array.isArray(a) ? a.map(s => String(s).trim()).filter(Boolean) : raw.split(',').map(s => s.trim()).filter(Boolean); }
+                                  catch { return raw.split(',').map(s => s.trim()).filter(Boolean); }
+                                };
+                                const strong = parse(job.strong_matches).slice(0, 3);
+                                const missing = parse(job.missing_skills).slice(0, 2);
+                                return (strong.length + missing.length) > 0 ? (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {strong.map((s, j) => <span key={`s${j}`} className="px-1.5 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-700 rounded-full">{s}</span>)}
+                                    {missing.map((s, j) => <span key={`m${j}`} className="px-1.5 py-0.5 text-[10px] font-medium bg-red-50 text-red-600 rounded-full">{s}</span>)}
+                                  </div>
+                                ) : null;
+                              })()}
+                            </div>
+                          </div>
+                        </td>
+                        {/* Score */}
+                        <td className="px-4 py-3.5 text-right w-24">
+                          {score > 0 && (
+                            <div className="text-right">
+                              <span className={`text-lg font-bold ${score >= 80 ? 'text-emerald-600' : score >= 70 ? 'text-blue-600' : score >= 60 ? 'text-orange-500' : 'text-gray-400'}`}>
+                                {score}%
+                              </span>
+                              <p className="text-[10px] text-gray-400 leading-none mt-0.5">Match</p>
+                            </div>
+                          )}
+                        </td>
+                        {/* Actions */}
+                        <td className="pl-4 pr-5 py-3.5 w-[320px]">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => onViewResume(job)}
+                              className={`inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border transition-colors shadow-sm ${
+                                hasCompleteGeneratedResume(job.resume_text)
+                                  ? 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                                  : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
+                              }`}
+                            >
+                              {hasCompleteGeneratedResume(job.resume_text) ? <CheckCircle2 size={13} className="text-emerald-500" /> : <FileText size={13} />}
+                              Resume
+                            </button>
+                            <button
+                              onClick={() => onViewDetail(job)}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm"
+                            >
+                              <Info size={13} /> Details
+                            </button>
+                            {isApplied ? (
+                              <span className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50">
+                                <CheckCircle2 size={13} /> Applied
+                              </span>
+                            ) : job.job_apply_link?.startsWith('http') ? (
+                              <button
+                                onClick={() => onMarkApplied(job)}
+                                disabled={isApplying}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm disabled:opacity-60"
+                              >
+                                {isApplying
+                                  ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Applying...</>
+                                  : <><ExternalLink size={13} /> Apply</>}
+                              </button>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
+                <button
+                  onClick={() => onPageChange(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft size={16} /> Prev
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+                    .reduce((acc, p, i, arr) => { if (i > 0 && p - arr[i - 1] > 1) acc.push('...'); acc.push(p); return acc; }, [])
+                    .map((item, i) =>
+                      item === '...' ? (
+                        <span key={`dots-${i}`} className="px-2 text-gray-400 text-sm">...</span>
+                      ) : (
+                        <button
+                          key={item}
+                          onClick={() => onPageChange(item)}
+                          className={`w-8 h-8 rounded-lg text-sm font-semibold transition-colors ${page === item ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                        >
+                          {item}
+                        </button>
+                      )
                     )}
-                    <button
-                      onClick={() => onViewResume(job)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors shadow-sm ${
-                        hasCompleteGeneratedResume(job.resume_text)
-                          ? 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                          : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
-                      }`}
-                    >
-                      {hasCompleteGeneratedResume(job.resume_text)
-                        ? <CheckCircle2 size={13} className="text-emerald-500" />
-                        : <FileText size={13} />}
-                      {hasCompleteGeneratedResume(job.resume_text) ? 'Resume' : 'Gen Resume'}
-                    </button>
-                    <button
-                      onClick={() => onViewDetail(job)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm"
-                    >
-                      <Info size={13} /> Details
-                    </button>
-                    {isApplied ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-violet-200 text-violet-700 bg-violet-50">
-                        <CheckCircle2 size={13} /> Applied
-                      </span>
-                    ) : job.job_apply_link ? (
-                      <button
-                        onClick={() => onMarkApplied(job)}
-                        disabled={isApplying}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:opacity-60"
-                      >
-                        {isApplying ? (
-                          <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Applying...</>
-                        ) : (
-                          <><Briefcase size={13} /> Apply</>
-                        )}
-                      </button>
-                    ) : null}
-                    {job.job_apply_link && (
-                      <a href={job.job_apply_link} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors">
-                        <ExternalLink size={14} />
-                      </a>
-                    )}
-                  </div>
                 </div>
-                {job.match_summary && (
-                  <p className="text-[12px] text-gray-500 mt-2 ml-[4.5rem] line-clamp-2">{job.match_summary}</p>
-                )}
-                {(job.strong_matches || job.missing_skills) && (
-                  <div className="flex flex-wrap gap-1.5 mt-2 ml-[4.5rem]">
-                    {(() => {
-                      const parse = (raw) => {
-                        if (!raw) return [];
-                        try { const arr = JSON.parse(raw); return Array.isArray(arr) ? arr.map(s => String(s).trim()).filter(Boolean) : raw.split(',').filter(Boolean).map(s => s.trim()); }
-                        catch { return raw.split(',').filter(Boolean).map(s => s.trim()); }
-                      };
-                      const strong = parse(job.strong_matches).slice(0, 4);
-                      const missing = parse(job.missing_skills).slice(0, 3);
-                      return (
-                        <>
-                          {strong.map((s, j) => <span key={j} className="px-2 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-700 rounded-full">{s}</span>)}
-                          {missing.map((s, j) => <span key={`m${j}`} className="px-2 py-0.5 text-[10px] font-medium bg-red-50 text-red-600 rounded-full">{s}</span>)}
-                        </>
-                      );
-                    })()}
-                  </div>
-                )}
+                <button
+                  onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+                  disabled={page === totalPages}
+                  className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next <ChevronRight size={16} />
+                </button>
               </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-2">
-          <button
-            onClick={() => onPageChange(Math.max(1, page - 1))}
-            disabled={page === 1}
-            className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <span className="text-[13px] font-medium text-gray-600 px-3">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-            disabled={page === totalPages}
-            className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      )}
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };
@@ -1386,11 +1495,11 @@ const ApplicationsTab = ({ apps, loading, search, onSearch, onStatusChange }) =>
   }, [apps]);
 
   return (
-    <div className="space-y-4">
-      {/* Header + Search Row */}
+    <div className="flex flex-col gap-4">
+      {/* Header Row */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h2 className="text-[16px] font-bold text-gray-900">My Applications</h2>
+          <h1 className="text-[16px] font-bold text-gray-900">My Applications</h1>
           {apps.length > 0 && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold">
               <Briefcase size={12} />
@@ -1398,14 +1507,14 @@ const ApplicationsTab = ({ apps, loading, search, onSearch, onStatusChange }) =>
             </span>
           )}
         </div>
-        <div className="flex-1 max-w-xs bg-white rounded-xl border border-gray-100 px-4 py-2 flex items-center gap-2 shadow-sm">
+        <div className="flex-1 max-w-xs bg-white rounded-xl border border-gray-100 px-4 py-2.5 flex items-center gap-2 shadow-sm">
           <Search size={14} className="text-gray-400 shrink-0" />
           <input
             type="text"
+            className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-800"
             placeholder="Search company, role..."
             value={search}
             onChange={(e) => onSearch(e.target.value)}
-            className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-800"
           />
           {search && (
             <button onClick={() => onSearch('')} className="text-gray-300 hover:text-gray-500">
@@ -1417,94 +1526,124 @@ const ApplicationsTab = ({ apps, loading, search, onSearch, onStatusChange }) =>
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-          <p className="text-[22px] font-extrabold text-gray-900 leading-none">{stats.total}</p>
-          <p className="text-[11px] text-gray-500 mt-1 font-medium">Total Applied</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-          <p className="text-[22px] font-extrabold text-amber-600 leading-none">{stats.interviews}</p>
-          <p className="text-[11px] text-gray-500 mt-1 font-medium">Interviews</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-          <p className="text-[22px] font-extrabold text-emerald-600 leading-none">{stats.offers}</p>
-          <p className="text-[11px] text-gray-500 mt-1 font-medium">Offers</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-          <p className="text-[22px] font-extrabold text-red-600 leading-none">{stats.rejected}</p>
-          <p className="text-[11px] text-gray-500 mt-1 font-medium">Rejected</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-          <p className="text-[22px] font-extrabold text-violet-600 leading-none">{stats.mentorApplied}</p>
-          <p className="text-[11px] text-gray-500 mt-1 font-medium">Applied by Mentor</p>
-        </div>
+        {[
+          { val: stats.total, label: 'Total Applied', color: 'text-gray-900' },
+          { val: stats.interviews, label: 'Interviews', color: 'text-amber-600' },
+          { val: stats.offers, label: 'Offers', color: 'text-emerald-600' },
+          { val: stats.rejected, label: 'Rejected', color: 'text-red-600' },
+          { val: stats.mentorApplied, label: 'Admin Applied', color: 'text-violet-600' },
+        ].map(({ val, label, color }) => (
+          <div key={label} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <p className={`text-[22px] font-extrabold leading-none ${color}`}>{val}</p>
+            <p className="text-[11px] text-gray-500 mt-1 font-medium">{label}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Applications List */}
-      {apps.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 text-center py-16">
-          <FileText size={32} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-sm font-medium text-gray-500">No applications found</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="divide-y divide-gray-50">
-            {apps.map((app, i) => (
-              <div key={app.id || i} className="px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className={`w-9 h-9 rounded-lg ${avatarBg(app.company)} flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0`}>
-                      {app.company?.charAt(0) || '?'}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-gray-900 truncate">{app.title}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className="text-[12px] text-gray-500">{app.company}</span>
-                        {app.location && <span className="text-[12px] text-gray-400">· {app.location}</span>}
-                        {app.source === 'sheet' && (
-                          <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">Sheet</span>
-                        )}
-                        {app.appliedByAdmin && (
-                          <span className="text-[10px] font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full">Mentor Applied</span>
-                        )}
-                        {app.matchScore != null && (
-                          <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
-                            Match: {app.matchScore}%
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <select
-                      value={app.status}
-                      onChange={(e) => onStatusChange(app, e.target.value)}
-                      className="text-[11px] font-medium rounded-lg border border-gray-200 px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-                    >
-                      <option value="APPLIED">Applied</option>
-                      <option value="INTERVIEW_SCHEDULED">Interview</option>
-                      <option value="OFFER_RECEIVED">Offer</option>
-                      <option value="REJECTED">Rejected</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 mt-1.5 ml-12">
-                  <p className="text-[11px] text-gray-400">{formatDate(app.appliedAt)}</p>
-                  {app.notes && app.notes.includes('admin') && (
-                    <span className="text-[10px] font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full">
-                      Mentor Applied
-                    </span>
-                  )}
-                  {app.jobLink && (
-                    <a href={app.jobLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 font-medium">
-                      View Job ↗
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
+      {/* Applications Table */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        {apps.length === 0 ? (
+          <div className="text-center py-16">
+            <FileText size={32} className="mx-auto text-gray-300 mb-3" />
+            <p className="text-sm font-medium text-gray-500">No applications found</p>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <tbody>
+                {apps.map((app, idx) => {
+                  const logoDomain = app.jobLink
+                    ? app.jobLink.replace(/^https?:\/\//, '').split('/')[0]
+                    : null;
+                  const score = parseInt(app.matchScore) || 0;
+
+                  return (
+                    <tr key={app.id || idx} className="border-b border-gray-50 hover:bg-gray-50/60">
+                      {/* # */}
+                      <td className="pl-5 pr-2 py-3.5 w-10">
+                        <span className="text-sm text-gray-400 font-medium">{idx + 1}</span>
+                      </td>
+
+                      {/* Logo + Info */}
+                      <td className="px-3 py-3.5">
+                        <div className="flex items-center gap-3.5">
+                          {logoDomain && (
+                            <img
+                              src={`https://logo.clearbit.com/${logoDomain}`}
+                              alt={app.company}
+                              className="w-10 h-10 rounded-xl object-contain bg-white border border-gray-100 shadow-sm shrink-0 p-0.5"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          )}
+                          <div className={`w-10 h-10 rounded-xl ${avatarBg(app.company)} text-white items-center justify-center font-bold text-sm shrink-0 shadow-sm ${logoDomain ? 'hidden' : 'flex'}`}>
+                            {app.company?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-semibold text-[13px] text-gray-900 truncate leading-snug">{app.company}</h3>
+                              {app.source === 'sheet' && (
+                                <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-amber-50 text-amber-600 rounded-full">Sheet</span>
+                              )}
+                              {app.appliedByAdmin && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                  Mentor
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[12px] text-gray-500 truncate mt-0.5 max-w-md font-medium">{app.title}</p>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Score */}
+                      <td className="px-4 py-3.5 text-right w-20">
+                        {score > 0 && (
+                          <div className="text-right">
+                            <span className={`text-lg font-bold ${score >= 80 ? 'text-emerald-600' : score >= 70 ? 'text-blue-600' : score >= 60 ? 'text-orange-500' : 'text-gray-400'}`}>
+                              {score}%
+                            </span>
+                            <p className="text-[10px] text-gray-400 leading-none mt-0.5">Match</p>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Date + Status Dropdown + View Job */}
+                      <td className="pl-4 pr-5 py-3.5 w-[290px]">
+                        <div className="flex items-center justify-end gap-2 flex-nowrap">
+                          <span className="text-[11px] text-gray-400 whitespace-nowrap">{formatDate(app.appliedAt)}</span>
+                          <select
+                            value={app.status}
+                            onChange={(e) => onStatusChange(app, e.target.value)}
+                            className="text-[11px] font-semibold rounded-lg border border-gray-200 px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                          >
+                            <option value="APPLIED">Applied</option>
+                            <option value="INTERVIEW_SCHEDULED">Interview</option>
+                            <option value="OFFER_RECEIVED">Offer</option>
+                            <option value="REJECTED">Rejected</option>
+                          </select>
+                          {app.jobLink && (
+                            <a
+                              href={app.jobLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 font-semibold whitespace-nowrap"
+                            >
+                              View Job ↗
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
