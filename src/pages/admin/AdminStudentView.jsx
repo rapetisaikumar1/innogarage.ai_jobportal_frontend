@@ -7,7 +7,7 @@ import {
   ArrowLeft, Briefcase, FileText, Search, Clock, Calendar,
   CheckCircle2, XCircle, ExternalLink, MapPin, Building2, Zap,
   TrendingUp, Eye, Star, ChevronLeft, ChevronRight, Sparkles,
-  RefreshCw, Info, X
+  RefreshCw, Info, X, RotateCcw
 } from 'lucide-react';
 
 const AVATAR_BG = [
@@ -1212,7 +1212,7 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48">
-        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-7 h-7 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -1220,18 +1220,40 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
   const appliedCount = allJobs.filter(j => j.job_apply_link && appliedLinks.has(j.job_apply_link)).length;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 h-full">
       {/* Search-in-progress banner */}
       {triggeringSearch && (
-        <div className="flex items-center gap-4 px-5 py-4 rounded-xl bg-white border border-gray-100 shadow-sm">
+        <div className="flex items-center gap-5 px-5 py-4 rounded-xl bg-white border border-gray-100 shrink-0" style={{ boxShadow: '0 2px 16px 0 rgba(99,102,241,0.08)' }}>
+          {/* Glowing pulse dots */}
           <div className="flex items-center gap-1.5 shrink-0">
             {[0, 150, 300].map((delay) => (
-              <span key={delay} className="w-2.5 h-2.5 rounded-full bg-violet-500 animate-bounce" style={{ animationDelay: `${delay}ms` }} />
+              <span key={delay} style={{
+                display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #6366f1, #3b82f6)',
+                animation: `glow-pulse 1.2s ease-in-out ${delay}ms infinite`,
+              }} />
             ))}
           </div>
+          {/* Scan bar */}
+          <div className="relative w-28 h-1 rounded-full shrink-0 overflow-hidden" style={{ background: '#e0e7ff' }}>
+            <div style={{
+              position: 'absolute', top: 0, left: 0, height: '100%', width: '35%',
+              borderRadius: '9999px',
+              background: 'linear-gradient(90deg, transparent, #6366f1, #818cf8, transparent)',
+              animation: 'scanBar 1.1s ease-in-out infinite',
+            }} />
+          </div>
+          {/* Text */}
           <div className="min-w-0">
-            <p className="text-sm font-bold text-violet-700">Searching for job matches for {studentName}…</p>
-            <p className="text-xs text-gray-400 mt-0.5">Jobs will appear below once found.</p>
+            <p className="text-sm font-bold" style={{
+              background: 'linear-gradient(90deg, #4f46e5, #2563eb, #7c3aed, #4f46e5)',
+              backgroundSize: '300% auto',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              animation: 'textShimmer 2.5s linear infinite',
+            }}>Searching for {studentName}’s best job matches…</p>
+            <p className="text-xs text-gray-400 mt-0.5">Jobs will appear below as they are found.</p>
           </div>
         </div>
       )}
@@ -1241,7 +1263,9 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
         <div>
           <h1 className="text-xl font-bold text-gray-900">Job Listings</h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            Showing {jobs.length} of {totalCount} jobs · {appliedCount} applied
+            {triggeringSearch
+              ? <span className="text-blue-500 font-medium flex items-center gap-1.5"><RefreshCw size={12} className="animate-spin" /> Searching for best matches…</span>
+              : <>Showing {jobs.length} of {totalCount} jobs{totalPages > 1 && ` · Page ${page}/${totalPages}`}</>}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1251,7 +1275,7 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
             className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:opacity-60"
           >
             <Sparkles size={14} className={triggeringSearch ? 'animate-pulse' : ''} />
-            {triggeringSearch ? 'Searching...' : 'Search Jobs'}
+            {triggeringSearch ? 'Searching...' : 'My Jobs'}
           </button>
           <button
             onClick={onRefresh}
@@ -1283,9 +1307,9 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
           <span className="pl-3 pr-2 text-[11px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap select-none">Sort</span>
           <div className="w-px h-5 bg-gray-100" />
           {[
-            { value: 'default',    label: 'Default' },
-            { value: 'score-desc', label: 'Score ↑' },
-            { value: 'score-asc',  label: 'Score ↓' },
+            { value: 'default',    label: 'Newest' },
+            { value: 'score-desc', label: 'Score High' },
+            { value: 'score-asc',  label: 'Score Low' },
           ].map(opt => (
             <button
               key={opt.value}
@@ -1311,16 +1335,16 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
       </div>
 
       {/* Jobs Table — identical layout to student JobListings */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="flex-1 overflow-hidden bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col">
         {jobs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="flex flex-col items-center justify-center flex-1 text-center py-16">
             <Briefcase className="mx-auto text-gray-300 mb-3" size={32} />
             <h3 className="text-base font-semibold text-gray-600">No jobs found</h3>
-            <p className="text-sm text-gray-400 mt-1">Click "Search Jobs" to find jobs for this student</p>
+            <p className="text-sm text-gray-400 mt-1">Click “My Jobs” to find jobs for this student</p>
           </div>
         ) : (
           <>
-            <div className="overflow-y-auto">
+            <div className="overflow-y-auto flex-1">
               <table className="w-full">
                 <tbody>
                   {jobs.map((job, idx) => {
@@ -1384,7 +1408,7 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
                               <span className={`text-lg font-bold ${score >= 80 ? 'text-emerald-600' : score >= 70 ? 'text-blue-600' : score >= 60 ? 'text-orange-500' : 'text-gray-400'}`}>
                                 {score}%
                               </span>
-                              <p className="text-[10px] text-gray-400 leading-none mt-0.5">Match</p>
+                              <p className="text-[10px] text-gray-400 leading-none mt-0.5">Resume Match</p>
                             </div>
                           )}
                         </td>
@@ -1480,7 +1504,7 @@ const ApplicationsTab = ({ apps, loading, search, onSearch, onStatusChange }) =>
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48">
-        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-7 h-7 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -1541,14 +1565,14 @@ const ApplicationsTab = ({ apps, loading, search, onSearch, onStatusChange }) =>
       </div>
 
       {/* Applications Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
         {apps.length === 0 ? (
           <div className="text-center py-16">
             <FileText size={32} className="mx-auto text-gray-300 mb-3" />
             <p className="text-sm font-medium text-gray-500">No applications found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-y-auto max-h-[600px]">
             <table className="w-full">
               <tbody>
                 {apps.map((app, idx) => {
@@ -1610,14 +1634,16 @@ const ApplicationsTab = ({ apps, loading, search, onSearch, onStatusChange }) =>
                         )}
                       </td>
 
-                      {/* Date + Status Dropdown + View Job */}
-                      <td className="pl-4 pr-5 py-3.5 w-[290px]">
+                      {/* Actions: Applied badge + status dropdown + View Job */}
+                      <td className="pl-4 pr-5 py-3.5 w-[340px]">
                         <div className="flex items-center justify-end gap-2 flex-nowrap">
-                          <span className="text-[11px] text-gray-400 whitespace-nowrap">{formatDate(app.appliedAt)}</span>
+                          <span className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 shrink-0">
+                            <CheckCircle2 size={13} /> Applied
+                          </span>
                           <select
                             value={app.status}
                             onChange={(e) => onStatusChange(app, e.target.value)}
-                            className="text-[11px] font-semibold rounded-lg border border-gray-200 px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                            className="text-[11px] font-semibold rounded-lg border border-gray-200 px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer shrink-0"
                           >
                             <option value="APPLIED">Applied</option>
                             <option value="INTERVIEW_SCHEDULED">Interview</option>
@@ -1629,9 +1655,9 @@ const ApplicationsTab = ({ apps, loading, search, onSearch, onStatusChange }) =>
                               href={app.jobLink}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 font-semibold whitespace-nowrap"
+                              className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
                             >
-                              View Job ↗
+                              <RotateCcw size={12} /> Re-apply
                             </a>
                           )}
                         </div>
