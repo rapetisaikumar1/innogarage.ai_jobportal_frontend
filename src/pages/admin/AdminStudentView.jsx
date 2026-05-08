@@ -1024,12 +1024,12 @@ const DashboardTab = ({ data, loading, onRefresh }) => {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
         {statCards.map((s, i) => (
-          <div key={i} className={`rounded-xl border p-4 ring-1 ${s.color}`}>
-            <div className="mb-2">{s.icon}</div>
-            <p className="text-2xl font-bold">{s.value}</p>
-            <p className="text-[11px] mt-0.5 opacity-70">{s.label}</p>
+          <div key={i} className={`rounded-xl border p-4 shadow-sm ${s.color}`}>
+            <div className="w-8 h-8 bg-white/60 rounded-lg flex items-center justify-center mb-2 shadow-sm">{s.icon}</div>
+            <p className="text-[22px] font-extrabold leading-none">{s.value}</p>
+            <p className="text-[11px] mt-1 opacity-70 font-medium">{s.label}</p>
           </div>
         ))}
       </div>
@@ -1271,13 +1271,20 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
                     )}
                     <button
                       onClick={() => onViewResume(job)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 transition-colors"
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors shadow-sm ${
+                        hasCompleteGeneratedResume(job.resume_text)
+                          ? 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                          : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
+                      }`}
                     >
-                      <FileText size={13} /> {hasCompleteGeneratedResume(job.resume_text) ? 'Resume' : 'Gen Resume'}
+                      {hasCompleteGeneratedResume(job.resume_text)
+                        ? <CheckCircle2 size={13} className="text-emerald-500" />
+                        : <FileText size={13} />}
+                      {hasCompleteGeneratedResume(job.resume_text) ? 'Resume' : 'Gen Resume'}
                     </button>
                     <button
                       onClick={() => onViewDetail(job)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm"
                     >
                       <Info size={13} /> Details
                     </button>
@@ -1310,12 +1317,21 @@ const JobsTab = ({ jobs, allJobs, loading, search, onSearch, page, totalPages, o
                 )}
                 {(job.strong_matches || job.missing_skills) && (
                   <div className="flex flex-wrap gap-1.5 mt-2 ml-[4.5rem]">
-                    {job.strong_matches?.split(',').filter(Boolean).slice(0, 4).map((s, j) => (
-                      <span key={j} className="px-2 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-700 rounded-full">{s.trim()}</span>
-                    ))}
-                    {job.missing_skills?.split(',').filter(Boolean).slice(0, 3).map((s, j) => (
-                      <span key={`m${j}`} className="px-2 py-0.5 text-[10px] font-medium bg-red-50 text-red-600 rounded-full">{s.trim()}</span>
-                    ))}
+                    {(() => {
+                      const parse = (raw) => {
+                        if (!raw) return [];
+                        try { const arr = JSON.parse(raw); return Array.isArray(arr) ? arr.map(s => String(s).trim()).filter(Boolean) : raw.split(',').filter(Boolean).map(s => s.trim()); }
+                        catch { return raw.split(',').filter(Boolean).map(s => s.trim()); }
+                      };
+                      const strong = parse(job.strong_matches).slice(0, 4);
+                      const missing = parse(job.missing_skills).slice(0, 3);
+                      return (
+                        <>
+                          {strong.map((s, j) => <span key={j} className="px-2 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-700 rounded-full">{s}</span>)}
+                          {missing.map((s, j) => <span key={`m${j}`} className="px-2 py-0.5 text-[10px] font-medium bg-red-50 text-red-600 rounded-full">{s}</span>)}
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -1371,41 +1387,55 @@ const ApplicationsTab = ({ apps, loading, search, onSearch, onStatusChange }) =>
 
   return (
     <div className="space-y-4">
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="bg-white rounded-xl border p-4">
-          <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-          <p className="text-[11px] text-gray-500">Total Applied</p>
+      {/* Header + Search Row */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h2 className="text-[16px] font-bold text-gray-900">My Applications</h2>
+          {apps.length > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold">
+              <Briefcase size={12} />
+              {stats.total} Applied
+            </span>
+          )}
         </div>
-        <div className="bg-white rounded-xl border p-4">
-          <p className="text-2xl font-bold text-amber-600">{stats.interviews}</p>
-          <p className="text-[11px] text-gray-500">Interviews</p>
-        </div>
-        <div className="bg-white rounded-xl border p-4">
-          <p className="text-2xl font-bold text-emerald-600">{stats.offers}</p>
-          <p className="text-[11px] text-gray-500">Offers</p>
-        </div>
-        <div className="bg-white rounded-xl border p-4">
-          <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
-          <p className="text-[11px] text-gray-500">Rejected</p>
-        </div>
-        <div className="bg-white rounded-xl border p-4">
-          <p className="text-2xl font-bold text-violet-600">{stats.mentorApplied}</p>
-          <p className="text-[11px] text-gray-500">Applied by Mentor</p>
+        <div className="flex-1 max-w-xs bg-white rounded-xl border border-gray-100 px-4 py-2 flex items-center gap-2 shadow-sm">
+          <Search size={14} className="text-gray-400 shrink-0" />
+          <input
+            type="text"
+            placeholder="Search company, role..."
+            value={search}
+            onChange={(e) => onSearch(e.target.value)}
+            className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-800"
+          />
+          {search && (
+            <button onClick={() => onSearch('')} className="text-gray-300 hover:text-gray-500">
+              <X size={13} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search applications..."
-            value={search}
-            onChange={(e) => onSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-[13px] bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-          />
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <p className="text-[22px] font-extrabold text-gray-900 leading-none">{stats.total}</p>
+          <p className="text-[11px] text-gray-500 mt-1 font-medium">Total Applied</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <p className="text-[22px] font-extrabold text-amber-600 leading-none">{stats.interviews}</p>
+          <p className="text-[11px] text-gray-500 mt-1 font-medium">Interviews</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <p className="text-[22px] font-extrabold text-emerald-600 leading-none">{stats.offers}</p>
+          <p className="text-[11px] text-gray-500 mt-1 font-medium">Offers</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <p className="text-[22px] font-extrabold text-red-600 leading-none">{stats.rejected}</p>
+          <p className="text-[11px] text-gray-500 mt-1 font-medium">Rejected</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <p className="text-[22px] font-extrabold text-violet-600 leading-none">{stats.mentorApplied}</p>
+          <p className="text-[11px] text-gray-500 mt-1 font-medium">Applied by Mentor</p>
         </div>
       </div>
 
@@ -1466,7 +1496,7 @@ const ApplicationsTab = ({ apps, loading, search, onSearch, onStatusChange }) =>
                   )}
                   {app.jobLink && (
                     <a href={app.jobLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 font-medium">
-                      View Job <ExternalLink size={10} />
+                      View Job ↗
                     </a>
                   )}
                 </div>
