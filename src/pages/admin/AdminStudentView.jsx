@@ -838,27 +838,35 @@ const AdminStudentView = () => {
                 </div>
               )}
               {/* Strong Matches */}
-              {detailJob.strong_matches && (
-                <div>
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Strong Matches</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {detailJob.strong_matches.split(',').filter(Boolean).map((t, i) => (
-                      <span key={i} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded border border-emerald-200">{t.trim()}</span>
-                    ))}
+              {detailJob.strong_matches && (() => {
+                let items = [];
+                try { items = JSON.parse(detailJob.strong_matches); } catch { items = String(detailJob.strong_matches).split(',').map(s => s.trim()).filter(Boolean); }
+                return items.length > 0 ? (
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Strong Matches</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {items.map((t, i) => (
+                        <span key={i} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded border border-emerald-200">{t}</span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                ) : null;
+              })()}
               {/* Missing Skills */}
-              {detailJob.missing_skills && (
-                <div>
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Missing Skills</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {detailJob.missing_skills.split(',').filter(Boolean).map((t, i) => (
-                      <span key={i} className="px-2 py-0.5 bg-red-50 text-red-600 text-[11px] font-medium rounded border border-red-200">{t.trim()}</span>
-                    ))}
+              {detailJob.missing_skills && (() => {
+                let items = [];
+                try { items = JSON.parse(detailJob.missing_skills); } catch { items = String(detailJob.missing_skills).split(',').map(s => s.trim()).filter(Boolean); }
+                return items.length > 0 ? (
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Missing Skills</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {items.map((t, i) => (
+                        <span key={i} className="px-2 py-0.5 bg-red-50 text-red-600 text-[11px] font-medium rounded border border-red-200">{t}</span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                ) : null;
+              })()}
               {/* Summary */}
               {detailJob.match_summary && (
                 <div>

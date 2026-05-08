@@ -284,17 +284,17 @@ const AdminSlots = () => {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="flex gap-2.5">
         {[
-          { label: 'Total Slots', value: stats.total, icon: <Calendar size={17} />, color: 'text-slate-600', bg: 'bg-slate-50', ring: 'ring-slate-100' },
-          { label: 'Available', value: stats.available, icon: <Clock size={17} />, color: 'text-blue-600', bg: 'bg-blue-50', ring: 'ring-blue-100' },
-          { label: 'Booked', value: stats.booked, icon: <Users size={17} />, color: 'text-emerald-600', bg: 'bg-emerald-50', ring: 'ring-emerald-100' },
-          { label: 'Expired', value: stats.expired, icon: <AlertCircle size={17} />, color: 'text-gray-500', bg: 'bg-gray-50', ring: 'ring-gray-100' },
+          { label: 'Total Slots', value: stats.total, icon: <Calendar size={14} />, color: 'text-slate-600', bg: 'bg-slate-50', numColor: 'text-slate-700' },
+          { label: 'Available', value: stats.available, icon: <Clock size={14} />, color: 'text-blue-500', bg: 'bg-blue-50', numColor: 'text-blue-600' },
+          { label: 'Booked', value: stats.booked, icon: <Users size={14} />, color: 'text-emerald-500', bg: 'bg-emerald-50', numColor: 'text-emerald-600' },
+          { label: 'Expired', value: stats.expired, icon: <AlertCircle size={14} />, color: 'text-gray-400', bg: 'bg-gray-50', numColor: 'text-gray-500' },
         ].map((s, i) => (
-          <div key={i} className={`rounded-xl border border-gray-100 bg-white p-4 ring-1 ${s.ring}`}>
-            <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center ${s.color} mb-2`}>{s.icon}</div>
-            <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-            <p className="text-[12px] text-gray-500 mt-0.5">{s.label}</p>
+          <div key={i} className="bg-white rounded-xl border border-gray-200 px-3.5 py-3 w-36">
+            <div className={`w-7 h-7 rounded-md ${s.bg} flex items-center justify-center ${s.color} mb-2`}>{s.icon}</div>
+            <p className={`text-xl font-bold ${s.numColor} leading-tight`}>{s.value}</p>
+            <p className="text-[11px] text-gray-500 mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>

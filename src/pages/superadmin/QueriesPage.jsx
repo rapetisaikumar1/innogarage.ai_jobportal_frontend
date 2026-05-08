@@ -110,19 +110,19 @@ const QueriesPage = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="flex gap-2.5">
         {[
-          { label: 'Total', value: stats.total, icon: MessageSquareMore, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
-          { label: 'Open', value: stats.open, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
-          { label: 'In Progress', value: stats.inProgress, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
-          { label: 'Closed', value: stats.closed, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+          { label: 'Total', value: stats.total, icon: MessageSquareMore, color: 'text-blue-500', bg: 'bg-blue-50', numColor: 'text-blue-600' },
+          { label: 'Open', value: stats.open, icon: AlertCircle, color: 'text-amber-500', bg: 'bg-amber-50', numColor: 'text-amber-600' },
+          { label: 'In Progress', value: stats.inProgress, icon: Clock, color: 'text-blue-400', bg: 'bg-blue-50', numColor: 'text-blue-500' },
+          { label: 'Closed', value: stats.closed, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', numColor: 'text-emerald-600' },
         ].map((stat, i) => (
-          <div key={i} className={`bg-white border ${stat.border} rounded-xl px-4 py-4`}>
-            <div className={`w-9 h-9 ${stat.bg} rounded-lg flex items-center justify-center mb-2.5`}>
-              <stat.icon size={16} className={stat.color} />
+          <div key={i} className="bg-white border border-gray-200 rounded-xl px-3.5 py-3 w-36">
+            <div className={`w-7 h-7 ${stat.bg} rounded-md flex items-center justify-center mb-2`}>
+              <stat.icon size={14} className={stat.color} />
             </div>
-            <p className="text-2xl font-extrabold text-gray-900 leading-none">{stat.value}</p>
-            <p className="text-xs text-gray-500 mt-1">{stat.label}</p>
+            <p className={`text-xl font-bold ${stat.numColor} leading-tight`}>{stat.value}</p>
+            <p className="text-[11px] text-gray-500 mt-0.5">{stat.label}</p>
           </div>
         ))}
       </div>

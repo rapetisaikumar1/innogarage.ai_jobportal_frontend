@@ -120,7 +120,7 @@ const AdminBookings = () => {
   const currentList = tab === 'pending' ? pending : tab === 'confirmed' ? confirmed : tab === 'completed' ? completed : cancelled;
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto">
+    <div className="space-y-5">
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-gray-900 tracking-tight">Bookings</h1>
@@ -128,17 +128,17 @@ const AdminBookings = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         {[
-          { label: 'Pending', value: pending.length, icon: <AlertCircle size={17} />, color: 'text-amber-600', bg: 'bg-amber-50', ring: 'ring-amber-100' },
-          { label: 'Confirmed', value: confirmed.length, icon: <CheckCircle2 size={17} />, color: 'text-blue-600', bg: 'bg-blue-50', ring: 'ring-blue-100' },
-          { label: 'Completed', value: completed.length, icon: <CheckCircle2 size={17} />, color: 'text-emerald-600', bg: 'bg-emerald-50', ring: 'ring-emerald-100' },
-          { label: 'Cancelled', value: cancelled.length, icon: <XCircle size={17} />, color: 'text-red-500', bg: 'bg-red-50', ring: 'ring-red-100' },
+          { label: 'Pending', value: pending.length, icon: <AlertCircle size={14} />, color: 'text-amber-500', bg: 'bg-amber-50', numColor: 'text-amber-600', border: 'border-amber-100' },
+          { label: 'Confirmed', value: confirmed.length, icon: <CheckCircle2 size={14} />, color: 'text-blue-500', bg: 'bg-blue-50', numColor: 'text-blue-600', border: 'border-blue-100' },
+          { label: 'Completed', value: completed.length, icon: <CheckCircle2 size={14} />, color: 'text-emerald-500', bg: 'bg-emerald-50', numColor: 'text-emerald-600', border: 'border-emerald-100' },
+          { label: 'Cancelled', value: cancelled.length, icon: <XCircle size={14} />, color: 'text-red-500', bg: 'bg-red-50', numColor: 'text-red-600', border: 'border-red-100' },
         ].map((s, i) => (
-          <div key={i} className={`rounded-xl border border-gray-100 bg-white p-4 ring-1 ${s.ring}`}>
-            <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center ${s.color} mb-2`}>{s.icon}</div>
-            <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-            <p className="text-[12px] text-gray-500 mt-0.5">{s.label}</p>
+          <div key={i} className={`bg-white rounded-xl border ${s.border} px-4 py-3.5`}>
+            <div className={`w-7 h-7 rounded-md ${s.bg} flex items-center justify-center ${s.color} mb-2.5`}>{s.icon}</div>
+            <p className={`text-2xl font-bold ${s.numColor} leading-tight`}>{s.value}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>

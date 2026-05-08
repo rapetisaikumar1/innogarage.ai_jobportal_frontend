@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { BookOpen, Plus, Edit, Trash2, FileText, Video, Link as LinkIcon, ExternalLink, Download, Calendar, Tag, FolderOpen, Users, UserPlus, X, Check, Search, ChevronDown, ChevronRight, Layers } from 'lucide-react';
+import { BookOpen, Plus, Edit, Trash2, FileText, Video, Link as LinkIcon, ExternalLink, Download, Calendar, Tag, FolderOpen, Users, UserPlus, X, Check, Search, ChevronDown, ChevronRight, Layers, StickyNote } from 'lucide-react';
 
 const CATEGORIES = ['Interview Prep', 'Career Development', 'Technical Skills', 'Soft Skills'];
 
@@ -18,9 +18,12 @@ const AdminTraining = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showNoteForm, setShowNoteForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', type: 'PDF', category: '', url: '' });
+  const [noteForm, setNoteForm] = useState({ title: '', description: '', category: '', studentId: '' });
+  const [noteSubmitting, setNoteSubmitting] = useState(false);
   const [file, setFile] = useState(null);
   const [filterCategory, setFilterCategory] = useState('');
   const [collapsed, setCollapsed] = useState({});
@@ -60,6 +63,32 @@ const AdminTraining = () => {
   const resetForm = () => {
     setForm({ title: '', description: '', type: 'PDF', category: '', url: '' });
     setFile(null); setEditId(null); setShowForm(false);
+  };
+
+  const resetNoteForm = () => {
+    setNoteForm({ title: '', description: '', category: '', studentId: '' });
+    setShowNoteForm(false);
+  };
+
+  const handleNoteSubmit = async (e) => {
+    e.preventDefault();
+    if (!noteForm.title.trim()) { toast.error('Title is required'); return; }
+    if (!noteForm.studentId) { toast.error('Please select a student'); return; }
+    setNoteSubmitting(true);
+    try {
+      await api.post('/training/notes/for-student', {
+        studentId: noteForm.studentId,
+        title: noteForm.title,
+        content: noteForm.description,
+        category: noteForm.category || null,
+      });
+      toast.success('Note added for student');
+      resetNoteForm();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to add note');
+    } finally {
+      setNoteSubmitting(false);
+    }
   };
 
   const handleEdit = (mat) => {
@@ -222,6 +251,7 @@ const AdminTraining = () => {
       case 'PDF': return { icon: FileText, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'PDF' };
       case 'VIDEO': return { icon: Video, color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-100', label: 'Video' };
       case 'LINK': return { icon: LinkIcon, color: 'text-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Link' };
+      case 'NOTE': return { icon: StickyNote, color: 'text-amber-500', bg: 'bg-amber-50', border: 'border-amber-100', label: 'Note' };
       default: return { icon: BookOpen, color: 'text-indigo-500', bg: 'bg-indigo-50', border: 'border-indigo-100', label: 'Document' };
     }
   };
@@ -235,12 +265,20 @@ const AdminTraining = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-gray-900">Training Materials</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Upload documents and assign to your students by category</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+            <BookOpen size={20} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">Training Materials</h1>
+            <p className="text-xs text-gray-500">Upload documents and assign to your students by category</p>
+          </div>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm">
-          <Plus size={14} /> Add Material
+        <button onClick={() => { resetForm(); setShowForm(true); setShowNoteForm(false); }} className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-sm">
+          <Plus size={15} /> Add Material
+        </button>
+        <button onClick={() => { resetNoteForm(); setShowNoteForm(true); setShowForm(false); }} className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 transition-colors shadow-sm">
+          <StickyNote size={15} /> Add Notes
         </button>
       </div>
 
@@ -288,22 +326,61 @@ const AdminTraining = () => {
         </form>
       )}
 
+      {/* Add Note Form */}
+      {showNoteForm && (
+        <form onSubmit={handleNoteSubmit} className="bg-white rounded-xl border border-amber-200 p-4 shadow-sm space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            <StickyNote size={16} className="text-amber-500" />
+            <h3 className="text-sm font-bold text-gray-900">Add Note</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+              <input type="text" value={noteForm.title} onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" placeholder="Note title" required />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Student *</label>
+              <select value={noteForm.studentId} onChange={(e) => setNoteForm({ ...noteForm, studentId: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all bg-white" required>
+                <option value="">Select Student</option>
+                {students.map(s => <option key={s.id} value={s.id}>{s.fullName}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
+            <select value={noteForm.category} onChange={(e) => setNoteForm({ ...noteForm, category: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all bg-white">
+              <option value="">Select Category</option>
+              {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Description / Content</label>
+            <textarea value={noteForm.description} onChange={(e) => setNoteForm({ ...noteForm, description: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all resize-none" rows="4" placeholder="Write your notes here..." />
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" disabled={noteSubmitting} className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white rounded-lg text-xs font-semibold hover:bg-amber-600 transition-colors disabled:opacity-50">{noteSubmitting ? 'Saving...' : 'Save Note'}</button>
+            <button type="button" onClick={resetNoteForm} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">Cancel</button>
+          </div>
+        </form>
+      )}
+
       {/* Category Filter Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        <button onClick={() => setFilterCategory('')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${!filterCategory ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+        <button onClick={() => setFilterCategory('')} className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${!filterCategory ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
           All ({categoryCounts.All})
         </button>
         {CATEGORIES.map(cat => {
           const count = categoryCounts[cat] || 0;
           if (count === 0) return null;
           return (
-            <button key={cat} onClick={() => setFilterCategory(filterCategory === cat ? '' : cat)} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap flex items-center gap-1.5 ${filterCategory === cat ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            <button key={cat} onClick={() => setFilterCategory(filterCategory === cat ? '' : cat)} className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${filterCategory === cat ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
               <span>{CAT_ICON[cat]}</span> {cat} ({count})
             </button>
           );
         })}
         {(categoryCounts['Uncategorized'] || 0) > 0 && (
-          <button onClick={() => setFilterCategory(filterCategory === 'Uncategorized' ? '' : 'Uncategorized')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${filterCategory === 'Uncategorized' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          <button onClick={() => setFilterCategory(filterCategory === 'Uncategorized' ? '' : 'Uncategorized')} className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${filterCategory === 'Uncategorized' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
             📁 Uncategorized ({categoryCounts['Uncategorized']})
           </button>
         )}
@@ -327,12 +404,16 @@ const AdminTraining = () => {
               <div key={category} className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
                 <div className="flex items-center justify-between px-5 py-3.5 bg-gray-50 border-b border-gray-200">
                   <button onClick={() => toggleCollapse(category)} className="flex items-center gap-3 flex-1 text-left">
-                    <span className="text-base">{catIcon}</span>
-                    <div>
-                      <h2 className="text-sm font-bold text-gray-900">{category}</h2>
-                      <p className="text-xs text-gray-400 mt-0.5">{items.length} material{items.length !== 1 ? 's' : ''} · {totalAssigned} assigned</p>
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: category === 'Interview Prep' ? '#fee2e2' : category === 'Career Development' ? '#e0f2fe' : category === 'Technical Skills' ? '#dcfce7' : '#f3e8ff' }}>
+                      {catIcon}
                     </div>
-                    {isCollapsed ? <ChevronRight size={15} className="text-gray-400 ml-2" /> : <ChevronDown size={15} className="text-gray-400 ml-2" />}
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <h2 className="text-sm font-bold text-gray-900">{category}</h2>
+                        {isCollapsed ? <ChevronRight size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+                      </div>
+                      <p className="text-xs text-gray-400">{items.length} material{items.length !== 1 ? 's' : ''} · {totalAssigned} assigned</p>
+                    </div>
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); openCategoryAssign(category); }}
@@ -354,7 +435,7 @@ const AdminTraining = () => {
                               <TypeIcon size={12} className={tc.color} />
                               <span className={`text-xs font-semibold ${tc.color}`}>{tc.label}</span>
                             </div>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-1">
                               <button onClick={() => openAssignModal(mat)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-violet-600 transition-colors" title="Assign Students">
                                 <UserPlus size={13} />
                               </button>
