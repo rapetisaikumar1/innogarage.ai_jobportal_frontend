@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { BookOpen, Plus, Edit, Trash2, FileText, Video, Link as LinkIcon, ExternalLink, Download, Calendar, Tag, FolderOpen, Users, UserPlus, X, Check, Search, ChevronDown, ChevronRight, Layers, StickyNote } from 'lucide-react';
+import { BookOpen, Plus, Edit, Trash2, FileText, Video, Link as LinkIcon, ExternalLink, Download, Calendar, FolderOpen, Users, UserPlus, X, Check, Search, ChevronDown, ChevronRight, Layers, StickyNote, FileEdit } from 'lucide-react';
 
 const CATEGORIES = ['Interview Prep', 'Career Development', 'Technical Skills', 'Soft Skills'];
 
@@ -18,15 +18,21 @@ const AdminTraining = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [showNoteForm, setShowNoteForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', type: 'PDF', category: '', url: '' });
-  const [noteForm, setNoteForm] = useState({ title: '', description: '', category: '', studentId: '' });
-  const [noteSubmitting, setNoteSubmitting] = useState(false);
   const [file, setFile] = useState(null);
   const [filterCategory, setFilterCategory] = useState('');
   const [collapsed, setCollapsed] = useState({});
+
+  // Notes state
+  const [showNoteForm, setShowNoteForm] = useState(false);
+  const [editNoteId, setEditNoteId] = useState(null);
+  const [noteForm, setNoteForm] = useState({ title: '', description: '' });
+  const [noteSubmitting, setNoteSubmitting] = useState(false);
+  const [noteAssignModal, setNoteAssignModal] = useState(null);
+  const [noteSelectedStudents, setNoteSelectedStudents] = useState([]);
+  const [noteStudentSearch, setNoteStudentSearch] = useState('');
 
   const [assignModal, setAssignModal] = useState(null);
   const [selectedStudents, setSelectedStudents] = useState([]);
@@ -37,20 +43,30 @@ const AdminTraining = () => {
   const [categoryStudentSearch, setCategoryStudentSearch] = useState('');
   const [categoryAssigning, setCategoryAssigning] = useState(false);
 
+  const [notes, setNotes] = useState([]);
+
   useEffect(() => {
     fetchMaterials();
     fetchStudents();
+    fetchNotes();
   }, []);
 
   const fetchMaterials = async () => {
     try {
       const res = await api.get('/training/materials');
-      setMaterials(res.data);
+      setMaterials(res.data.filter(m => m.type !== 'NOTE'));
     } catch {
       toast.error('Failed to load materials');
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchNotes = async () => {
+    try {
+      const res = await api.get('/training/materials');
+      setNotes(res.data.filter(m => m.type === 'NOTE'));
+    } catch { /* silent */ }
   };
 
   const fetchStudents = async () => {
@@ -60,35 +76,81 @@ const AdminTraining = () => {
     } catch { /* silent */ }
   };
 
-  const resetForm = () => {
-    setForm({ title: '', description: '', type: 'PDF', category: '', url: '' });
-    setFile(null); setEditId(null); setShowForm(false);
+  const resetNoteForm = () => {
+    setNoteForm({ title: '', description: '' });
+    setEditNoteId(null);
+    setShowNoteForm(false);
   };
 
-  const resetNoteForm = () => {
-    setNoteForm({ title: '', description: '', category: '', studentId: '' });
-    setShowNoteForm(false);
+  const handleEditNote = (note) => {
+    setNoteForm({ title: note.title, description: note.description || '' });
+    setEditNoteId(note.id);
+    setShowNoteForm(true);
+    setShowForm(false);
   };
 
   const handleNoteSubmit = async (e) => {
     e.preventDefault();
     if (!noteForm.title.trim()) { toast.error('Title is required'); return; }
-    if (!noteForm.studentId) { toast.error('Please select a student'); return; }
     setNoteSubmitting(true);
     try {
-      await api.post('/training/notes/for-student', {
-        studentId: noteForm.studentId,
-        title: noteForm.title,
-        content: noteForm.description,
-        category: noteForm.category || null,
-      });
-      toast.success('Note added for student');
+      const formData = new FormData();
+      formData.append('title', noteForm.title);
+      formData.append('description', noteForm.description);
+      formData.append('type', 'NOTE');
+      if (editNoteId) {
+        await api.put(`/training/materials/${editNoteId}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        toast.success('Note updated');
+      } else {
+        await api.post('/training/materials', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        toast.success('Note created');
+      }
       resetNoteForm();
+      fetchNotes();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to add note');
+      toast.error(error.response?.data?.message || 'Failed to save note');
     } finally {
       setNoteSubmitting(false);
     }
+  };
+
+  const handleDeleteNote = async (id) => {
+    if (!window.confirm('Delete this note?')) return;
+    try {
+      await api.delete(`/training/materials/${id}`);
+      toast.success('Note deleted');
+      fetchNotes();
+    } catch {
+      toast.error('Failed to delete note');
+    }
+  };
+
+  const openNoteAssignModal = (note) => {
+    const alreadyAssigned = (note.assignments || []).map(a => a.student.id);
+    setNoteSelectedStudents(alreadyAssigned);
+    setNoteAssignModal(note.id);
+    setNoteStudentSearch('');
+  };
+
+  const handleNoteAssign = async () => {
+    const note = notes.find(n => n.id === noteAssignModal);
+    const currentlyAssigned = (note?.assignments || []).map(a => a.student.id);
+    const toAssign = noteSelectedStudents.filter(id => !currentlyAssigned.includes(id));
+    const toUnassign = currentlyAssigned.filter(id => !noteSelectedStudents.includes(id));
+    try {
+      if (toAssign.length > 0) await api.post(`/training/materials/${noteAssignModal}/assign`, { studentIds: toAssign });
+      if (toUnassign.length > 0) await api.post(`/training/materials/${noteAssignModal}/unassign`, { studentIds: toUnassign });
+      toast.success('Note assignments updated');
+      fetchNotes();
+      setNoteAssignModal(null);
+    } catch {
+      toast.error('Failed to update note assignments');
+    }
+  };
+
+  const resetForm = () => {
+    setForm({ title: '', description: '', type: 'PDF', category: '', url: '' });
+    setFile(null); setEditId(null); setShowForm(false);
   };
 
   const handleEdit = (mat) => {
@@ -220,6 +282,12 @@ const AdminTraining = () => {
     return s.fullName.toLowerCase().includes(q) || s.email.toLowerCase().includes(q) || (s.registrationNumber || '').toLowerCase().includes(q);
   });
 
+  const filteredNoteStudents = students.filter(s => {
+    if (!noteStudentSearch.trim()) return true;
+    const q = noteStudentSearch.toLowerCase();
+    return s.fullName.toLowerCase().includes(q) || s.email.toLowerCase().includes(q) || (s.registrationNumber || '').toLowerCase().includes(q);
+  });
+
   const grouped = useMemo(() => {
     const groups = {};
     CATEGORIES.forEach(c => { groups[c] = []; });
@@ -251,7 +319,6 @@ const AdminTraining = () => {
       case 'PDF': return { icon: FileText, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'PDF' };
       case 'VIDEO': return { icon: Video, color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-100', label: 'Video' };
       case 'LINK': return { icon: LinkIcon, color: 'text-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Link' };
-      case 'NOTE': return { icon: StickyNote, color: 'text-amber-500', bg: 'bg-amber-50', border: 'border-amber-100', label: 'Note' };
       default: return { icon: BookOpen, color: 'text-indigo-500', bg: 'bg-indigo-50', border: 'border-indigo-100', label: 'Document' };
     }
   };
@@ -274,13 +341,37 @@ const AdminTraining = () => {
             <p className="text-xs text-gray-500">Upload documents and assign to your students by category</p>
           </div>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); setShowNoteForm(false); }} className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-sm">
-          <Plus size={15} /> Add Material
-        </button>
-        <button onClick={() => { resetNoteForm(); setShowNoteForm(true); setShowForm(false); }} className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 transition-colors shadow-sm">
-          <StickyNote size={15} /> Add Notes
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { resetNoteForm(); setShowNoteForm(true); setShowForm(false); }} className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 transition-colors shadow-sm">
+            <StickyNote size={15} /> Add Notes
+          </button>
+          <button onClick={() => { resetForm(); setShowForm(true); setShowNoteForm(false); }} className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-sm">
+            <Plus size={15} /> Add Material
+          </button>
+        </div>
       </div>
+
+      {/* Note Form */}
+      {showNoteForm && (
+        <form onSubmit={handleNoteSubmit} className="bg-white rounded-xl border border-amber-200 p-4 shadow-sm space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            <StickyNote size={15} className="text-amber-500" />
+            <h3 className="text-sm font-bold text-gray-900">{editNoteId ? 'Edit Note' : 'Add New Note'}</h3>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+            <input type="text" value={noteForm.title} onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" required placeholder="Note title..." />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+            <textarea value={noteForm.description} onChange={(e) => setNoteForm({ ...noteForm, description: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all resize-none" rows="4" placeholder="Write your note content here..." />
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" disabled={noteSubmitting} className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white rounded-lg text-xs font-semibold hover:bg-amber-600 transition-colors disabled:opacity-50">{noteSubmitting ? 'Saving...' : (editNoteId ? 'Update Note' : 'Create Note')}</button>
+            <button type="button" onClick={resetNoteForm} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">Cancel</button>
+          </div>
+        </form>
+      )}
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-3">
@@ -322,44 +413,6 @@ const AdminTraining = () => {
           <div className="flex gap-2">
             <button type="submit" disabled={submitting} className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">{submitting ? 'Saving...' : (editId ? 'Update' : 'Create')}</button>
             <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">Cancel</button>
-          </div>
-        </form>
-      )}
-
-      {/* Add Note Form */}
-      {showNoteForm && (
-        <form onSubmit={handleNoteSubmit} className="bg-white rounded-xl border border-amber-200 p-4 shadow-sm space-y-3">
-          <div className="flex items-center gap-2 mb-1">
-            <StickyNote size={16} className="text-amber-500" />
-            <h3 className="text-sm font-bold text-gray-900">Add Note</h3>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
-              <input type="text" value={noteForm.title} onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" placeholder="Note title" required />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Student *</label>
-              <select value={noteForm.studentId} onChange={(e) => setNoteForm({ ...noteForm, studentId: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all bg-white" required>
-                <option value="">Select Student</option>
-                {students.map(s => <option key={s.id} value={s.id}>{s.fullName}</option>)}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
-            <select value={noteForm.category} onChange={(e) => setNoteForm({ ...noteForm, category: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all bg-white">
-              <option value="">Select Category</option>
-              {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Description / Content</label>
-            <textarea value={noteForm.description} onChange={(e) => setNoteForm({ ...noteForm, description: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all resize-none" rows="4" placeholder="Write your notes here..." />
-          </div>
-          <div className="flex gap-2">
-            <button type="submit" disabled={noteSubmitting} className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white rounded-lg text-xs font-semibold hover:bg-amber-600 transition-colors disabled:opacity-50">{noteSubmitting ? 'Saving...' : 'Save Note'}</button>
-            <button type="button" onClick={resetNoteForm} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">Cancel</button>
           </div>
         </form>
       )}
@@ -499,6 +552,66 @@ const AdminTraining = () => {
         </div>
       )}
 
+      {/* Notes Section */}
+      <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+        <div className="flex items-center justify-between px-5 py-3.5 bg-amber-50 border-b border-amber-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 bg-amber-100">
+              📝
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-gray-900">Notes</h2>
+              <p className="text-xs text-gray-400">{notes.length} note{notes.length !== 1 ? 's' : ''} · {notes.reduce((s, n) => s + (n.assignments || []).length, 0)} assigned</p>
+            </div>
+          </div>
+        </div>
+        {notes.length === 0 ? (
+          <div className="text-center py-10 px-4">
+            <StickyNote size={28} className="mx-auto text-gray-200 mb-2" />
+            <p className="text-sm text-gray-400 font-medium">No notes yet</p>
+            <p className="text-xs text-gray-400 mt-0.5">Click "Add Notes" to create one</p>
+          </div>
+        ) : (
+          <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {notes.map((note) => (
+              <div key={note.id} className="bg-amber-50/60 rounded-xl border border-amber-100 hover:border-amber-200 hover:shadow-md transition-all duration-200 overflow-hidden">
+                <div className="px-4 py-3 border-b border-amber-100 flex items-center justify-between">
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-100 border border-amber-200">
+                    <StickyNote size={12} className="text-amber-600" />
+                    <span className="text-xs font-semibold text-amber-700">Note</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => openNoteAssignModal(note)} className="p-1.5 rounded-lg hover:bg-amber-100 text-gray-400 hover:text-violet-600 transition-colors" title="Assign Students">
+                      <UserPlus size={13} />
+                    </button>
+                    <button onClick={() => handleEditNote(note)} className="p-1.5 rounded-lg hover:bg-amber-100 text-gray-400 hover:text-blue-600 transition-colors" title="Edit">
+                      <Edit size={13} />
+                    </button>
+                    <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 rounded-lg hover:bg-amber-100 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <h3 className="text-sm font-bold text-gray-900 mb-1 line-clamp-1">{note.title}</h3>
+                  {note.description && <p className="text-xs text-gray-600 mb-3 line-clamp-3 leading-relaxed whitespace-pre-line">{note.description}</p>}
+                  {!note.description && <div className="mb-3" />}
+                  <div className="flex items-center justify-between">
+                    <button onClick={() => openNoteAssignModal(note)} className="inline-flex items-center gap-1 px-2.5 py-1 bg-white text-gray-600 rounded-md text-xs font-medium hover:bg-gray-50 transition-colors border border-gray-200">
+                      <Users size={11} /> {(note.assignments || []).length} assigned
+                    </button>
+                    <p className="text-xs text-gray-400 flex items-center gap-1">
+                      <Calendar size={11} />
+                      {new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Single Material Assign Modal */}
       {assignModal && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -612,6 +725,63 @@ const AdminTraining = () => {
               <button onClick={handleCategoryAssign} disabled={categoryAssigning} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-xs font-semibold hover:bg-violet-700 transition-colors disabled:opacity-50">
                 {categoryAssigning ? 'Assigning...' : 'Assign All Materials'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Note Assign Modal */}
+      {noteAssignModal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Assign Note to Students</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Select students to assign this note to</p>
+              </div>
+              <button onClick={() => setNoteAssignModal(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"><X size={18} /></button>
+            </div>
+            <div className="px-5 py-3 border-b border-gray-100">
+              <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                <Search size={14} className="text-gray-400" />
+                <input type="text" placeholder="Search students..." value={noteStudentSearch} onChange={e => setNoteStudentSearch(e.target.value)} className="flex-1 bg-transparent text-xs outline-none text-gray-700 placeholder-gray-400" />
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[11px] text-gray-400">{noteSelectedStudents.length} selected</span>
+                <div className="flex gap-2">
+                  <button onClick={() => setNoteSelectedStudents(filteredNoteStudents.map(s => s.id))} className="text-[11px] text-blue-600 hover:text-blue-700 font-medium">Select All</button>
+                  <button onClick={() => setNoteSelectedStudents([])} className="text-[11px] text-gray-500 hover:text-gray-700 font-medium">Clear</button>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-2">
+              {filteredNoteStudents.length === 0 ? (
+                <p className="text-center text-xs text-gray-400 py-8">No students found</p>
+              ) : (
+                <div className="space-y-1">
+                  {filteredNoteStudents.map(student => {
+                    const isSelected = noteSelectedStudents.includes(student.id);
+                    return (
+                      <button key={student.id} onClick={() => setNoteSelectedStudents(prev => isSelected ? prev.filter(id => id !== student.id) : [...prev, student.id])} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${isSelected ? 'bg-amber-50 border border-amber-200' : 'hover:bg-gray-50 border border-transparent'}`}>
+                        <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-amber-500' : 'border-2 border-gray-300'}`}>
+                          {isSelected && <Check size={12} className="text-white" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-900 truncate">{student.fullName}</p>
+                          <p className="text-[11px] text-gray-400 truncate">{student.email}</p>
+                        </div>
+                        {student.registrationNumber && (
+                          <span className="text-[10px] font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{student.registrationNumber}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+              <button onClick={() => setNoteAssignModal(null)} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">Cancel</button>
+              <button onClick={handleNoteAssign} className="px-4 py-2 bg-amber-500 text-white rounded-lg text-xs font-semibold hover:bg-amber-600 transition-colors">Save Assignments</button>
             </div>
           </div>
         </div>
