@@ -11,7 +11,7 @@ import { STUDENT_PORTAL_MODE } from '../../utils/studentPortalView';
 
 const TABS = [
   { key: 'dashboard', label: 'Dashboard', icon: TrendingUp },
-  { key: 'jobs', label: 'Job Listings', icon: Briefcase },
+  { key: 'jobs', label: 'Find Jobs', icon: Briefcase },
   { key: 'applications', label: 'My Applications', icon: FileText },
 ];
 
@@ -70,64 +70,67 @@ const AdminStudentView = () => {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-5">
-      <button
-        type="button"
-        onClick={() => navigate('/admin/students')}
-        className="inline-flex items-center gap-2 self-start text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors"
-      >
-        <ArrowLeft size={16} /> Back to Students
-      </button>
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <section className="rounded-2xl border border-gray-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-sm">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/students')}
+              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-gray-200 bg-slate-50 px-3 text-sm font-medium text-gray-600 transition-colors hover:border-gray-300 hover:bg-white hover:text-gray-900"
+            >
+              <ArrowLeft size={16} />
+              <span className="hidden sm:inline">Students</span>
+            </button>
 
-      <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-800 p-5 text-white shadow-lg shadow-blue-200/40">
-        <div className="absolute inset-y-0 right-0 w-1/3 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),_transparent_60%)]" />
-        <div className="absolute -right-10 top-6 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute left-20 top-[-40px] h-24 w-24 rounded-full bg-white/10 blur-2xl" />
-        <div className="relative flex items-center gap-4">
-          {student.avatarUrl ? (
-            <img
-              src={student.avatarUrl}
-              alt={student.fullName}
-              className="h-16 w-16 rounded-2xl border border-white/20 object-cover shadow-lg"
-            />
-          ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-3xl font-bold shadow-lg backdrop-blur-sm">
-              {getInitials(student.fullName)}
+            {student.avatarUrl ? (
+              <img
+                src={student.avatarUrl}
+                alt={student.fullName}
+                className="h-12 w-12 rounded-2xl border border-gray-200 object-cover shadow-sm"
+              />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-gray-200 bg-blue-600 text-xl font-bold text-white shadow-sm">
+                {getInitials(student.fullName)}
+              </div>
+            )}
+
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="truncate text-xl font-bold tracking-tight text-gray-900">{student.fullName}</h1>
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+                  <Eye size={11} /> Portal View
+                </span>
+              </div>
+              <p className="truncate text-sm text-gray-600">{student.email}</p>
+              <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Managed by {adminUser?.fullName || 'Admin'}
+              </p>
             </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="truncate text-3xl font-bold tracking-tight">{student.fullName}</h1>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
-                <Eye size={12} /> Candidate Portal View
-              </span>
-            </div>
-            <p className="mt-1 truncate text-base text-blue-50/95">{student.email}</p>
-            <p className="mt-2 text-sm text-blue-100/80">Managing as: {adminUser?.fullName || 'Admin'}</p>
+          </div>
+
+          <div className="flex w-full items-center gap-1 rounded-xl bg-slate-100 p-1 xl:w-auto xl:justify-end">
+            {TABS.map(({ key, label, icon: Icon }) => {
+              const active = activeTab === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveTab(key)}
+                  className={`inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-all xl:flex-none ${
+                    active
+                      ? 'bg-white text-blue-700 shadow-sm'
+                      : 'text-gray-500 hover:bg-white/70 hover:text-gray-900'
+                  }`}
+                >
+                  <Icon size={16} />
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>
-
-      <div className="grid shrink-0 grid-cols-1 gap-3 md:grid-cols-3">
-        {TABS.map(({ key, label, icon: Icon }) => {
-          const active = activeTab === key;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setActiveTab(key)}
-              className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-4 text-sm font-semibold transition-all ${
-                active
-                  ? 'border-blue-200 bg-white text-blue-700 shadow-sm shadow-blue-100'
-                  : 'border-transparent bg-transparent text-gray-500 hover:border-gray-200 hover:bg-white/70 hover:text-gray-800'
-              }`}
-            >
-              <Icon size={16} />
-              {label}
-            </button>
-          );
-        })}
-      </div>
 
       <div className="min-h-0 flex-1">
         {activeTab === 'dashboard' && <StudentDashboard {...sharedProps} />}

@@ -112,6 +112,15 @@ const parseListField = (value) => {
   return String(value).split(/[,|\n]/).map(item => item.trim()).filter(Boolean);
 };
 
+const getJobRecencyTime = (job) => {
+  const candidates = [job?.saved_at, job?.timestamp, job?.createdAt, job?.posted];
+  for (const value of candidates) {
+    const time = new Date(value || '').getTime();
+    if (Number.isFinite(time) && time > 0) return time;
+  }
+  return 0;
+};
+
 const buildLocalResumeInsights = (job, resumeText) => {
   const strong = parseListField(job?.strong_matches);
   const missing = parseListField(job?.missing_skills);
@@ -535,6 +544,7 @@ const JobListings = ({
     () => getPortalStorageKey('waitingForJobs', { portalMode, studentId }),
     [portalMode, studentId]
   );
+  const isCompactView = embedded;
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -688,7 +698,7 @@ const JobListings = ({
         clearJobsCache(jobsCacheKey); // DB empty — don't cache empty result but don't keep stale
       }
     } catch (error) {
-      toast.error('Failed to load job listings');
+      toast.error('Failed to load jobs');
     } finally {
       setLoading(false);
     }
@@ -735,7 +745,7 @@ const JobListings = ({
     clearJobsCache(jobsCacheKey);
     await Promise.all([fetchMatchedJobs({ forceRefresh: true }), fetchAppliedStatus(), fetchUsage()]);
     setRefreshing(false);
-    toast.success('Job listings refreshed!');
+    toast.success('Jobs refreshed.');
   };
 
   /**
@@ -959,10 +969,20 @@ const JobListings = ({
         j.strong_matches?.toLowerCase().includes(q)
       );
     }
-    if (filterType === 'applied') filtered = filtered.filter((j) => !!(j.job_apply_link && appliedLinks.has(j.job_apply_link)));
-    if (filterType === 'admin_apply') filtered = filtered.filter((j) => !!(j.job_apply_link && adminAppliedLinks.has(j.job_apply_link)));
-    // Sort only when the user explicitly picks a sort order; default preserves API order
-    if (sortOrder === 'score-desc') {
+    if (filterType === 'applied') {
+      filtered = filtered.filter((j) => !!(j.job_apply_link && appliedLinks.has(j.job_apply_link)));
+    } else if (filterType === 'student_apply') {
+      filtered = filtered.filter((j) => !!(
+        j.job_apply_link
+        && appliedLinks.has(j.job_apply_link)
+        && !adminAppliedLinks.has(j.job_apply_link)
+      ));
+    } else if (filterType === 'admin_apply') {
+      filtered = filtered.filter((j) => !!(j.job_apply_link && adminAppliedLinks.has(j.job_apply_link)));
+    }
+    if (sortOrder === 'default') {
+      filtered = [...filtered].sort((a, b) => getJobRecencyTime(b) - getJobRecencyTime(a));
+    } else if (sortOrder === 'score-desc') {
       filtered = [...filtered].sort((a, b) => (parseInt(b.match_score) || 0) - (parseInt(a.match_score) || 0));
     } else if (sortOrder === 'score-asc') {
       filtered = [...filtered].sort((a, b) => (parseInt(a.match_score) || 0) - (parseInt(b.match_score) || 0));
@@ -993,14 +1013,14 @@ const JobListings = ({
   };
 
   return (
-    <div className={embedded ? 'flex flex-col h-full min-h-0' : 'flex flex-col h-[calc(100vh-4rem)]'}>
+    <div className={embedded ? 'flex h-full min-h-0 flex-col' : 'flex flex-col h-[calc(100vh-4rem)]'}>
 
       {/* Days Popup */}
       {showDaysPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-6 w-[340px] space-y-4">
-            <h3 className="text-lg font-bold text-gray-800">Search Jobs</h3>
-            <p className="text-sm text-gray-500">How many days of job listings do you want?</p>
+            <h3 className="text-lg font-bold text-gray-800">Find Jobs</h3>
+            <p className="text-sm text-gray-500">Choose how many days back you want the live search to scan.</p>
             <div className="flex items-center gap-3">
               <input type="number" min="1" max="30" value={daysInput} onChange={(e) => setDaysInput(e.target.value)}
                 className="input-field text-center text-lg font-semibold w-20" />
@@ -1009,7 +1029,7 @@ const JobListings = ({
             <div className="flex gap-2 pt-2">
               <button onClick={() => setShowDaysPopup(false)} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
               <button onClick={() => handleTriggerJobSearch(daysInput || '1')} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center justify-center gap-2">
-                <Sparkles size={14} /> Search
+                <Sparkles size={14} /> Find Jobs
               </button>
             </div>
           </div>
@@ -1370,7 +1390,7 @@ const JobListings = ({
 
       {/* Search-in-progress inline banner */}
       {triggeringSearch && (
-        <div className="flex items-center gap-5 px-5 py-4 mb-3 rounded-xl bg-white border border-gray-100 shrink-0" style={{ boxShadow: '0 2px 16px 0 rgba(99,102,241,0.08)' }}>
+        <div className={`flex items-center rounded-xl border border-gray-100 bg-white shrink-0 ${isCompactView ? 'mb-2 gap-3 px-4 py-2.5' : 'mb-3 gap-5 px-5 py-4'}`} style={{ boxShadow: '0 2px 16px 0 rgba(99,102,241,0.08)' }}>
 
           {/* Glowing pulse dots */}
           <div className="flex items-center gap-1.5 shrink-0">
@@ -1384,7 +1404,7 @@ const JobListings = ({
           </div>
 
           {/* Scan bar track */}
-          <div className="relative w-28 h-1 rounded-full shrink-0 overflow-hidden" style={{ background: '#e0e7ff' }}>
+          <div className={`relative rounded-full shrink-0 overflow-hidden ${isCompactView ? 'h-1 w-20' : 'h-1 w-28'}`} style={{ background: '#e0e7ff' }}>
             <div style={{
               position: 'absolute', top: 0, left: 0, height: '100%', width: '35%',
               borderRadius: '9999px',
@@ -1395,35 +1415,35 @@ const JobListings = ({
 
           {/* Text */}
           <div className="min-w-0">
-            <p className="text-sm font-bold" style={{
+            <p className={`${isCompactView ? 'text-[13px]' : 'text-sm'} font-bold`} style={{
               background: 'linear-gradient(90deg, #4f46e5, #2563eb, #7c3aed, #4f46e5)',
               backgroundSize: '300% auto',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
               animation: 'textShimmer 2.5s linear infinite',
-            }}>Searching for your best job matches…</p>
-            <p className="text-xs text-gray-400 mt-0.5">{searchStatusMsg || 'Jobs appear below one by one as they are found for your profile.'}</p>
+            }}>Searching for your best job matches...</p>
+            <p className={`${isCompactView ? 'text-[11px]' : 'text-xs mt-0.5'} text-gray-400`}>{searchStatusMsg || 'Jobs appear below one by one as they are found for your profile.'}</p>
           </div>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 shrink-0">
+      <div className={`shrink-0 ${isCompactView ? 'mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2.5 shadow-sm' : 'mb-4 flex items-center justify-between'}`}>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Job Listings</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
+          <h1 className={`${isCompactView ? 'text-lg' : 'text-xl'} font-bold text-gray-900`}>Find Jobs</h1>
+          <p className={`${isCompactView ? 'mt-0 text-[11px]' : 'mt-0.5 text-sm'} text-gray-400`}>
             {triggeringSearch
-              ? <span className="text-blue-500 font-medium flex items-center gap-1.5"><RefreshCw size={12} className="animate-spin" /> Searching for your best matches…</span>
+              ? <span className="text-blue-500 font-medium flex items-center gap-1.5"><RefreshCw size={12} className="animate-spin" /> Searching for 60%+ matches…</span>
               : streamedCount !== null
               ? <span className="text-blue-500 font-medium">Loading {Math.min(streamedCount, filteredJobs.length)} of {filteredJobs.length} jobs…</span>
-              : <>Showing {paginatedJobs.length} of {filteredJobs.length} jobs{totalPages > 1 && ` · Page ${page}/${totalPages}`}</>
+              : <>Showing {paginatedJobs.length} of {filteredJobs.length} qualified matches{totalPages > 1 && ` · Page ${page}/${totalPages}`}</>
             }
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Plan Badge + Usage */}
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold ${
+          <div className={`flex items-center gap-1.5 rounded-lg border font-bold ${isCompactView ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'} ${
             usage.plan === 'ultra' ? 'bg-amber-50 border-amber-200 text-amber-700' :
             usage.plan === 'pro' ? 'bg-violet-50 border-violet-200 text-violet-700' :
             usage.plan === 'basic' ? 'bg-blue-50 border-blue-200 text-blue-700' :
@@ -1444,7 +1464,7 @@ const JobListings = ({
               setShowDaysPopup(true);
             }}
             disabled={triggeringSearch}
-            className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-60 ${
+            className={`flex items-center gap-1.5 font-semibold rounded-lg transition-colors disabled:opacity-60 ${isCompactView ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'} ${
               usage.used >= usage.max && usage.plan !== 'ultra'
                 ? 'bg-gray-400 text-white cursor-not-allowed'
                 : 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -1455,14 +1475,14 @@ const JobListings = ({
             ) : (
               <>
                 <Sparkles size={14} className={triggeringSearch ? 'animate-pulse' : ''} />
-                {triggeringSearch ? 'Searching...' : 'My Jobs'}
+                {triggeringSearch ? 'Searching...' : 'Find Jobs'}
               </>
             )}
           </button>
           <button
             onClick={handleRefresh}
             disabled={loading || refreshing}
-            className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors disabled:opacity-60"
+            className={`flex items-center gap-1.5 font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors disabled:opacity-60 ${isCompactView ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'}`}
           >
             <RefreshCw size={14} className={(loading || refreshing) ? 'animate-spin' : ''} />
             Refresh
@@ -1471,14 +1491,14 @@ const JobListings = ({
       </div>
 
       {/* Search + Filter Row */}
-      <div className="flex items-center gap-3 mb-4 shrink-0">
+      <div className={`flex shrink-0 ${isCompactView ? 'mb-3 flex-wrap items-center gap-2' : 'mb-4 items-center gap-3'}`}>
         {/* Search input */}
-        <div className="flex-1 bg-white rounded-xl border border-gray-100 px-4 py-2.5 flex items-center gap-2 shadow-sm">
-          <Search size={16} className="text-gray-400 shrink-0" />
+        <div className={`flex-1 bg-white rounded-xl border border-gray-100 flex items-center gap-2 shadow-sm ${isCompactView ? 'px-3 py-2' : 'px-4 py-2.5'}`}>
+          <Search size={isCompactView ? 14 : 16} className="text-gray-400 shrink-0" />
           <input
             type="text"
-            className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-800"
-            placeholder="Search company, skills..."
+            className={`${isCompactView ? 'text-[13px]' : 'text-sm'} flex-1 bg-transparent text-gray-800 outline-none placeholder-gray-400`}
+            placeholder="Search title or company..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -1489,7 +1509,7 @@ const JobListings = ({
 
         {/* Sort by Score */}
         <div className="flex items-center bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
-          <span className="pl-3 pr-2 text-[11px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap select-none">Sort</span>
+          <span className={`font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap select-none ${isCompactView ? 'pl-2.5 pr-1.5 text-[10px]' : 'pl-3 pr-2 text-[11px]'}`}>Sort</span>
           <div className="w-px h-5 bg-gray-100" />
           {[
             { value: 'default', label: 'Newest' },
@@ -1499,7 +1519,7 @@ const JobListings = ({
             <button
               key={opt.value}
               onClick={() => setSortOrder(opt.value)}
-              className={`px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+              className={`${isCompactView ? 'px-3 py-2 text-[11px]' : 'px-3.5 py-2.5 text-xs'} font-semibold whitespace-nowrap transition-colors ${
                 sortOrder === opt.value
                   ? 'bg-gray-900 text-white'
                   : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
@@ -1514,11 +1534,12 @@ const JobListings = ({
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="bg-white border border-gray-100 rounded-xl px-4 py-2.5 text-sm text-gray-600 font-medium outline-none cursor-pointer hover:border-gray-200 hover:bg-gray-50 transition-all shadow-sm"
+          className={`bg-white border border-gray-100 rounded-xl text-gray-600 font-medium outline-none cursor-pointer hover:border-gray-200 hover:bg-gray-50 transition-all shadow-sm ${isCompactView ? 'px-3 py-2 text-[13px]' : 'px-4 py-2.5 text-sm'}`}
         >
           <option value="all">All Jobs</option>
           <option value="applied">Applied</option>
-          <option value="admin_apply">Admin Apply</option>
+          <option value="student_apply">Applied by Student</option>
+          <option value="admin_apply">Applied by Admin</option>
         </select>
       </div>
 
@@ -1531,17 +1552,27 @@ const JobListings = ({
         ) : filteredJobs.length === 0 ? (
           <div className="flex flex-col items-center justify-center flex-1 text-center py-16">
             <Briefcase className="mx-auto text-gray-300 mb-3" size={32} />
-            <h3 className="text-base font-semibold text-gray-600">No jobs found</h3>
-            <p className="text-sm text-gray-400 mt-1">Try adjusting your search or filters</p>
+            <h3 className="text-base font-semibold text-gray-600">{jobs.length === 0 ? 'No 60%+ matches yet' : 'No jobs found'}</h3>
+            <p className="text-sm text-gray-400 mt-1">{jobs.length === 0 ? 'Click Find Jobs to start a live search based on role, skills, experience, location, and resume summary.' : 'Try adjusting your search or filters.'}</p>
           </div>
         ) : (
           <>
             <div className="overflow-y-auto flex-1">
-              <table className="w-full">
+              <table className="w-full min-w-[880px]">
+                <thead className="bg-slate-50/90 backdrop-blur-sm">
+                  <tr className="border-b border-gray-100 text-left">
+                    <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Job Title</th>
+                    <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Company</th>
+                    <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Date Posted</th>
+                    <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Match Score</th>
+                    <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Resume</th>
+                    <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Apply Link</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {paginatedJobs.map((job, idx) => {
                     const globalIdx = (page - 1) * PAGE_SIZE + idx + 1;
-                    const dateLabel = formatDate(job.timestamp);
+                    const dateLabel = formatDate(job.posted || job.timestamp);
                     const role = extractRole(job);
                     const score = parseInt(job.match_score) || 0;
                     const isApplied = job.job_apply_link && appliedLinks.has(job.job_apply_link);
@@ -1560,7 +1591,7 @@ const JobListings = ({
 
                     return (
                       <tr
-                        key={job.id}
+                        key={job.id || job.job_apply_link || `${job.employer_name}-${job.job_title}-${globalIdx}`}
                         className="border-b border-gray-50 hover:bg-gray-50/60 group"
                         style={{
                           opacity: isVisible ? 1 : 0,
@@ -1570,53 +1601,55 @@ const JobListings = ({
                           animation: isNewArrival ? 'jobSlideIn 0.45s cubic-bezier(0.22,1,0.36,1)' : undefined,
                         }}
                       >
-                        {/* # */}
-                        <td className="pl-5 pr-2 py-3.5 w-10">
-                          <span className="text-sm text-gray-400 font-medium">{globalIdx}</span>
+                        <td className={`px-4 ${isCompactView ? 'py-2.5' : 'py-3.5'}`}>
+                          <div className="min-w-0">
+                            <p className={`${isCompactView ? 'text-[12px]' : 'text-[13px]'} font-semibold text-gray-900 truncate leading-snug`}>{role}</p>
+                          </div>
                         </td>
-                        {/* Logo + Info */}
-                        <td className="px-3 py-3.5">
-                          <div className="flex items-center gap-3.5">
+                        <td className={`px-4 ${isCompactView ? 'py-2.5' : 'py-3.5'}`}>
+                          <div className={`flex items-center ${isCompactView ? 'gap-3' : 'gap-3.5'}`}>
                             {logoDomain ? (
                               <img
                                 src={`https://logo.clearbit.com/${logoDomain}`}
                                 alt={job.employer_name}
-                                className="w-10 h-10 rounded-xl object-contain bg-white border border-gray-100 shadow-sm shrink-0 p-0.5"
+                                className={`${isCompactView ? 'h-9 w-9 rounded-lg' : 'h-10 w-10 rounded-xl'} object-contain bg-white border border-gray-100 shadow-sm shrink-0 p-0.5`}
                                 onError={(e) => {
                                   e.currentTarget.style.display = 'none';
                                   e.currentTarget.nextSibling.style.display = 'flex';
                                 }}
                               />
                             ) : null}
-                            <div className={`w-10 h-10 rounded-xl ${avatarBg(job.employer_name)} text-white items-center justify-center font-bold text-sm shrink-0 shadow-sm ${logoDomain ? 'hidden' : 'flex'}`}>
+                            <div className={`${isCompactView ? 'h-9 w-9 rounded-lg text-[13px]' : 'h-10 w-10 rounded-xl text-sm'} ${avatarBg(job.employer_name)} text-white items-center justify-center font-bold shrink-0 shadow-sm ${logoDomain ? 'hidden' : 'flex'}`}>
                               {job.employer_name?.charAt(0)?.toUpperCase() || '?'}
                             </div>
                             <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-[13px] text-gray-900 truncate leading-snug">{job.employer_name}</h3>
-                                {dateLabel && <span className="text-[11px] text-gray-400 shrink-0">{dateLabel}</span>}
-                              </div>
-                              <p className="text-[12px] text-gray-500 truncate mt-0.5 max-w-md font-medium">{role}</p>
+                              <h3 className={`${isCompactView ? 'text-[12px]' : 'text-[13px]'} font-semibold text-gray-900 truncate leading-snug`}>{job.employer_name || 'Unknown company'}</h3>
                             </div>
                           </div>
                         </td>
-                        {/* Score */}
-                        <td className="px-4 py-3.5 text-right w-24">
-                          {score > 0 && (
-                            <div className="text-right">
-                              <span className={`text-lg font-bold ${score >= 80 ? 'text-emerald-600' : score >= 70 ? 'text-blue-600' : score >= 60 ? 'text-orange-500' : 'text-gray-400'}`}>
-                                {score}%
-                              </span>
-                              <p className="text-[10px] text-gray-400 leading-none mt-0.5">Resume Match</p>
-                            </div>
-                          )}
+                        <td className={`px-4 ${isCompactView ? 'py-2.5' : 'py-3.5'}`}>
+                          <span className={`${isCompactView ? 'text-[11px]' : 'text-[12px]'} font-medium text-gray-600`}>
+                            {dateLabel || 'Recently posted'}
+                          </span>
                         </td>
-                        {/* Action Buttons */}
-                        <td className="pl-4 pr-5 py-3.5 w-80">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className={`px-4 ${isCompactView ? 'py-2.5 w-36' : 'py-3.5 w-40'}`}>
+                          <div>
+                            <span className={`${isCompactView ? 'text-base' : 'text-lg'} font-bold ${score >= 80 ? 'text-emerald-600' : score >= 70 ? 'text-blue-600' : 'text-orange-500'}`}>
+                              {score}%
+                            </span>
+                            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                              <div
+                                className={`${score >= 80 ? 'bg-emerald-500' : score >= 70 ? 'bg-blue-500' : 'bg-orange-500'} h-full rounded-full transition-all duration-500`}
+                                style={{ width: `${Math.min(score, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className={`px-4 ${isCompactView ? 'py-2.5 w-44' : 'py-3.5 w-48'}`}>
+                          <div className="flex items-center">
                             <button
                               onClick={() => handleResumeClick(job)}
-                              className={`relative inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border transition-colors shadow-sm ${
+                              className={`relative inline-flex items-center gap-1.5 rounded-lg border font-semibold transition-colors shadow-sm ${isCompactView ? 'px-3 py-1.5 text-[11px]' : 'px-3.5 py-[7px] text-[12px]'} ${
                                 hasCompleteGeneratedResume(job.resume_text)
                                   ? 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
                                   : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
@@ -1624,22 +1657,21 @@ const JobListings = ({
                               {hasCompleteGeneratedResume(job.resume_text)
                                 ? <CheckCircle2 size={13} className="text-emerald-500" />
                                 : <FileText size={13} />}
-                              Resume
+                              {hasCompleteGeneratedResume(job.resume_text) ? 'Resume Ready' : 'Generate Resume'}
                             </button>
-                            <button
-                              onClick={() => setDetailJob(job)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
-                              <Info size={13} /> Details
-                            </button>
+                          </div>
+                        </td>
+                        <td className={`px-4 ${isCompactView ? 'py-2.5 w-36' : 'py-3.5 w-40'}`}>
+                          <div className="flex items-center">
                             {isApplied ? (
-                              <span className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50">
+                              <span className={`inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 ${isCompactView ? 'px-3 py-1.5 text-[11px] font-semibold' : 'px-3.5 py-[7px] text-[12px] font-semibold'}`}>
                                 <CheckCircle2 size={13} /> Applied
                               </span>
                             ) : job.job_apply_link?.startsWith('http') ? (
                               <button
                                 onClick={() => handleMarkApplied(job)}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm">
-                                <ExternalLink size={13} /> Apply
+                                className={`inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm ${isCompactView ? 'px-3 py-1.5 text-[11px] font-semibold' : 'px-3.5 py-[7px] text-[12px] font-semibold'}`}>
+                                <ExternalLink size={13} /> Apply Link
                               </button>
                             ) : null}
                           </div>

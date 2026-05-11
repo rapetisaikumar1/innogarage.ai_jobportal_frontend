@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Logo from '../Logo';
@@ -6,9 +6,11 @@ import SubscribeDialog from '../SubscribeDialog';
 import api from '../../services/api';
 import {
   LayoutDashboard, Briefcase, FileText, GraduationCap, Users, MessageSquare,
-  UserCog, BarChart3, BookOpen, Calendar, LogOut, Menu, X, Bell, ChevronDown,
+  UserCog, BookOpen, Calendar, LogOut, Menu, X, Bell, ChevronDown,
   Settings, StickyNote, UserPlus, Contact, Hash, Trophy, Crown, Megaphone, HelpCircle, Zap
 } from 'lucide-react';
+
+const verifiedStripeUpgradeUsers = new Set();
 
 const DashboardLayout = () => {
   const { user, logout, updateUser } = useAuth();
@@ -20,8 +22,16 @@ const DashboardLayout = () => {
   const [notifCount, setNotifCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [notifDropdown, setNotifDropdown] = useState(false);
+  const stripeVerifyStartedRef = useRef(false);
 
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotificationCount = useCallback(async () => {
+    try {
+      const countRes = await api.get('/notifications/unread-count');
+      setNotifCount(countRes.data.count);
+    } catch {}
+  }, []);
+
+  const fetchNotificationList = useCallback(async () => {
     try {
       const [countRes, listRes] = await Promise.all([
         api.get('/notifications/unread-count'),
@@ -33,10 +43,16 @@ const DashboardLayout = () => {
   }, []);
 
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    fetchNotificationCount();
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchNotificationCount();
+    }, 30000);
     return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  }, [fetchNotificationCount]);
+
+  useEffect(() => {
+    if (notifDropdown) fetchNotificationList();
+  }, [fetchNotificationList, notifDropdown]);
 
   useEffect(() => {
     if (location.state?.showSubscribe) {
@@ -53,9 +69,9 @@ const DashboardLayout = () => {
     if (isUpgraded) {
       window.history.replaceState({}, '', window.location.pathname);
     }
-    // Verify session if just upgraded OR if user plan is still free/null (self-healing)
-    const currentPlan = String(user?.subscriptionPlan || 'free').toLowerCase();
-    if (isUpgraded || !user?.subscriptionPlan || currentPlan === 'free') {
+    if (isUpgraded && user?.role === 'STUDENT' && !stripeVerifyStartedRef.current && !verifiedStripeUpgradeUsers.has(user.id)) {
+      stripeVerifyStartedRef.current = true;
+      verifiedStripeUpgradeUsers.add(user.id);
       (async () => {
         try {
           const { data: verifyResult } = await api.post('/stripe/verify-session');
@@ -72,7 +88,7 @@ const DashboardLayout = () => {
         }
       })();
     }
-  }, []);
+  }, [updateUser, user?.id, user?.role]);
 
   const handleLogout = async () => {
     await logout();
@@ -84,7 +100,7 @@ const DashboardLayout = () => {
       case 'STUDENT':
         return [
           { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', end: true },
-          { to: '/dashboard/jobs', icon: Briefcase, label: 'Job Listings' },
+          { to: '/dashboard/jobs', icon: Briefcase, label: 'Find Jobs' },
           { to: '/dashboard/applications', icon: FileText, label: 'My Applications' },
           { to: '/dashboard/training', icon: GraduationCap, label: 'Training' },
           { to: '/dashboard/notes', icon: StickyNote, label: 'My Notes' },
@@ -99,6 +115,8 @@ const DashboardLayout = () => {
           { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
           { to: '/admin/students', icon: Users, label: 'My Students' },
           { to: '/admin/training', icon: GraduationCap, label: 'Training' },
+          { to: '/admin/available-technologies', icon: Zap, label: 'Technologies' },
+          { to: '/admin/raise-request', icon: Contact, label: 'Raise Request' },
           { to: '/admin/slots', icon: Calendar, label: 'Time Slots' },
           { to: '/admin/bookings', icon: BookOpen, label: 'Bookings' },
           { to: '/admin/chat', icon: MessageSquare, label: 'Chat' },
@@ -110,8 +128,9 @@ const DashboardLayout = () => {
           { to: '/superadmin', icon: LayoutDashboard, label: 'Dashboard', end: true },
           { to: '/superadmin/admins', icon: UserCog, label: 'Manage Mentors' },
           { to: '/superadmin/students', icon: Users, label: 'Manage Students' },
+          { to: '/superadmin/requests', icon: Contact, label: 'Requests' },
           { to: '/superadmin/training', icon: GraduationCap, label: 'Training Materials' },
-          { to: '/superadmin/analytics', icon: BarChart3, label: 'Analytics' },
+          { to: '/superadmin/available-technologies', icon: Zap, label: 'Technologies' },
           { to: '/superadmin/queries', icon: HelpCircle, label: 'Queries' },
           { to: '/superadmin/chat', icon: MessageSquare, label: 'Chat' },
           { to: '/superadmin/profile', icon: Settings, label: 'Profile' },
@@ -127,6 +146,7 @@ const DashboardLayout = () => {
   const isStudent = user?.role === 'STUDENT';
   const useHorizontalNav = false;
   const roleLabel = isSuperAdmin ? 'Super Admin' : isAdmin ? 'Mentor' : 'Student';
+  const isAdminStudentPortalView = /^\/admin\/students\/[^/]+\/view(?:\/resume-view)?$/.test(location.pathname);
 
   return (
     <div className="h-screen bg-gradient-to-br from-slate-100 via-blue-50/80 to-indigo-100/60 flex overflow-hidden">
@@ -151,20 +171,20 @@ const DashboardLayout = () => {
             // Define section groups per role
             const sectionGroups = role === 'STUDENT'
               ? [
-                  { label: 'Main', names: ['Dashboard', 'Job Listings', 'My Applications'] },
+                  { label: 'Main', names: ['Dashboard', 'Find Jobs', 'My Applications'] },
                   { label: 'Learning', names: ['Training', 'My Notes', 'Mentoring'] },
                   { label: 'Community', names: ['Chat', 'Shoutboard', 'Help & Support'] },
                 ]
               : role === 'ADMIN'
               ? [
-                  { label: 'Main', names: ['Dashboard', 'My Students', 'Training'] },
+                  { label: 'Main', names: ['Dashboard', 'My Students', 'Training', 'Technologies', 'Raise Request'] },
                   { label: 'Management', names: ['Time Slots', 'Bookings'] },
                   { label: 'Community', names: ['Chat', 'Queries'] },
                 ]
               : role === 'SUPER_ADMIN'
               ? [
-                  { label: 'Main', names: ['Dashboard', 'Manage Mentors', 'Manage Students'] },
-                  { label: 'Content', names: ['Training Materials', 'Analytics'] },
+                  { label: 'Main', names: ['Dashboard', 'Manage Mentors', 'Manage Students', 'Requests'] },
+                  { label: 'Content', names: ['Training Materials', 'Technologies'] },
                   { label: 'Community', names: ['Queries', 'Chat'] },
                 ]
               : [];
@@ -287,7 +307,7 @@ const DashboardLayout = () => {
               <button
                 className="relative text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-xl hover:bg-gray-100"
                 onClick={() => {
-                  setNotifDropdown(!notifDropdown);
+                  setNotifDropdown((prev) => !prev);
                   setProfileDropdown(false);
                 }}
               >
@@ -330,6 +350,8 @@ const DashboardLayout = () => {
                             ? { bg: 'bg-emerald-100', icon: <Briefcase size={14} className="text-emerald-600" /> }
                             : n.type?.startsWith('BOOKING_')
                             ? { bg: 'bg-orange-100', icon: <Calendar size={14} className="text-orange-600" /> }
+                            : n.type === 'admin_request'
+                            ? { bg: 'bg-sky-100', icon: <Contact size={14} className="text-sky-600" /> }
                             : n.type === 'query'
                             ? { bg: 'bg-amber-100', icon: <HelpCircle size={14} className="text-amber-600" /> }
                             : { bg: 'bg-violet-100', icon: <Bell size={14} className="text-violet-600" /> };
@@ -346,6 +368,7 @@ const DashboardLayout = () => {
                                 if (targetLink) navigate(targetLink);
                                 else if (n.type === 'CHAT_MESSAGE' || n.type === 'message' || n.type === 'mention') navigate(user?.role === 'STUDENT' ? '/dashboard/chat' : user?.role === 'ADMIN' ? '/admin/chat' : '/superadmin/chat');
                                 else if (n.type === 'JOB_APPLIED_BY_ADMIN' || n.type === 'application') navigate(user?.role === 'STUDENT' ? '/dashboard/applications' : user?.role === 'ADMIN' ? '/admin/students' : '/superadmin');
+                                else if (n.type === 'admin_request') navigate(user?.role === 'ADMIN' ? '/admin/raise-request' : '/superadmin/requests');
                                 else if (n.type === 'query') navigate(user?.role === 'STUDENT' ? '/dashboard/help-support' : user?.role === 'ADMIN' ? '/admin/queries' : '/superadmin/queries');
                                 else if (n.type?.startsWith('BOOKING_')) navigate(user?.role === 'STUDENT' ? '/dashboard/mentoring' : '/admin/bookings');
                               }}
@@ -442,11 +465,13 @@ const DashboardLayout = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-5 lg:p-7">
-          <Outlet />
+        <main className={`flex-1 overflow-y-auto ${isAdminStudentPortalView ? 'flex min-h-0 flex-col p-4 lg:p-5' : 'p-5 lg:p-7'}`}>
+          <div className={isAdminStudentPortalView ? 'flex-1 min-h-0' : ''}>
+            <Outlet />
+          </div>
 
           {/* Footer */}
-          <footer className="mt-12 text-gray-600 py-10 border-t border-gray-200">
+          {!isAdminStudentPortalView && <footer className="mt-12 text-gray-600 py-10 border-t border-gray-200">
             <div className="max-w-5xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
                   <div className="md:col-span-1">
@@ -494,7 +519,7 @@ const DashboardLayout = () => {
                   </div>
                 </div>
             </div>
-          </footer>
+          </footer>}
         </main>
       </div>
 

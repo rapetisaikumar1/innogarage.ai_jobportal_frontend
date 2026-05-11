@@ -19,7 +19,7 @@ const plans = [
       'Smart Job Matching',
       'Basic Resume Builder',
       'Up to 35 Job Searches',
-      '1 My Jobs Search per Day',
+      '1 Job Search per Day',
       'Email Support',
     ],
     cta: 'Get Started',

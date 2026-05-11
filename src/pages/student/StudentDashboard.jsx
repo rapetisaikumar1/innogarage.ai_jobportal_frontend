@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -182,8 +182,10 @@ const StudentDashboard = ({
   const [recentApps, setRecentApps] = useState([]);
   const [recentJobs, setRecentJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const lastRefreshAtRef = useRef(0);
 
   const fetchData = useCallback(async () => {
+    lastRefreshAtRef.current = Date.now();
     try {
       if (isAdminView) {
         if (!studentId) {
@@ -196,7 +198,7 @@ const StudentDashboard = ({
         const [dashboardRes, jobsRes] = await Promise.all([
           api.get(
             getPortalEndpoint('dashboardData', { portalMode, studentId }),
-            buildPortalRequestConfig(portalMode, { params: { t: Date.now() } })
+            buildPortalRequestConfig(portalMode)
           ),
           api.get(
             getPortalEndpoint('matchedJobs', { portalMode, studentId }),
@@ -208,10 +210,37 @@ const StudentDashboard = ({
         const sheetApplied = dashboardRes.data.sheetApplications || [];
         const dashboardStats = dashboardRes.data.stats || {};
 
+        const PENDING_TTL_MS = 10 * 60 * 1000;
+        const now = Date.now();
+        const pendingApplied = (() => {
+          try { return JSON.parse(sessionStorage.getItem(pendingAppliedKey) || '[]'); } catch { return []; }
+        })().filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
+        const apiJobLinks = new Set(sheetApplied.map(a => a.jobLink));
+        const stillPending = pendingApplied.filter(p => !apiJobLinks.has(p.jobLink));
+        if (stillPending.length !== pendingApplied.length) {
+          try { sessionStorage.setItem(pendingAppliedKey, JSON.stringify(stillPending)); } catch { /* ignore */ }
+        }
+        const combinedSheetApplied = [
+          ...sheetApplied,
+          ...stillPending.map(p => ({
+            jobLink: p.jobLink,
+            employerName: p.employerName,
+            jobTitle: p.jobTitle,
+            status: 'APPLIED',
+            appliedMethod: 'MANUAL',
+            matchScore: p.matchScore,
+            createdAt: p.appliedAt,
+          })),
+        ];
+
         setStats({
           ...dashboardStats,
-          totalSheetJobs: dashboardStats.totalSheetJobs ?? allJobs.length,
-          sheetAppliedCount: dashboardStats.sheetAppliedCount ?? sheetApplied.length,
+          totalJobs: allJobs.length,
+          totalSheetJobs: allJobs.length,
+          sheetAppliedCount: combinedSheetApplied.length,
+          totalApplications: (dashboardStats.totalApplied || 0) + combinedSheetApplied.length,
+          adminApplyCount: (dashboardStats.adminApplyCount || 0) + stillPending.length,
+          candidateApplyCount: dashboardStats.candidateApplyCount || 0,
         });
 
         const jobsMap = {};
@@ -229,7 +258,7 @@ const StudentDashboard = ({
           fullJob: null,
         }));
 
-        const sheetApps = sheetApplied.map(app => {
+        const sheetApps = combinedSheetApplied.map(app => {
           const fullJob = jobsMap[app.jobLink];
           return {
             id: app.jobLink,
@@ -355,13 +384,16 @@ const StudentDashboard = ({
   // where Apply is clicked then the user quickly navigates to Dashboard)
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === 'visible') fetchData();
+      if (document.visibilityState === 'visible' && Date.now() - lastRefreshAtRef.current > 15000) fetchData();
+    };
+    const onFocus = () => {
+      if (Date.now() - lastRefreshAtRef.current > 15000) fetchData();
     };
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', fetchData);
+    window.addEventListener('focus', onFocus);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', fetchData);
+      window.removeEventListener('focus', onFocus);
     };
   }, [fetchData]);
 
@@ -416,7 +448,7 @@ const StudentDashboard = ({
     <div className="space-y-3">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between bg-white/40 backdrop-blur-xl border border-white/50 rounded-xl shadow shadow-indigo-50/30 px-4 py-3">
+      <div className="flex items-center justify-between bg-white border border-gray-100 rounded-xl shadow-sm px-4 py-3">
         <div>
           <h1 className="text-[18px] font-bold text-gray-800 tracking-tight leading-none">
             {greeting}, <span className="bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">{firstName}</span>
@@ -435,7 +467,7 @@ const StudentDashboard = ({
       {/* ── KPI Strip ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
         {statCards.map(({ label, value, icon: Icon, light, text }) => (
-          <div key={label} className="bg-white/60 backdrop-blur-md border border-white/50 rounded-xl px-3.5 py-2.5 flex items-center gap-2.5 shadow-sm">
+          <div key={label} className="bg-white border border-gray-100 rounded-xl px-3.5 py-2.5 flex items-center gap-2.5 shadow-sm">
             <div className={`w-8 h-8 ${light} rounded-lg flex items-center justify-center shrink-0`}>
               <Icon size={14} className={text} strokeWidth={2} />
             </div>
@@ -454,7 +486,7 @@ const StudentDashboard = ({
         <div className="space-y-3 min-w-0">
 
           {/* Recent Applications */}
-          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 overflow-hidden shadow shadow-blue-50/20">
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/40">
               <h2 className="text-[14px] font-bold text-gray-700 flex items-center gap-1.5">
                 <Briefcase size={14} className="text-gray-400" />
@@ -509,12 +541,12 @@ const StudentDashboard = ({
             )}
           </div>
 
-          {/* Recent Job Listings */}
-          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 overflow-hidden shadow shadow-indigo-50/20">
+          {/* Recent Jobs */}
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/40">
               <h2 className="text-[14px] font-bold text-gray-700 flex items-center gap-1.5">
                 <Search size={14} className="text-gray-400" />
-                Recent Job Listings
+                Recent Jobs
               </h2>
               {recentJobs.length > 0 && (
                 <PortalLink portalMode={portalMode} section="jobs" navigate={navigate} onPortalNavigate={onPortalNavigate} className="text-[12px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
@@ -525,7 +557,7 @@ const StudentDashboard = ({
             {recentJobs.length === 0 ? (
               <div className="flex items-center gap-3 px-4 py-4">
                 <Search size={20} className="text-gray-200 shrink-0" />
-                <p className="text-[13px] font-medium text-gray-600">No matched jobs yet — use <span className="font-semibold text-gray-800">My Jobs</span> to load roles.</p>
+                <p className="text-[13px] font-medium text-gray-600">No matched jobs yet — use <span className="font-semibold text-gray-800">Find Jobs</span> to load roles.</p>
               </div>
             ) : (
               <div className="overflow-x-auto max-h-[340px] overflow-y-auto">
@@ -577,7 +609,7 @@ const StudentDashboard = ({
         <div className="space-y-3">
 
           {/* Applications Overview */}
-          <div className="bg-white/50 backdrop-blur-xl rounded-xl border border-white/50 p-5 shadow shadow-blue-50/20">
+          <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
             <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-4">Applications</h3>
             <div className="flex items-center gap-4">
               <div className="relative shrink-0">
