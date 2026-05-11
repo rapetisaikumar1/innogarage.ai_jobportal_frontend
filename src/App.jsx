@@ -35,15 +35,17 @@ import AdminSlots from './pages/admin/AdminSlots';
 import AdminBookings from './pages/admin/AdminBookings';
 import AdminChat from './pages/admin/AdminChat';
 import AdminProfile from './pages/admin/AdminProfile';
+import AdminRaiseRequests from './pages/admin/AdminRaiseRequests';
 import AdminStudentView from './pages/admin/AdminStudentView';
 import AdminTraining from './pages/admin/AdminTraining';
+import AvailableTechnologiesPage from './pages/shared/AvailableTechnologiesPage';
 
 // Super Admin Pages
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import ManageAdmins from './pages/superadmin/ManageAdmins';
 import ManageStudents from './pages/superadmin/ManageStudents';
+import SuperAdminRequests from './pages/superadmin/SuperAdminRequests';
 import ManageTraining from './pages/superadmin/ManageTraining';
-import Analytics from './pages/superadmin/Analytics';
 import SuperAdminProfile from './pages/superadmin/SuperAdminProfile';
 import QueriesPage from './pages/superadmin/QueriesPage';
 import SuperAdminChat from './pages/superadmin/SuperAdminChat';
@@ -118,6 +120,8 @@ function App() {
         <Route path="students/:studentId/view" element={<AdminStudentView />} />
         <Route path="students/:studentId/view/resume-view" element={<ResumeViewPage />} />
         <Route path="training" element={<AdminTraining />} />
+        <Route path="available-technologies" element={<AvailableTechnologiesPage />} />
+        <Route path="raise-request" element={<AdminRaiseRequests />} />
         <Route path="slots" element={<AdminSlots />} />
         <Route path="bookings" element={<AdminBookings />} />
         <Route path="chat" element={<AdminChat />} />
@@ -130,8 +134,9 @@ function App() {
         <Route index element={<SuperAdminDashboard />} />
         <Route path="admins" element={<ManageAdmins />} />
         <Route path="students" element={<ManageStudents />} />
+        <Route path="requests" element={<SuperAdminRequests />} />
         <Route path="training" element={<ManageTraining />} />
-        <Route path="analytics" element={<Analytics />} />
+        <Route path="available-technologies" element={<AvailableTechnologiesPage canManage />} />
         <Route path="queries" element={<QueriesPage />} />
         <Route path="chat" element={<SuperAdminChat />} />
         <Route path="profile" element={<SuperAdminProfile />} />

@@ -22,6 +22,19 @@ const api = axios.create({
   },
 });
 
+const inFlightGetRequests = new Map();
+
+const stableStringify = (value) => {
+  if (!value || typeof value !== 'object') return String(value || '');
+  const sorted = Object.keys(value)
+    .sort()
+    .reduce((acc, key) => {
+      acc[key] = value[key];
+      return acc;
+    }, {});
+  return JSON.stringify(sorted);
+};
+
 const AUTH_REFRESH_SKIP_PATHS = [
   '/auth/login',
   '/auth/verify-login-otp',
@@ -91,5 +104,25 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+const rawGet = api.get.bind(api);
+api.get = (url, config = {}) => {
+  if (config.dedupe === false) {
+    return rawGet(url, config);
+  }
+
+  const role = config._rolePrefix || getRolePrefix();
+  const token = getTokenForRole(role) || '';
+  const key = `${role}:${token}:${url}:${stableStringify(config.params)}`;
+  const existing = inFlightGetRequests.get(key);
+
+  if (existing) return existing;
+
+  const request = rawGet(url, config).finally(() => {
+    inFlightGetRequests.delete(key);
+  });
+  inFlightGetRequests.set(key, request);
+  return request;
+};
 
 export default api;

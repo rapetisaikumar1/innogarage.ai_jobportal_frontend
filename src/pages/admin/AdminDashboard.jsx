@@ -116,7 +116,7 @@ const AdminDashboard = () => {
             <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
               {students.slice(0, 5).map((student) => {
                 const stuInitials = student.fullName?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-                const appCount = (student._count?.jobApplications || 0) + (student._count?.sheetApplications || 0);
+                const appCount = (student._count?.jobApplications || 0) + (student._count?.externalApplications || 0);
                 return (
                   <div key={student.id} className="flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors">
                     <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">

@@ -1,31 +1,57 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
 import {
-  Users, UserCog, GraduationCap, BarChart3,
-  CheckCircle2, Calendar, FileText,
-  TrendingUp, HelpCircle, AlertCircle, Clock, MessageSquareMore, Code2
+  Users,
+  UserCog,
+  CheckCircle2,
+  Calendar,
+  FileText,
+  TrendingUp,
+  AlertCircle,
+  Clock,
+  MessageSquareMore,
+  Code2,
 } from 'lucide-react';
+import { format } from 'date-fns';
 
-// Mini donut chart component
-const DonutChart = ({ value, max, color, trackColor = '#e0e7ff', size = 80, strokeWidth = 8 }) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const percentage = max > 0 ? Math.min(value / max, 1) : 0;
-  const offset = circumference - percentage * circumference;
+const buildDonutSegments = (items, total, circumference) => {
+  let accumulated = 0;
 
-  return (
-    <svg width={size} height={size} className="transform -rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={trackColor} strokeWidth={strokeWidth} />
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth} strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-700 ease-out" />
-    </svg>
-  );
+  return items.map(([label, count], index) => {
+    const fraction = total > 0 ? count / total : 0;
+    const dash = fraction * circumference;
+    const offset = -accumulated * circumference;
+    accumulated += fraction;
+
+    return {
+      label,
+      count,
+      index,
+      dash,
+      offset,
+    };
+  });
+};
+
+const isStudentActive = (student) => {
+  if (!student) return false;
+  if (typeof student.status === 'string') return student.status === 'ACTIVE';
+  if (typeof student.isActive === 'boolean') return student.isActive;
+  return false;
+};
+
+const getInitials = (name) => {
+  if (!name) return '?';
+  return name
+    .split(' ')
+    .map((word) => word[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 };
 
 const SuperAdminDashboard = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const [analytics, setAnalytics] = useState(null);
   const [queryStats, setQueryStats] = useState({ open: 0, inProgress: 0, closed: 0, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -52,291 +78,198 @@ const SuperAdminDashboard = () => {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div></div>;
   }
 
-  const greeting = (() => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  })();
-
   const totalStudents = analytics?.totalStudents ?? 0;
+  const activeStudents = analytics?.activeStudents ?? 0;
   const totalMentors = analytics?.totalMentors ?? 0;
   const totalApplications = analytics?.totalApplications ?? 0;
-  const completedBookings = analytics?.completedBookings ?? 0;
   const offersReceived = analytics?.offersReceived ?? 0;
   const totalBookings = analytics?.totalBookings ?? 0;
+  const studentsWithoutMentor = analytics?.studentsWithoutMentor ?? 0;
+  const recentStudents = analytics?.recentStudents ?? [];
+  const technologyEntries = Object.entries(analytics?.technologyBreakdown ?? {}).sort((a, b) => b[1] - a[1]);
+  const technologyItems = technologyEntries.slice(0, 6);
+  const totalWithRole = technologyEntries.reduce((sum, [, count]) => sum + count, 0);
 
   const statCards = [
-    { label: 'Total Students', value: totalStudents, icon: Users, gradient: 'from-blue-500 to-blue-600', light: 'bg-blue-50', text: 'text-blue-600' },
-    { label: 'Total Mentors', value: totalMentors, icon: UserCog, gradient: 'from-violet-500 to-violet-600', light: 'bg-violet-50', text: 'text-violet-600' },
-    { label: 'Jobs Applied', value: totalApplications, icon: FileText, gradient: 'from-emerald-500 to-emerald-600', light: 'bg-emerald-50', text: 'text-emerald-600' },
-    { label: 'Mentoring Sessions', value: completedBookings, icon: Calendar, gradient: 'from-orange-500 to-orange-600', light: 'bg-orange-50', text: 'text-orange-600' },
-    { label: 'Students Placed', value: offersReceived, icon: CheckCircle2, gradient: 'from-teal-500 to-teal-600', light: 'bg-teal-50', text: 'text-teal-600' },
-    { label: 'Total Bookings', value: totalBookings, icon: TrendingUp, gradient: 'from-cyan-500 to-cyan-600', light: 'bg-cyan-50', text: 'text-cyan-600' },
+    { label: 'Total Students', value: totalStudents, icon: Users, iconBg: 'bg-blue-50', iconColor: 'text-blue-500', numColor: 'text-blue-600' },
+    { label: 'Active Students', value: activeStudents, icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-500', numColor: 'text-emerald-600' },
+    { label: 'Total Mentors', value: totalMentors, icon: UserCog, iconBg: 'bg-violet-50', iconColor: 'text-violet-500', numColor: 'text-violet-600' },
+    { label: 'Jobs Applied', value: totalApplications, icon: FileText, iconBg: 'bg-amber-50', iconColor: 'text-amber-500', numColor: 'text-amber-600' },
+    { label: 'Students Placed', value: offersReceived, icon: TrendingUp, iconBg: 'bg-teal-50', iconColor: 'text-teal-500', numColor: 'text-teal-600' },
+    { label: 'Total Bookings', value: totalBookings, icon: Calendar, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-500', numColor: 'text-indigo-600' },
+    { label: 'Without Mentor', value: studentsWithoutMentor, icon: AlertCircle, iconBg: 'bg-rose-50', iconColor: 'text-rose-500', numColor: 'text-rose-600' },
   ];
 
-  // Summary data for donut sections
-  const summaryTotal = totalStudents + totalMentors;
-  const placementTotal = totalApplications > 0 ? totalApplications : 1;
-
-  const quickActions = [
-    { to: '/superadmin/admins', icon: UserCog, label: 'Manage Mentors', iconBg: 'bg-gradient-to-br from-violet-500 to-violet-600' },
-    { to: '/superadmin/students', icon: Users, label: 'Manage Students', iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600' },
-    { to: '/superadmin/training', icon: GraduationCap, label: 'Training Materials', iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600' },
-    { to: '/superadmin/queries', icon: HelpCircle, label: 'Queries', iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600' },
-    { to: '/superadmin/analytics', icon: BarChart3, label: 'Analytics', iconBg: 'bg-gradient-to-br from-rose-500 to-rose-600' },
+  const queryCards = [
+    { label: 'Total', value: queryStats.total, icon: MessageSquareMore, iconBg: 'bg-slate-50', iconColor: 'text-slate-500', numColor: 'text-slate-700' },
+    { label: 'Open', value: queryStats.open, icon: AlertCircle, iconBg: 'bg-amber-50', iconColor: 'text-amber-500', numColor: 'text-amber-600' },
+    { label: 'In Progress', value: queryStats.inProgress, icon: Clock, iconBg: 'bg-blue-50', iconColor: 'text-blue-500', numColor: 'text-blue-600' },
+    { label: 'Closed', value: queryStats.closed, icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-500', numColor: 'text-emerald-600' },
   ];
+
+  const roleColors = [
+    'bg-blue-500',
+    'bg-emerald-500',
+    'bg-violet-500',
+    'bg-amber-500',
+    'bg-rose-500',
+    'bg-cyan-500',
+    'bg-teal-500',
+    'bg-indigo-500',
+  ];
+
+  const roleStrokeColors = [
+    '#3b82f6',
+    '#10b981',
+    '#8b5cf6',
+    '#f59e0b',
+    '#f43f5e',
+    '#06b6d4',
+    '#14b8a6',
+    '#6366f1',
+  ];
+
+  const donutSize = 170;
+  const donutStroke = 22;
+  const donutRadius = (donutSize - donutStroke) / 2;
+  const donutCircumference = 2 * Math.PI * donutRadius;
+  const donutSegments = buildDonutSegments(technologyItems, totalWithRole, donutCircumference);
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-blue-50/60 to-indigo-50/40 border border-gray-200/60 px-7 py-6">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-100/40 to-transparent rounded-full -translate-y-1/2 translate-x-1/3" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-indigo-100/30 to-transparent rounded-full translate-y-1/2 -translate-x-1/4" />
-        <div className="relative">
-          <h1 className="text-xl font-bold text-gray-800 tracking-tight">
-            {greeting}, <span className="bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">{user?.fullName || 'Super Admin'}</span>
-          </h1>
-          <p className="text-gray-500 text-sm mt-1.5">Here's your platform overview. Manage and monitor everything from here.</p>
-        </div>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">
+        {statCards.map(({ label, value, icon: Icon, iconBg, iconColor, numColor }) => (
+          <div key={label} className="bg-white rounded-xl border border-gray-200 px-3 py-2.5">
+            <div className={`w-6 h-6 ${iconBg} rounded-md flex items-center justify-center mb-1.5`}>
+              <Icon size={13} className={iconColor} strokeWidth={1.8} />
+            </div>
+            <p className={`text-lg font-bold ${numColor} leading-tight`}>{value}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">{label}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Summary Cards Row */}
-      <div className="flex flex-col lg:flex-row gap-4">
-        {/* Donut Chart Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:flex-[3]">
-          {/* Users Overview */}
-          <div className="bg-white rounded-xl border border-gray-200/60 px-5 py-4 hover:shadow-md transition-shadow duration-300">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Users Overview</h3>
-            <div className="flex items-center gap-4">
-              <div className="relative flex-shrink-0">
-                <DonutChart value={totalStudents} max={summaryTotal || 1} color="#0e7490" trackColor="#be185d" size={90} strokeWidth={9} />
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-lg font-extrabold text-gray-900 leading-none">{summaryTotal}</span>
-                  <span className="text-[10px] text-gray-400 font-medium">Total</span>
-                </div>
-              </div>
-              <div className="space-y-2.5 flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-cyan-700" />
-                    <span className="text-xs text-gray-600">Students</span>
-                  </div>
-                  <span className="text-sm font-bold text-gray-900">{totalStudents}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-pink-700" />
-                    <span className="text-xs text-gray-600">Mentors</span>
-                  </div>
-                  <span className="text-sm font-bold text-gray-900">{totalMentors}</span>
-                </div>
-              </div>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <h2 className="text-sm font-bold text-gray-900">Recent Students</h2>
+            <Link to="/superadmin/students" className="text-sm text-indigo-600 font-semibold flex items-center gap-0.5 hover:text-indigo-700">
+              View All <span className="text-base leading-none">›</span>
+            </Link>
           </div>
-
-          {/* Applications */}
-          <div className="bg-white rounded-xl border border-gray-200/60 px-5 py-4 hover:shadow-md transition-shadow duration-300">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Applications</h3>
-            <div className="flex items-center gap-4">
-              <div className="relative flex-shrink-0">
-                <DonutChart value={offersReceived} max={placementTotal} color="#15803d" trackColor="#9333ea" size={90} strokeWidth={9} />
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-lg font-extrabold text-gray-900 leading-none">{totalApplications}</span>
-                  <span className="text-[10px] text-gray-400 font-medium">Total</span>
-                </div>
-              </div>
-              <div className="space-y-2.5 flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-green-700" />
-                    <span className="text-xs text-gray-600">Placed</span>
-                  </div>
-                  <span className="text-sm font-bold text-gray-900">{offersReceived}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-purple-600" />
-                    <span className="text-xs text-gray-600">Applied</span>
-                  </div>
-                  <span className="text-sm font-bold text-gray-900">{totalApplications}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Technology-wise Candidates */}
-          <div className="bg-white rounded-xl border border-gray-200/60 px-5 py-4 hover:shadow-md transition-shadow duration-300">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Technology / Role</h3>
-            {analytics?.technologyBreakdown && Object.keys(analytics.technologyBreakdown).length > 0 ? (
-              <div className="space-y-2 max-h-[110px] overflow-y-auto pr-1">
-                {Object.entries(analytics.technologyBreakdown)
-                  .sort((a, b) => b[1] - a[1])
-                  .slice(0, 8)
-                  .map(([role, count], i) => {
-                    const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500', 'bg-amber-500', 'bg-teal-500'];
-                    const pct = totalStudents > 0 ? Math.round((count / totalStudents) * 100) : 0;
-                    return (
-                      <div key={role} className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${colors[i % colors.length]}`} />
-                        <span className="text-xs text-gray-600 truncate flex-1">{role}</span>
-                        <span className="text-xs font-bold text-gray-900">{count}</span>
-                        <span className="text-[10px] text-gray-400 w-8 text-right">{pct}%</span>
+          {recentStudents.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-10">No students found</p>
+          ) : (
+            <div className="divide-y divide-gray-100 max-h-[255px] overflow-y-auto">
+              {recentStudents.map((student) => {
+                const active = isStudentActive(student);
+                return (
+                  <div key={student.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                    <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-indigo-600 font-bold text-xs">{getInitials(student.fullName)}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 text-[13px] truncate">{student.fullName}</p>
+                      <p className="text-xs text-gray-400 truncate">{student.email}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-gray-400">{student.registrationNumber || 'No Reg No'}</span>
+                        <span className="text-xs text-gray-300">•</span>
+                        <span className="text-xs text-gray-400">{format(new Date(student.createdAt), 'MMM d, yyyy')}</span>
                       </div>
-                    );
-                  })}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-[80px] text-gray-400">
-                <Code2 size={20} className="mb-1" />
-                <span className="text-xs">No role data yet</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Summary Card - wider, different size */}
-        <div className="bg-white rounded-xl border border-gray-200/60 px-5 py-4 hover:shadow-md transition-shadow duration-300 lg:flex-[1.5]">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Summary</h3>
-          <div className="grid grid-cols-2 gap-x-5 gap-y-2.5">
-            {statCards.map(({ label, value, icon: Icon, light, text }) => (
-              <div key={label} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 ${light} rounded-lg flex items-center justify-center`}>
-                    <Icon size={14} className={text} strokeWidth={2} />
-                  </div>
-                  <span className="text-xs text-gray-600">{label}</span>
-                </div>
-                <span className="text-sm font-bold text-gray-900">{value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Application Status Breakdown */}
-      {analytics?.applicationsByStatus && Object.keys(analytics.applicationsByStatus).length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200/60 overflow-hidden hover:shadow-lg transition-shadow duration-300">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-gray-800">Application Status Breakdown</h2>
-            <span className="text-xs text-gray-400 font-medium">{totalApplications} total</span>
-          </div>
-          <div className="px-6 py-5">
-            {/* Progress bar */}
-            <div className="flex h-2.5 rounded-full overflow-hidden bg-gray-100 mb-5">
-              {Object.entries(analytics.applicationsByStatus).map(([status, count], i) => {
-                const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500', 'bg-rose-500', 'bg-cyan-500', 'bg-teal-500', 'bg-orange-500'];
-                const pct = totalApplications > 0 ? (count / totalApplications) * 100 : 0;
-                return <div key={status} className={`${colors[i % colors.length]} transition-all duration-500`} style={{ width: `${pct}%` }} />;
-              })}
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-              {Object.entries(analytics.applicationsByStatus).map(([status, count], i) => {
-                const dotColors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500', 'bg-rose-500', 'bg-cyan-500', 'bg-teal-500', 'bg-orange-500'];
-                return (
-                  <div key={status} className="bg-gray-50/80 px-3 py-3.5 rounded-lg text-center hover:bg-gray-100/80 transition-colors">
-                    <div className="flex items-center justify-center gap-1.5 mb-1.5">
-                      <span className={`w-2 h-2 rounded-full ${dotColors[i % dotColors.length]}`} />
-                      <p className="text-lg font-extrabold text-gray-900">{count}</p>
                     </div>
-                    <p className="text-[11px] text-gray-400 capitalize font-medium">{status.replace(/_/g, ' ').toLowerCase()}</p>
+                    <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${active ? 'text-emerald-700 bg-emerald-50' : 'text-red-600 bg-red-50'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                      {active ? 'Active' : 'Inactive'}
+                    </span>
                   </div>
                 );
               })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Technology / Role-wise Candidates */}
-      {analytics?.technologyBreakdown && Object.keys(analytics.technologyBreakdown).length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200/60 overflow-hidden hover:shadow-lg transition-shadow duration-300">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-gray-800">Technology / Role-wise Candidates</h2>
-            <span className="text-xs text-gray-400 font-medium">{Object.values(analytics.technologyBreakdown).reduce((a, b) => a + b, 0)} with roles</span>
-          </div>
-          <div className="px-6 py-5">
-            {/* Progress bar */}
-            <div className="flex h-2.5 rounded-full overflow-hidden bg-gray-100 mb-5">
-              {Object.entries(analytics.technologyBreakdown).sort((a, b) => b[1] - a[1]).map(([role, count], i) => {
-                const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500', 'bg-amber-500', 'bg-teal-500', 'bg-rose-500', 'bg-indigo-500'];
-                const total = Object.values(analytics.technologyBreakdown).reduce((a, b) => a + b, 0);
-                const pct = total > 0 ? (count / total) * 100 : 0;
-                return <div key={role} className={`${colors[i % colors.length]} transition-all duration-500`} style={{ width: `${pct}%` }} />;
-              })}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-              {Object.entries(analytics.technologyBreakdown).sort((a, b) => b[1] - a[1]).map(([role, count], i) => {
-                const dotColors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500', 'bg-amber-500', 'bg-teal-500', 'bg-rose-500', 'bg-indigo-500'];
-                return (
-                  <div key={role} className="bg-gray-50/80 px-3 py-3.5 rounded-lg text-center hover:bg-gray-100/80 transition-colors">
-                    <div className="flex items-center justify-center gap-1.5 mb-1.5">
-                      <span className={`w-2 h-2 rounded-full ${dotColors[i % dotColors.length]}`} />
-                      <p className="text-lg font-extrabold text-gray-900">{count}</p>
-                    </div>
-                    <p className="text-[11px] text-gray-400 font-medium truncate" title={role}>{role}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Query Status Breakdown */}
-      <div className="bg-white rounded-xl border border-gray-200/60 overflow-hidden hover:shadow-lg transition-shadow duration-300">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-gray-800">Query Status Overview</h2>
-          <Link to="/superadmin/queries" className="text-xs text-blue-600 hover:text-blue-700 font-medium">View All &rarr;</Link>
-        </div>
-        <div className="px-6 py-5">
-          {/* Progress bar */}
-          {queryStats.total > 0 && (
-            <div className="flex h-2.5 rounded-full overflow-hidden bg-gray-100 mb-5">
-              <div className="bg-amber-500 transition-all duration-500" style={{ width: `${(queryStats.open / queryStats.total) * 100}%` }} />
-              <div className="bg-blue-500 transition-all duration-500" style={{ width: `${(queryStats.inProgress / queryStats.total) * 100}%` }} />
-              <div className="bg-emerald-500 transition-all duration-500" style={{ width: `${(queryStats.closed / queryStats.total) * 100}%` }} />
             </div>
           )}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: 'Total', value: queryStats.total, icon: MessageSquareMore, dot: 'bg-gray-500', bg: 'bg-gray-50', text: 'text-gray-600' },
-              { label: 'Open', value: queryStats.open, icon: AlertCircle, dot: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-600' },
-              { label: 'In Progress', value: queryStats.inProgress, icon: Clock, dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-600' },
-              { label: 'Closed', value: queryStats.closed, icon: CheckCircle2, dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-600' },
-            ].map((s) => (
-              <div key={s.label} className={`${s.bg} px-4 py-4 rounded-lg text-center hover:opacity-90 transition-opacity`}>
-                <div className="flex items-center justify-center gap-2 mb-1.5">
-                  <s.icon size={14} className={s.text} />
-                  <p className="text-xl font-extrabold text-gray-900">{s.value}</p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <h2 className="text-sm font-bold text-gray-900">Query Status Overview</h2>
+            <Link to="/superadmin/queries" className="text-sm text-indigo-600 font-semibold flex items-center gap-0.5 hover:text-indigo-700">
+              View All <span className="text-base leading-none">›</span>
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
+            {queryCards.map(({ label, value, icon: Icon, iconBg, iconColor, numColor }) => (
+              <div key={label} className="rounded-xl border border-gray-200 px-3 py-3">
+                <div className={`w-7 h-7 ${iconBg} rounded-md flex items-center justify-center mb-3`}>
+                  <Icon size={14} className={iconColor} strokeWidth={1.8} />
                 </div>
-                <div className="flex items-center justify-center gap-1.5">
-                  <span className={`w-2 h-2 rounded-full ${s.dot}`} />
-                  <p className="text-[11px] text-gray-500 font-medium">{s.label}</p>
-                </div>
+                <p className={`text-2xl font-bold ${numColor} leading-tight`}>{value}</p>
+                <p className="text-[11px] text-gray-500 mt-1">{label}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-sm font-bold text-gray-800 mb-3.5">Quick Actions</h2>
-        <div className="flex flex-wrap items-center gap-3">
-          {quickActions.map(({ to, icon: Icon, label, iconBg }) => (
-            <Link
-              key={to}
-              to={to}
-              className="flex items-center gap-3 px-5 py-3 bg-white border border-gray-200/60 rounded-xl hover:shadow-md hover:border-gray-300 transition-all duration-300 group"
-            >
-              <div className={`w-9 h-9 ${iconBg} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
-                <Icon size={16} className="text-white" strokeWidth={2} />
-              </div>
-              <span className="text-[13px] font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">{label}</span>
-            </Link>
-          ))}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <h2 className="text-sm font-bold text-gray-900">Technology wise Candidates</h2>
         </div>
+        {technologyItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-gray-400">
+            <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mb-3">
+              <Code2 size={24} className="text-slate-400" strokeWidth={1.8} />
+            </div>
+            <p className="font-semibold text-sm">No role data yet</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 p-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center">
+            <div className="flex items-center justify-center">
+              <div className="relative flex h-[170px] w-[170px] items-center justify-center">
+                <svg width={donutSize} height={donutSize} className="-rotate-90">
+                  <circle
+                    cx={donutSize / 2}
+                    cy={donutSize / 2}
+                    r={donutRadius}
+                    fill="none"
+                    stroke="#e5e7eb"
+                    strokeWidth={donutStroke}
+                  />
+                  {donutSegments.map(({ label, dash, offset, index }) => (
+                    <circle
+                      key={label}
+                      cx={donutSize / 2}
+                      cy={donutSize / 2}
+                      r={donutRadius}
+                      fill="none"
+                      stroke={roleStrokeColors[index % roleStrokeColors.length]}
+                      strokeWidth={donutStroke}
+                      strokeLinecap="butt"
+                      strokeDasharray={`${dash} ${donutCircumference - dash}`}
+                      strokeDashoffset={offset}
+                    />
+                  ))}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-2xl font-bold text-gray-900 leading-none">{totalWithRole}</span>
+                  <span className="mt-1 text-[11px] font-medium leading-4 text-gray-400">Total Candidates</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 max-h-[185px] overflow-y-auto pr-1">
+              {technologyItems.map(([role, count], index) => {
+                const percentage = totalWithRole > 0 ? ((count / totalWithRole) * 100).toFixed(1) : '0.0';
+                return (
+                  <div key={role} className="flex items-center gap-3">
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${roleColors[index % roleColors.length]}`} />
+                    <span className="text-sm text-gray-700 flex-1 truncate">{role}</span>
+                    <span className="text-sm font-semibold text-gray-900">{count}</span>
+                    <span className="text-xs text-gray-400 w-14 text-right">({percentage}%)</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

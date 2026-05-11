@@ -85,7 +85,7 @@ const extractRole = (job) => {
   return job.employer_name || 'View Details';
 };
 
-const extractResumeRoleTitle = (resumeText, candidateName, sheetCandidateName) => {
+const extractResumeRoleTitle = (resumeText, candidateName, pipelineCandidateName) => {
   if (!resumeText) return '';
   const nameVariants = new Set();
   const nameParts = new Set();
@@ -105,7 +105,7 @@ const extractResumeRoleTitle = (resumeText, candidateName, sheetCandidateName) =
     }
   };
   addName(candidateName);
-  addName(sheetCandidateName);
+  addName(pipelineCandidateName);
   const isNameLine = (line) => {
     const lower = line.trim().toLowerCase().replace(/[.,\-]+$/, '').trim();
     if (!lower) return false;
@@ -207,7 +207,7 @@ const StudentDashboard = ({
         ]);
 
         const allJobs = jobsRes.data.jobs || [];
-        const sheetApplied = dashboardRes.data.sheetApplications || [];
+        const externalApplied = dashboardRes.data.externalApplications || [];
         const dashboardStats = dashboardRes.data.stats || {};
 
         const PENDING_TTL_MS = 10 * 60 * 1000;
@@ -215,13 +215,13 @@ const StudentDashboard = ({
         const pendingApplied = (() => {
           try { return JSON.parse(sessionStorage.getItem(pendingAppliedKey) || '[]'); } catch { return []; }
         })().filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
-        const apiJobLinks = new Set(sheetApplied.map(a => a.jobLink));
+        const apiJobLinks = new Set(externalApplied.map(a => a.jobLink));
         const stillPending = pendingApplied.filter(p => !apiJobLinks.has(p.jobLink));
         if (stillPending.length !== pendingApplied.length) {
           try { sessionStorage.setItem(pendingAppliedKey, JSON.stringify(stillPending)); } catch { /* ignore */ }
         }
-        const combinedSheetApplied = [
-          ...sheetApplied,
+        const combinedExternalApplied = [
+          ...externalApplied,
           ...stillPending.map(p => ({
             jobLink: p.jobLink,
             employerName: p.employerName,
@@ -236,9 +236,9 @@ const StudentDashboard = ({
         setStats({
           ...dashboardStats,
           totalJobs: allJobs.length,
-          totalSheetJobs: allJobs.length,
-          sheetAppliedCount: combinedSheetApplied.length,
-          totalApplications: (dashboardStats.totalApplied || 0) + combinedSheetApplied.length,
+          totalMatchedJobs: allJobs.length,
+          externalAppliedCount: combinedExternalApplied.length,
+          totalApplications: (dashboardStats.totalApplied || 0) + combinedExternalApplied.length,
           adminApplyCount: (dashboardStats.adminApplyCount || 0) + stillPending.length,
           candidateApplyCount: dashboardStats.candidateApplyCount || 0,
         });
@@ -258,7 +258,7 @@ const StudentDashboard = ({
           fullJob: null,
         }));
 
-        const sheetApps = combinedSheetApplied.map(app => {
+        const externalApps = combinedExternalApplied.map(app => {
           const fullJob = jobsMap[app.jobLink];
           return {
             id: app.jobLink,
@@ -268,14 +268,14 @@ const StudentDashboard = ({
             appliedAt: app.createdAt,
             matchScore: app.matchScore,
             jobLink: app.jobLink,
-            source: 'sheet',
+            source: 'external',
             fullJob,
           };
         });
 
         const seenLinks = new Set(dbApps.map(a => a.jobLink).filter(Boolean));
-        const uniqueSheet = sheetApps.filter(a => !seenLinks.has(a.jobLink));
-        const allApps = [...dbApps, ...uniqueSheet].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
+        const uniqueExternal = externalApps.filter(a => !seenLinks.has(a.jobLink));
+        const allApps = [...dbApps, ...uniqueExternal].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
         setRecentApps(allApps.slice(0, 5));
         setRecentJobs(
           [...allJobs]
@@ -283,14 +283,14 @@ const StudentDashboard = ({
             .slice(0, 5)
         );
       } else {
-        const [statsRes, appsRes, jobsRes, sheetAppliedRes] = await Promise.all([
+        const [statsRes, appsRes, jobsRes, externalAppliedRes] = await Promise.all([
           api.get('/jobs/stats?refresh=1'),
           api.get('/jobs/applications/mine?limit=5'),
           api.get('/jobs/matched'),
           api.get('/jobs/external-applied-status'),
         ]);
         const allJobs = jobsRes.data.jobs || [];
-        const sheetApplied = sheetAppliedRes.data.applications || [];
+        const externalApplied = externalAppliedRes.data.applications || [];
 
         // Merge pending applies from sessionStorage (covers race condition: user
         // navigated to Dashboard before the mark-applied API call completed)
@@ -299,13 +299,13 @@ const StudentDashboard = ({
         const pendingApplied = (() => {
           try { return JSON.parse(sessionStorage.getItem(pendingAppliedKey) || '[]'); } catch { return []; }
         })().filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
-        const apiJobLinks = new Set(sheetApplied.map(a => a.jobLink));
+        const apiJobLinks = new Set(externalApplied.map(a => a.jobLink));
         const stillPending = pendingApplied.filter(p => !apiJobLinks.has(p.jobLink));
         if (stillPending.length !== pendingApplied.length) {
           try { sessionStorage.setItem(pendingAppliedKey, JSON.stringify(stillPending)); } catch { /* ignore */ }
         }
-        const combinedSheetApplied = [
-          ...sheetApplied,
+        const combinedExternalApplied = [
+          ...externalApplied,
           ...stillPending.map(p => ({
             jobLink: p.jobLink,
             employerName: p.employerName,
@@ -322,8 +322,8 @@ const StudentDashboard = ({
         const updatedCandidateCount = (statsRes.data.candidateApplyCount || 0) + stillPending.length;
         setStats({
           ...statsRes.data,
-          sheetAppliedCount: combinedSheetApplied.length,
-          totalSheetJobs: allJobs.length,
+          externalAppliedCount: combinedExternalApplied.length,
+          totalMatchedJobs: allJobs.length,
           candidateApplyCount: updatedCandidateCount,
         });
 
@@ -331,7 +331,7 @@ const StudentDashboard = ({
         const jobsMap = {};
         allJobs.forEach(j => { if (j.job_apply_link) jobsMap[j.job_apply_link] = j; });
 
-        // Merge DB + sheet apps (same as MyApplications)
+        // Merge internal + external applications (same as MyApplications)
         const dbApps = (appsRes.data.applications || []).map(app => ({
           id: app.id,
           title: app.job?.title || 'Untitled',
@@ -343,7 +343,7 @@ const StudentDashboard = ({
           source: 'db',
           fullJob: null,
         }));
-        const sheetApps = combinedSheetApplied.map(app => {
+        const externalApps = combinedExternalApplied.map(app => {
           const fullJob = jobsMap[app.jobLink];
           return {
             id: app.jobLink,
@@ -353,13 +353,13 @@ const StudentDashboard = ({
             appliedAt: app.createdAt,
             matchScore: app.matchScore,
             jobLink: app.jobLink,
-            source: 'sheet',
+            source: 'external',
             fullJob,
           };
         });
         const seenLinks = new Set(dbApps.map(a => a.jobLink).filter(Boolean));
-        const uniqueSheet = sheetApps.filter(a => !seenLinks.has(a.jobLink));
-        const allApps = [...dbApps, ...uniqueSheet].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
+        const uniqueExternal = externalApps.filter(a => !seenLinks.has(a.jobLink));
+        const allApps = [...dbApps, ...uniqueExternal].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
         setRecentApps(allApps.slice(0, 5));
 
         // Show newest 5 jobs (by saved_at descending)
@@ -409,13 +409,13 @@ const StudentDashboard = ({
   })();
 
   const firstName = user?.fullName?.split(' ')[0] || 'User';
-  const sheetAppliedCount = stats?.sheetAppliedCount || 0;
+  const externalAppliedCount = stats?.externalAppliedCount || 0;
   const dbAppliedCount = stats?.totalApplied || 0;
-  const totalApplied = sheetAppliedCount + dbAppliedCount;
+  const totalApplied = externalAppliedCount + dbAppliedCount;
   const interviewCount = stats?.interviewScheduled || 0;
   const rejectedCount = stats?.rejected || 0;
-  const totalSheetJobs = stats?.totalSheetJobs || 0;
-  const jobsToApply = Math.max(totalSheetJobs - sheetAppliedCount, 0);
+  const totalMatchedJobs = stats?.totalMatchedJobs || stats?.totalJobs || 0;
+  const jobsToApply = Math.max(totalMatchedJobs - externalAppliedCount, 0);
   const adminApplyCount = stats?.adminApplyCount || 0;
   const candidateApplyCount = stats?.candidateApplyCount || 0;
   const totalCount = totalApplied;
@@ -613,7 +613,7 @@ const StudentDashboard = ({
             <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-4">Applications</h3>
             <div className="flex items-center gap-4">
               <div className="relative shrink-0">
-                <DonutChart value={totalApplied} max={totalSheetJobs || 1} color="#1e40af" trackColor="#d1fae5" size={88} strokeWidth={9} />
+                <DonutChart value={totalApplied} max={totalMatchedJobs || 1} color="#1e40af" trackColor="#d1fae5" size={88} strokeWidth={9} />
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-[17px] font-extrabold text-gray-900 leading-none">{totalCount}</span>
                   <span className="text-[9px] font-medium text-gray-500">Total</span>

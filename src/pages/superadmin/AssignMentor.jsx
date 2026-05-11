@@ -3,6 +3,11 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { UserCheck, Users, ArrowRight } from 'lucide-react';
 
+const hasAssignedAdmin = (student) => {
+  if (student?.assignedMentorId) return true;
+  return Array.isArray(student?.adminAssignments) && student.adminAssignments.length > 0;
+};
+
 const AssignMentor = () => {
   const [admins, setAdmins] = useState([]);
   const [students, setStudents] = useState([]);
@@ -16,11 +21,11 @@ const AssignMentor = () => {
   const fetchData = async () => {
     try {
       const [adminsRes, studentsRes] = await Promise.all([
-        api.get('/admin/admins'),
-        api.get('/admin/students'),
+        api.get('/admin/admins', { params: { summary: true } }),
+        api.get('/admin/students', { params: { summary: true, limit: 500 } }),
       ]);
       setAdmins(adminsRes.data.filter(a => a.isActive));
-      setStudents(studentsRes.data);
+      setStudents(studentsRes.data.students || studentsRes.data || []);
     } catch (error) {
       toast.error('Failed to load data');
     } finally {
@@ -35,7 +40,7 @@ const AssignMentor = () => {
   };
 
   const selectAll = () => {
-    const unassigned = students.filter(s => !s.mentorId).map(s => s.id);
+    const unassigned = students.filter(s => !hasAssignedAdmin(s)).map(s => s.id);
     setSelectedStudents(prev => prev.length === unassigned.length ? [] : unassigned);
   };
 
@@ -55,8 +60,8 @@ const AssignMentor = () => {
     }
   };
 
-  const unassigned = students.filter(s => !s.mentorId);
-  const assigned = students.filter(s => s.mentorId);
+  const unassigned = students.filter((student) => !hasAssignedAdmin(student));
+  const assigned = students.filter((student) => hasAssignedAdmin(student));
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div></div>;
@@ -86,7 +91,7 @@ const AssignMentor = () => {
                       onChange={(e) => setSelectedMentor(e.target.value)} className="text-primary-600" />
                     <div>
                       <p className="font-medium text-gray-800 text-sm">{admin.fullName}</p>
-                      <p className="text-xs text-gray-500">{admin._count?.students || 0} students</p>
+                      <p className="text-xs text-gray-500">{assigned.filter((student) => student.assignedMentorId === admin.id || student.adminAssignments?.some((assignment) => assignment.adminId === admin.id)).length} students</p>
                     </div>
                   </label>
                 ))
@@ -144,7 +149,7 @@ const AssignMentor = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {admins.map((admin) => {
-              const mentees = assigned.filter(s => s.mentorId === admin.id);
+              const mentees = assigned.filter((student) => student.assignedMentorId === admin.id || student.adminAssignments?.some((assignment) => assignment.adminId === admin.id));
               return (
                 <div key={admin.id} className="bg-gray-50 rounded-xl p-4">
                   <div className="flex items-center gap-3 mb-3">

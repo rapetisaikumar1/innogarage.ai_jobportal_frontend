@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -7,17 +7,57 @@ import { User, Mail, Phone, Linkedin, GraduationCap, Briefcase, Tag, FileText, L
 const LOCATION_OPTIONS = ['USA', 'Canada', 'India'];
 
 const EXPERIENCE_OPTIONS = [
-  { value: 'No Experience', label: 'No Experience (Entry Level)' },
   { value: 'Less than 1 year', label: 'Less than 1 year' },
-  { value: '1 year', label: '1 year' },
-  { value: '2 years', label: '2 years' },
-  { value: '3 years', label: '3 years' },
-  { value: '4 years', label: '4 years' },
-  { value: '5 years', label: '5 years' },
-  { value: '6-7 years', label: '6–7 years' },
-  { value: '8-10 years', label: '8–10 years' },
-  { value: '10+ years', label: '10+ years (Senior)' },
+  { value: '1 – 2 years', label: '1 – 2 years' },
+  { value: '2 – 3 years', label: '2 – 3 years' },
+  { value: '3 – 5 years', label: '3 – 5 years' },
+  { value: '5 – 7 years', label: '5 – 7 years' },
+  { value: '7 – 10 years', label: '7 – 10 years' },
+  { value: '10+ years', label: '10+ years' },
 ];
+
+const ExperienceDropdown = ({ value, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const selected = EXPERIENCE_OPTIONS.find(o => o.value === value);
+
+  return (
+    <div className="relative" ref={ref}>
+      <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
+        <Briefcase size={11} className="text-gray-400" /> Years of Experience
+      </label>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between text-sm bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all cursor-pointer text-left"
+      >
+        <span className={selected ? 'text-gray-800' : 'text-gray-400'}>{selected ? selected.label : 'Select...'}</span>
+        <svg className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+      </button>
+      {open && (
+        <ul className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg py-1 max-h-60 overflow-auto">
+          {EXPERIENCE_OPTIONS.map(opt => (
+            <li
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={`flex items-center gap-2 px-4 py-2 text-sm cursor-pointer transition-colors ${value === opt.value ? 'bg-indigo-500 text-white font-medium' : 'text-gray-700 hover:bg-gray-100'}`}
+            >
+              {value === opt.value && <span className="text-xs">✓</span>}
+              {opt.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
 
 const ProfilePage = () => {
   const { user, updateUser } = useAuth();
@@ -228,21 +268,10 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            <div>
-              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
-                <Briefcase size={11} className="text-gray-400" /> Years of Experience
-              </label>
-              <select
-                className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all cursor-pointer"
-                value={form.experience}
-                onChange={(e) => setForm({ ...form, experience: e.target.value })}
-              >
-                <option value="">Select experience level...</option>
-                {EXPERIENCE_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
+            <ExperienceDropdown
+              value={form.experience}
+              onChange={(val) => setForm({ ...form, experience: val })}
+            />
 
             {/* Job Search Fields */}
             <div className="border border-violet-200/80 bg-violet-50/40 rounded-lg p-4 space-y-3">

@@ -121,53 +121,54 @@ const AdminBookings = () => {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-gray-900 tracking-tight">Bookings</h1>
-        <p className="text-[13px] text-gray-500 mt-0.5">Review, confirm, or cancel mentoring session requests</p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-3">
-        {[
-          { label: 'Pending', value: pending.length, icon: <AlertCircle size={14} />, color: 'text-amber-500', bg: 'bg-amber-50', numColor: 'text-amber-600', border: 'border-amber-100' },
-          { label: 'Confirmed', value: confirmed.length, icon: <CheckCircle2 size={14} />, color: 'text-blue-500', bg: 'bg-blue-50', numColor: 'text-blue-600', border: 'border-blue-100' },
-          { label: 'Completed', value: completed.length, icon: <CheckCircle2 size={14} />, color: 'text-emerald-500', bg: 'bg-emerald-50', numColor: 'text-emerald-600', border: 'border-emerald-100' },
-          { label: 'Cancelled', value: cancelled.length, icon: <XCircle size={14} />, color: 'text-red-500', bg: 'bg-red-50', numColor: 'text-red-600', border: 'border-red-100' },
-        ].map((s, i) => (
-          <div key={i} className={`bg-white rounded-xl border ${s.border} px-4 py-3.5`}>
-            <div className={`w-7 h-7 rounded-md ${s.bg} flex items-center justify-center ${s.color} mb-2.5`}>{s.icon}</div>
-            <p className={`text-2xl font-bold ${s.numColor} leading-tight`}>{s.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
-        {tabItems.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-semibold rounded-md transition-all ${tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <div className={`w-1.5 h-1.5 rounded-full ${t.dot}`}></div>
-            {t.label} ({t.count})
-          </button>
-        ))}
-      </div>
-
-      {/* Bookings List */}
-      {currentList.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 text-center py-14">
-          <Calendar size={32} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-sm font-medium text-gray-500">No {tab} bookings</p>
+      {/* Header + Stats row */}
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Bookings</h1>
+          <p className="text-[13px] text-gray-500 mt-0.5">Review, confirm, or cancel mentoring session requests</p>
         </div>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
+          {[
+            { label: 'Pending', value: pending.length, icon: <AlertCircle size={14} />, color: 'text-amber-500', bg: 'bg-amber-50', numColor: 'text-amber-600' },
+            { label: 'Confirmed', value: confirmed.length, icon: <CheckCircle2 size={14} />, color: 'text-blue-500', bg: 'bg-blue-50', numColor: 'text-blue-600' },
+            { label: 'Completed', value: completed.length, icon: <CheckCircle2 size={14} />, color: 'text-emerald-500', bg: 'bg-emerald-50', numColor: 'text-emerald-600' },
+            { label: 'Cancelled', value: cancelled.length, icon: <XCircle size={14} />, color: 'text-red-500', bg: 'bg-red-50', numColor: 'text-red-600' },
+          ].map((s, i) => (
+            <div key={i} className="bg-white rounded-xl border border-gray-200 px-3.5 py-3">
+              <div className={`w-7 h-7 rounded-md ${s.bg} flex items-center justify-center ${s.color} mb-2`}>{s.icon}</div>
+              <p className={`text-xl font-bold ${s.numColor} leading-tight`}>{s.value}</p>
+              <p className="text-[11px] text-gray-500 mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Tabs + Bookings in one card */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {/* Tabs bar */}
+        <div className="flex items-center gap-0 border-b border-gray-100">
+          {tabItems.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex items-center gap-1.5 px-5 py-3 text-[13px] font-semibold transition-all border-b-2 ${tab === t.key ? 'border-indigo-600 text-indigo-600 bg-indigo-50/40' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+            >
+              <div className={`w-1.5 h-1.5 rounded-full ${t.dot}`}></div>
+              {t.label} <span className="text-[11px] font-normal">({t.count})</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Bookings List */}
+        {currentList.length === 0 ? (
+          <div className="text-center py-16">
+            <Calendar size={32} className="mx-auto text-gray-300 mb-3" />
+            <p className="text-sm font-medium text-gray-500">No {tab} bookings</p>
+          </div>
+        ) : (
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
+              <tr className="border-b border-gray-100 bg-gray-50/60">
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Student</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Date & Time</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Status</th>
@@ -261,8 +262,8 @@ const AdminBookings = () => {
               })}
             </tbody>
           </table>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Confirm Modal */}
       {confirmModal && (

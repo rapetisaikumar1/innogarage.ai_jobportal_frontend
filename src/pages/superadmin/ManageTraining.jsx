@@ -5,12 +5,12 @@ import { BookOpen, Plus, Edit, Trash2, FileText, Video, Link as LinkIcon, Extern
 
 const CATEGORIES = ['Interview Prep', 'Career Development', 'Technical Skills', 'Soft Skills'];
 
-const CAT_STYLE = {
-  'Interview Prep':     { bg: 'bg-violet-50',  text: 'text-violet-700',  border: 'border-violet-200',  headerBg: 'bg-gradient-to-r from-violet-50 to-violet-100/60',  icon: '\u{1F3AF}', pill: 'bg-violet-100 text-violet-700' },
-  'Career Development': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', headerBg: 'bg-gradient-to-r from-emerald-50 to-emerald-100/60', icon: '\u{1F680}', pill: 'bg-emerald-100 text-emerald-700' },
-  'Technical Skills':   { bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200',    headerBg: 'bg-gradient-to-r from-blue-50 to-blue-100/60',    icon: '\u{1F4BB}', pill: 'bg-blue-100 text-blue-700' },
-  'Soft Skills':        { bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',   headerBg: 'bg-gradient-to-r from-amber-50 to-amber-100/60',   icon: '\u{1F91D}', pill: 'bg-amber-100 text-amber-700' },
-  'Uncategorized':      { bg: 'bg-gray-50',    text: 'text-gray-600',    border: 'border-gray-200',    headerBg: 'bg-gradient-to-r from-gray-50 to-gray-100/60',    icon: '\u{1F4C1}', pill: 'bg-gray-100 text-gray-600' },
+const CAT_ICON = {
+  'Interview Prep': '🎯',
+  'Career Development': '🚀',
+  'Technical Skills': '💻',
+  'Soft Skills': '🤝',
+  'Uncategorized': '📁',
 };
 
 const ManageTraining = () => {
@@ -423,22 +423,21 @@ const ManageTraining = () => {
 
       {/* Category Filter Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        <button onClick={() => setFilterCategory('')} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors whitespace-nowrap ${!filterCategory ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+        <button onClick={() => setFilterCategory('')} className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${!filterCategory ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
           All ({categoryCounts.All})
         </button>
         {CATEGORIES.map(cat => {
-          const style = CAT_STYLE[cat];
           const count = categoryCounts[cat] || 0;
           if (count === 0) return null;
           return (
-            <button key={cat} onClick={() => setFilterCategory(filterCategory === cat ? '' : cat)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors whitespace-nowrap flex items-center gap-1.5 ${filterCategory === cat ? style.pill + ' ring-2 ring-offset-1 ring-gray-300' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-              <span>{style.icon}</span> {cat} ({count})
+            <button key={cat} onClick={() => setFilterCategory(filterCategory === cat ? '' : cat)} className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${filterCategory === cat ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
+              <span>{CAT_ICON[cat]}</span> {cat} ({count})
             </button>
           );
         })}
         {(categoryCounts['Uncategorized'] || 0) > 0 && (
-          <button onClick={() => setFilterCategory(filterCategory === 'Uncategorized' ? '' : 'Uncategorized')} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors whitespace-nowrap ${filterCategory === 'Uncategorized' ? 'bg-gray-200 text-gray-700 ring-2 ring-offset-1 ring-gray-300' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-            Uncategorized ({categoryCounts['Uncategorized']})
+          <button onClick={() => setFilterCategory(filterCategory === 'Uncategorized' ? '' : 'Uncategorized')} className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${filterCategory === 'Uncategorized' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
+            📁 Uncategorized ({categoryCounts['Uncategorized']})
           </button>
         )}
       </div>
@@ -455,61 +454,63 @@ const ManageTraining = () => {
       ) : (
         <div className="space-y-5">
           {grouped.map(([category, items]) => {
-            const style = CAT_STYLE[category] || CAT_STYLE['Uncategorized'];
+            const catIcon = CAT_ICON[category] || '📁';
             const isCollapsed = collapsed[category];
             const totalAssigned = items.reduce((sum, m) => sum + (m.assignments || []).length, 0);
             return (
-              <div key={category} className={`border ${style.border} rounded-xl overflow-hidden shadow-sm bg-white`}>
-                {/* Category Section Header */}
-                <div className={`flex items-center justify-between px-5 py-3 ${style.headerBg}`}>
+              <div key={category} className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                <div className="flex items-center justify-between px-5 py-3.5 bg-gray-50 border-b border-gray-200">
                   <button onClick={() => toggleCollapse(category)} className="flex items-center gap-3 flex-1 text-left">
-                    <span className="text-lg">{style.icon}</span>
-                    <div>
-                      <h2 className={`text-[14px] font-bold ${style.text}`}>{category}</h2>
-                      <p className="text-[11px] text-gray-400">{items.length} material{items.length !== 1 ? 's' : ''} &middot; {totalAssigned} assignment{totalAssigned !== 1 ? 's' : ''}</p>
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: category === 'Interview Prep' ? '#fee2e2' : category === 'Career Development' ? '#e0f2fe' : category === 'Technical Skills' ? '#dcfce7' : '#f3e8ff' }}>
+                      {catIcon}
                     </div>
-                    {isCollapsed ? <ChevronRight size={16} className="text-gray-400 ml-2" /> : <ChevronDown size={16} className="text-gray-400 ml-2" />}
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <h2 className="text-sm font-bold text-gray-900">{category}</h2>
+                        {isCollapsed ? <ChevronRight size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+                      </div>
+                      <p className="text-xs text-gray-400">{items.length} material{items.length !== 1 ? 's' : ''} · {totalAssigned} assigned</p>
+                    </div>
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); openCategoryAssign(category); }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/80 hover:bg-white text-violet-600 rounded-lg text-[11px] font-semibold transition-colors shadow-sm border border-violet-200"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold transition-colors border border-gray-200"
                   >
-                    <Layers size={13} /> Assign Category
+                    <Layers size={13} /> Assign All
                   </button>
                 </div>
 
-                {/* Material Cards */}
                 {!isCollapsed && (
-                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {items.map((mat) => {
                       const tc = typeConfig(mat.type);
                       const TypeIcon = tc.icon;
                       return (
-                        <div key={mat.id} className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-200 group overflow-hidden">
-                          <div className={`px-4 py-2.5 ${tc.bg} border-b ${tc.border} flex items-center justify-between`}>
-                            <div className="flex items-center gap-2">
-                              <TypeIcon size={14} className={tc.color} />
-                              <span className={`text-[10px] font-bold uppercase tracking-wider ${tc.color}`}>{tc.label}</span>
+                        <div key={mat.id} className="bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-200 group overflow-hidden">
+                          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                            <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md ${tc.bg} border ${tc.border}`}>
+                              <TypeIcon size={12} className={tc.color} />
+                              <span className={`text-xs font-semibold ${tc.color}`}>{tc.label}</span>
                             </div>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => openAssignModal(mat)} className="p-1.5 rounded-lg hover:bg-white/70 text-gray-500 hover:text-violet-600 transition-colors" title="Assign Students">
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => openAssignModal(mat)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-violet-600 transition-colors" title="Assign Students">
                                 <UserPlus size={13} />
                               </button>
-                              <button onClick={() => handleEdit(mat)} className="p-1.5 rounded-lg hover:bg-white/70 text-gray-500 hover:text-blue-600 transition-colors" title="Edit">
+                              <button onClick={() => handleEdit(mat)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors" title="Edit">
                                 <Edit size={13} />
                               </button>
-                              <button onClick={() => handleDelete(mat.id)} className="p-1.5 rounded-lg hover:bg-white/70 text-gray-500 hover:text-red-500 transition-colors" title="Delete">
+                              <button onClick={() => handleDelete(mat.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
                                 <Trash2 size={13} />
                               </button>
                             </div>
                           </div>
                           <div className="p-4">
-                            <h3 className="text-[13px] font-bold text-gray-900 mb-1 line-clamp-1">{mat.title}</h3>
-                            {mat.description && <p className="text-[11px] text-gray-500 mb-3 line-clamp-2 leading-relaxed">{mat.description}</p>}
+                            <h3 className="text-sm font-bold text-gray-900 mb-1 line-clamp-1">{mat.title}</h3>
+                            {mat.description && <p className="text-xs text-gray-500 mb-3 line-clamp-2 leading-relaxed">{mat.description}</p>}
                             {!mat.description && <div className="mb-3" />}
                             <div className="flex items-center gap-2 flex-wrap mb-3">
                               {mat.url && (
-                                <a href={mat.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-semibold hover:bg-blue-100 transition-colors">
+                                <a href={mat.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 text-gray-600 rounded-md text-xs font-medium hover:bg-gray-100 transition-colors border border-gray-200">
                                   <ExternalLink size={11} /> Open
                                 </a>
                               )}
@@ -531,18 +532,18 @@ const ManageTraining = () => {
                                       })
                                       .catch(() => alert('Failed to download file'));
                                   }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-md text-[10px] font-semibold hover:bg-emerald-100 transition-colors">
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 text-gray-600 rounded-md text-xs font-medium hover:bg-gray-100 transition-colors border border-gray-200">
                                   <Download size={11} /> Download
                                 </a>
                               )}
-                              <button onClick={() => openAssignModal(mat)} className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 text-violet-600 rounded-md text-[10px] font-semibold hover:bg-violet-100 transition-colors">
-                                <Users size={11} /> {(mat.assignments || []).length}
+                              <button onClick={() => openAssignModal(mat)} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 text-gray-600 rounded-md text-xs font-medium hover:bg-gray-100 transition-colors border border-gray-200">
+                                <Users size={11} /> {(mat.assignments || []).length} assigned
                               </button>
                             </div>
-                            <div className="flex items-center text-[10px] text-gray-400 pt-2 border-t border-gray-50">
-                              <Calendar size={11} className="mr-1" />
+                            <p className="text-xs text-gray-400 flex items-center gap-1">
+                              <Calendar size={11} />
                               {new Date(mat.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                            </div>
+                            </p>
                           </div>
                         </div>
                       );
@@ -575,16 +576,16 @@ const ManageTraining = () => {
         ) : (
           <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {notes.map((note) => (
-              <div key={note.id} className="bg-amber-50/60 rounded-xl border border-amber-100 hover:border-amber-200 hover:shadow-md transition-all duration-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-amber-100 flex items-center justify-between">
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-100 border border-amber-200">
+              <div key={note.id} className="rounded-xl border border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm transition-all duration-200 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-amber-200 bg-transparent">
                     <StickyNote size={12} className="text-amber-600" />
                     <span className="text-xs font-semibold text-amber-700">Note</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => openNoteAssignModal(note)} className="p-1.5 rounded-lg hover:bg-amber-100 text-gray-400 hover:text-violet-600 transition-colors" title="Assign Students"><UserPlus size={13} /></button>
-                    <button onClick={() => handleEditNote(note)} className="p-1.5 rounded-lg hover:bg-amber-100 text-gray-400 hover:text-blue-600 transition-colors" title="Edit"><Edit size={13} /></button>
-                    <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 rounded-lg hover:bg-amber-100 text-gray-400 hover:text-red-500 transition-colors" title="Delete"><Trash2 size={13} /></button>
+                    <button onClick={() => openNoteAssignModal(note)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-violet-600 transition-colors" title="Assign Students"><UserPlus size={13} /></button>
+                    <button onClick={() => handleEditNote(note)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors" title="Edit"><Edit size={13} /></button>
+                    <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors" title="Delete"><Trash2 size={13} /></button>
                   </div>
                 </div>
                 <div className="p-4">

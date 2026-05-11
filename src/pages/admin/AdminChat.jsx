@@ -189,26 +189,16 @@ const AdminChat = () => {
 
   const totalUnread = contacts.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
 
-  const getRoleLabel = (role, department) => {
+  const getRoleLabel = (role) => {
     if (role === 'SUPER_ADMIN') return 'Super Admin';
-    if (role === 'ADMIN') {
-      if (department === 'MARKETING') return 'Marketing';
-      if (department === 'PROXY') return 'Proxy';
-      if (department === 'HR') return 'HR';
-      return 'Admin';
-    }
+    if (role === 'ADMIN') return 'Admin';
     if (role === 'STUDENT') return 'Student';
     return role;
   };
 
-  const getRoleBadge = (role, department) => {
+  const getRoleBadge = (role) => {
     if (role === 'SUPER_ADMIN') return { text: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-200' };
-    if (role === 'ADMIN') {
-      if (department === 'MARKETING') return { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' };
-      if (department === 'PROXY') return { text: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' };
-      if (department === 'HR') return { text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' };
-      return { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' };
-    }
+    if (role === 'ADMIN') return { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' };
     return { text: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' };
   };
 

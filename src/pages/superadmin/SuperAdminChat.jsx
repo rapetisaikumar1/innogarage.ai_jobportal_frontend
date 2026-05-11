@@ -171,26 +171,16 @@ const SuperAdminChat = () => {
 
   const totalUnread = contacts.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
 
-  const getRoleLabel = (role, department) => {
+  const getRoleLabel = (role) => {
     if (role === 'SUPER_ADMIN') return 'Super Admin';
-    if (role === 'ADMIN') {
-      if (department === 'MARKETING') return 'Marketing';
-      if (department === 'PROXY') return 'Proxy';
-      if (department === 'HR') return 'HR';
-      return 'Admin';
-    }
+    if (role === 'ADMIN') return 'Admin';
     if (role === 'STUDENT') return 'Student';
     return role;
   };
 
-  const getRoleBadge = (role, department) => {
+  const getRoleBadge = (role) => {
     if (role === 'SUPER_ADMIN') return { text: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-200' };
-    if (role === 'ADMIN') {
-      if (department === 'MARKETING') return { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' };
-      if (department === 'PROXY') return { text: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' };
-      if (department === 'HR') return { text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' };
-      return { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' };
-    }
+    if (role === 'ADMIN') return { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' };
     return { text: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' };
   };
 
@@ -323,7 +313,6 @@ const SuperAdminChat = () => {
           ) : (
             filteredContacts.map((contact) => {
               const isActive = activeContact?.id === contact.id;
-              const badge = getRoleBadge(contact.role, contact.department);
               return (
                 <button
                   key={contact.id}
@@ -337,9 +326,14 @@ const SuperAdminChat = () => {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <p className={`text-[13px] font-semibold truncate ${isActive ? 'text-blue-900' : 'text-gray-900'}`}>{contact.fullName}</p>
-                        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border flex-shrink-0 ${badge.text} ${badge.bg} ${badge.border}`}>
-                          {getRoleLabel(contact.role, contact.department)}
-                        </span>
+                        {contact.role !== 'STUDENT' && (() => {
+                          const badge = getRoleBadge(contact.role, contact.department);
+                          return (
+                            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${badge.text} ${badge.bg} ${badge.border}`}>
+                              {getRoleLabel(contact.role, contact.department)}
+                            </span>
+                          );
+                        })()}
                       </div>
                       {contact.unreadCount > 0 && (
                         <span className="w-5 h-5 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center flex-shrink-0">

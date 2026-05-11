@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { Users, Search, Trash2, Info, Plus, ChevronLeft, ChevronRight, ArrowLeft, Mail, Phone, MapPin, Calendar, GraduationCap, Briefcase, Award, X, ExternalLink, Shield, Hash, Clock, User, FileText, BookOpen, Zap, TrendingUp, CheckCircle2, XCircle, AlertCircle, Star, ChevronDown, Check, Crown } from 'lucide-react';
@@ -8,18 +9,42 @@ const AVATAR_COLORS = [
   'bg-rose-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-teal-500',
 ];
 
-const DEPT_COLORS = {
-  MARKETING: { bg: 'bg-blue-50', text: 'text-blue-700', ring: 'ring-blue-200', label: 'Marketing' },
-  PROXY: { bg: 'bg-violet-50', text: 'text-violet-700', ring: 'ring-violet-200', label: 'Proxy' },
-  HR: { bg: 'bg-emerald-50', text: 'text-emerald-700', ring: 'ring-emerald-200', label: 'HR' },
-};
-
 const avatarStyle = (name) => {
   const idx = (name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length;
   return AVATAR_COLORS[idx];
 };
 
+const isStudentActive = (student) => {
+  if (!student) return false;
+  if (typeof student.status === 'string') return student.status === 'ACTIVE';
+  if (typeof student.isActive === 'boolean') return student.isActive;
+  return false;
+};
+
+const getInitials = (name) => {
+  if (!name) return '?';
+  return name.split(' ').map((word) => word[0]).join('').slice(0, 2).toUpperCase();
+};
+
+const formatDate = (value) => {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+const getAssignedAdmins = (student) => {
+  if (student?.adminAssignments?.length > 0) {
+    return student.adminAssignments;
+  }
+
+  if (student?.assignedMentor) {
+    return [{ id: `legacy-${student.assignedMentor.id}`, admin: student.assignedMentor }];
+  }
+
+  return [];
+};
+
 const ManageStudents = () => {
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [mentors, setMentors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +84,7 @@ const ManageStudents = () => {
 
   const fetchStudents = async () => {
     try {
-      const res = await api.get('/admin/students', { params: { limit: 500 } });
+      const res = await api.get('/admin/students', { params: { limit: 500, summary: true } });
       const data = res.data;
       setStudents(data.students || data || []);
     } catch (error) {
@@ -71,7 +96,7 @@ const ManageStudents = () => {
 
   const fetchMentors = async () => {
     try {
-      const res = await api.get('/admin/admins');
+      const res = await api.get('/admin/admins', { params: { summary: true } });
       setMentors(res.data || []);
     } catch {
       // silent
@@ -141,8 +166,7 @@ const ManageStudents = () => {
       });
       const r = res.data?.results?.[0];
       if (r?.status === 'already_assigned') toast('Already assigned', { icon: '⚠️' });
-      else if (r?.status === 'limit_reached') toast.error('Max 5 admins per student');
-      else if (r?.status === 'marketing_first') toast.error('First admin must be from Marketing department');
+      else if (r?.status === 'limit_reached') toast.error(r.message || 'Only one admin can be assigned per student');
       else toast.success('Admin assigned');
       fetchStudents();
     } catch (error) {
@@ -185,8 +209,8 @@ const ManageStudents = () => {
       const matchesStatus = statusFilter === 'all' ||
         (statusFilter === 'active' && s.status === 'ACTIVE') ||
         (statusFilter === 'inactive' && s.status === 'INACTIVE');
-      const assignedAdminIds = (s.adminAssignments || []).map(a => a.admin?.id).filter(Boolean);
-      const hasAdmins = assignedAdminIds.length > 0 || s.assignedMentorId;
+      const assignedAdminIds = getAssignedAdmins(s).map((assignment) => assignment.admin?.id).filter(Boolean);
+      const hasAdmins = assignedAdminIds.length > 0;
       const matchesMentor = mentorFilter === 'all' ||
         (mentorFilter === 'unassigned' && !hasAdmins) ||
         assignedAdminIds.includes(mentorFilter) ||
@@ -213,436 +237,174 @@ const ManageStudents = () => {
 
   // ─── Inline Detail View (Full Page) ───
   if (selectedStudent && detail) {
-    const statusColors = {
-      APPLIED: 'bg-blue-50 text-blue-700 ring-blue-200',
-      INTERVIEW_SCHEDULED: 'bg-amber-50 text-amber-700 ring-amber-200',
-      OFFER_RECEIVED: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-      REJECTED: 'bg-red-50 text-red-700 ring-red-200',
-    };
-    const statusIcons = {
-      APPLIED: <FileText size={12} />,
-      INTERVIEW_SCHEDULED: <Calendar size={12} />,
-      OFFER_RECEIVED: <CheckCircle2 size={12} />,
-      REJECTED: <XCircle size={12} />,
-    };
-    const bookingColors = {
-      PENDING: 'bg-amber-50 text-amber-700 ring-amber-200',
-      CONFIRMED: 'bg-blue-50 text-blue-700 ring-blue-200',
-      COMPLETED: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-      CANCELLED: 'bg-red-50 text-red-700 ring-red-200',
-    };
-    const stats = [
-      { label: 'Job Applications', value: detail._count?.jobApplications || 0, icon: Briefcase, color: 'bg-blue-50 text-blue-600' },
-      { label: 'Mentor Sessions', value: detail._count?.bookings || 0, icon: BookOpen, color: 'bg-violet-50 text-violet-600' },
-      { label: 'Issues Raised', value: detail._count?.issues || 0, icon: AlertCircle, color: 'bg-orange-50 text-orange-600' },
+    const skills = detail.keySkills
+      ? (typeof detail.keySkills === 'string' ? detail.keySkills.split(',').map(s => s.trim()).filter(Boolean) : detail.keySkills)
+      : [];
+    const displayName = detail.fullName?.replace(/\s+/g, ' ').trim() || 'Student';
+    const isActive = isStudentActive(detail);
+    const assignedAdmins = getAssignedAdmins(detail);
+    const profileMeta = [
+      { icon: Mail, value: detail.email },
+      { icon: Phone, value: detail.phone },
+      { icon: MapPin, value: detail.location },
+    ].filter((item) => item.value);
+    const accountRows = [
+      { label: 'Email Verified', value: detail.isEmailVerified ? 'Yes' : 'No', tone: detail.isEmailVerified ? 'text-emerald-600' : 'text-rose-500' },
+      { label: 'Joined', value: formatDate(detail.createdAt), tone: 'text-slate-800' },
+      { label: 'Last Updated', value: formatDate(detail.updatedAt), tone: 'text-slate-800' },
     ];
 
     return (
-      <div className="space-y-6">
-        {/* Top Bar */}
+      <div className="mx-auto max-w-6xl space-y-4">
         <div className="flex items-center justify-between">
           <button
             onClick={() => { setSelectedStudent(null); setDetail(null); }}
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm font-medium group"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
           >
-            <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+            <ArrowLeft size={15} />
             Back to Students
           </button>
-          <div className="flex items-center gap-2">
-            {detail.resumeUrl && (
-              <a
-                href={detail.resumeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
-              >
-                <ExternalLink size={14} />
-                View Resume
-              </a>
-            )}
-            <button
-              onClick={() => toggleStatus(detail.id)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border shadow-sm ${detail.status === 'ACTIVE' ? 'border-amber-200 text-amber-700 hover:bg-amber-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'}`}
-            >
-              {detail.status === 'ACTIVE' ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
-              {detail.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-            </button>
-
-          </div>
+          <button
+            onClick={() => navigate(`/admin/students/${detail.id}/view`)}
+            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-1.5 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-slate-800"
+          >
+            <User size={15} />
+            View as Student
+          </button>
         </div>
 
-        {/* Profile Header Card */}
-        <div className="rounded-2xl overflow-hidden shadow-sm bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900">
-          <div className="px-8 py-6">
-            <div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl font-bold capitalize text-white tracking-tight">{detail.fullName}</h1>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${detail.status === 'ACTIVE' ? 'bg-emerald-400 text-emerald-950' : 'bg-red-400 text-red-950'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${detail.status === 'ACTIVE' ? 'bg-emerald-700' : 'bg-red-700'}`}></span>
-                  {detail.status === 'ACTIVE' ? 'Active' : 'Inactive'}
-                </span>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${detail.isEmailVerified ? 'bg-sky-400 text-sky-950' : 'bg-slate-400 text-slate-900'}`}>
-                  <Shield size={11} />
-                  {detail.isEmailVerified ? 'Verified' : 'Unverified'}
-                </span>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${PLAN_COLORS[normalizePlanKey(detail.subscriptionPlan)] || 'bg-gray-100 text-gray-500 ring-gray-200'}`}>
-                  <Crown size={11} />
-                  {normalizePlanKey(detail.subscriptionPlan) || 'No Plan'}
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-blue-600 text-xl font-bold text-white shadow-sm">
+              {getInitials(displayName)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="truncate text-[1.8rem] font-semibold tracking-tight text-slate-900">{displayName}</h2>
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${isActive ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-rose-50 text-rose-600 ring-rose-200'}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-rose-400'}`}></span>
+                  {isActive ? 'Active' : 'Inactive'}
                 </span>
               </div>
-              <div className="flex items-center gap-2.5 mt-3 flex-wrap text-sm font-medium text-white">
-                {detail.registrationNumber && (
-                  <span className="inline-flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-lg">
-                    <Hash size={13} className="text-sky-300" />
-                    <span className="font-mono font-bold">{detail.registrationNumber}</span>
+              <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] text-slate-600">
+                {profileMeta.map(({ icon: Icon, value }) => (
+                  <span key={`${Icon.displayName || Icon.name}-${value}`} className="inline-flex items-center gap-1.5">
+                    <Icon size={14} className="text-slate-400" />
+                    {value}
                   </span>
-                )}
-                {detail.email && (
-                  <span className="inline-flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-lg">
-                    <Mail size={13} className="text-sky-300" />
-                    {detail.email}
-                  </span>
-                )}
-                {detail.phone && (
-                  <span className="inline-flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-lg">
-                    <Phone size={13} className="text-sky-300" />
-                    {detail.phone}
-                  </span>
-                )}
-                {detail.location && (
-                  <span className="inline-flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-lg">
-                    <MapPin size={13} className="text-sky-300" />
-                    {detail.location}
-                  </span>
-                )}
-                <span className="inline-flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-lg">
-                  <Calendar size={13} className="text-sky-300" />
-                  Joined {new Date(detail.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </span>
+                ))}
               </div>
+              {detail.registrationNumber && (
+                <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[13px] font-medium text-slate-700">
+                  <Hash size={13} className="text-slate-400" />
+                  Reg: {detail.registrationNumber}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Activity Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {stats.map((s, i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-100 px-4 py-3.5 hover:border-gray-200 transition-all">
-              <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-lg ${s.color} flex items-center justify-center`}>
-                  <s.icon size={16} />
-                </div>
-                <div>
-                  <p className="text-xl font-bold text-gray-900 leading-tight">{s.value}</p>
-                  <p className="text-[11px] text-gray-400 font-medium leading-tight">{s.label}</p>
-                </div>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.82fr)]">
+          <div>
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-4 py-3">
+                <h3 className="flex items-center gap-2 text-[13px] font-semibold text-slate-900"><GraduationCap size={15} className="text-blue-600" />Education & Skills</h3>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Two-Column Layout: Profile + Mentor | Activities */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column — Profile Details */}
-          <div className="space-y-6">
-            {/* Education & Skills Card */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-900 mb-5 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
-                  <GraduationCap size={14} className="text-amber-600" />
+              <div className="space-y-4 p-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {detail.education && (
+                    <div className="rounded-lg bg-slate-50 px-3 py-2.5">
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Education</p>
+                      <p className="text-[13px] leading-5 text-slate-800">{detail.education}</p>
+                    </div>
+                  )}
+                  {detail.experience && (
+                    <div className="rounded-lg bg-slate-50 px-3 py-2.5">
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Experience</p>
+                      <p className="text-[13px] leading-5 text-slate-800">{detail.experience}</p>
+                    </div>
+                  )}
+                  {detail.jobRole && (
+                    <div className="rounded-lg bg-slate-50 px-3 py-2.5 sm:col-span-2">
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Target Role</p>
+                      <p className="text-[13px] leading-5 text-slate-800">{detail.jobRole}</p>
+                    </div>
+                  )}
                 </div>
-                Education & Skills
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Education</p>
-                  <p className="text-sm text-gray-800 font-medium">{detail.education || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Experience</p>
-                  <p className="text-sm text-gray-800 font-medium">{detail.experience || '—'}</p>
-                </div>
-                {detail.jobRole && (
+                {skills.length > 0 && (
                   <div>
-                    <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Job Role</p>
-                    <p className="text-sm text-gray-800 font-medium">{detail.jobRole}</p>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Skills</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {skills.map((skill, index) => (
+                        <span key={index} className="rounded-full border border-sky-100 bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-800">{skill}</span>
+                      ))}
+                    </div>
                   </div>
                 )}
+                {!detail.education && !detail.experience && !detail.jobRole && skills.length === 0 && (
+                  <p className="text-[13px] italic text-slate-400">No education or skills info available</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-4 py-3">
+                <h3 className="flex items-center gap-2 text-[13px] font-semibold text-slate-900"><Shield size={15} className="text-slate-600" />Account Details</h3>
+              </div>
+              <div className="space-y-2.5 p-4">
+                {accountRows.map((row) => (
+                  <div key={row.label} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5 text-[12px]">
+                    <span className="text-slate-500">{row.label}</span>
+                    <span className={`font-semibold ${row.tone}`}>{row.value}</span>
+                  </div>
+                ))}
                 {detail.linkedinProfile && (
-                  <div>
-                    <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide mb-1">LinkedIn</p>
-                    <a href={detail.linkedinProfile.startsWith('http') ? detail.linkedinProfile : `https://${detail.linkedinProfile}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 truncate">
-                      {detail.linkedinProfile} <ExternalLink size={11} />
+                  <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5 text-[12px]">
+                    <span className="text-slate-500">LinkedIn</span>
+                    <a href={detail.linkedinProfile.startsWith('http') ? detail.linkedinProfile : `https://${detail.linkedinProfile}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700">
+                      Profile <ExternalLink size={11} />
                     </a>
                   </div>
                 )}
-                <div>
-                  <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide mb-2">Key Skills</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {detail.keySkills?.length > 0
-                      ? (Array.isArray(detail.keySkills) ? detail.keySkills : detail.keySkills.split(',')).map((skill, i) => (
-                          <span key={i} className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-100">{typeof skill === 'string' ? skill.trim() : skill}</span>
-                        ))
-                      : <span className="text-sm text-gray-400">—</span>
-                    }
+                {detail.resumeUrl && (
+                  <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5 text-[12px]">
+                    <span className="text-slate-500">Resume</span>
+                    <a href={detail.resumeUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700">
+                      View <ExternalLink size={11} />
+                    </a>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
-            {/* Assigned Admins Card */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-900 mb-5 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center">
-                  <Users size={14} className="text-violet-600" />
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="flex items-center gap-2 text-[13px] font-semibold text-slate-900"><Users size={15} className="text-violet-600" />Assigned Admins</h3>
+                  <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">{assignedAdmins.length}</span>
                 </div>
-                Assigned Admins
-                <span className="text-[11px] font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full ml-auto">{detail.adminAssignments?.length || 0}/5</span>
-              </h3>
-              {detail.adminAssignments?.length > 0 ? (
-                <div className="space-y-2">
-                  {detail.adminAssignments.map(a => {
-                    const dept = a.department || a.admin?.department;
-                    const dc = dept && DEPT_COLORS[dept];
-                    return (
-                      <div key={a.id} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow ${avatarStyle(a.admin?.fullName)}`}>
-                          {a.admin?.fullName?.charAt(0)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">{a.admin?.fullName}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <p className="text-xs text-gray-500 truncate">{a.admin?.email}</p>
-                            {dc && <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${dc.bg} ${dc.text}`}>{dc.label}</span>}
-                          </div>
-                        </div>
-                        <button onClick={() => removeAdmin(detail.id, a.admin?.id)} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="Remove admin">
-                          <X size={14} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : detail.assignedMentor ? (
-                <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow ${avatarStyle(detail.assignedMentor.fullName)}`}>
-                    {detail.assignedMentor.fullName?.charAt(0)}
+              </div>
+              <div className="space-y-2.5 p-4">
+                {assignedAdmins.length > 0 ? assignedAdmins.map((assignment) => (
+                  <div key={assignment.id} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-200 text-[11px] font-bold text-slate-700 ring-1 ring-slate-200">
+                      {getInitials(assignment.admin?.fullName)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[12px] font-semibold text-slate-900">{assignment.admin?.fullName}</p>
+                      <p className="truncate text-[12px] text-slate-500">{assignment.admin?.email || 'No email available'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{detail.assignedMentor.fullName}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{detail.assignedMentor.email}</p>
+                )) : (
+                  <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/60 px-3 py-4 text-center">
+                    <p className="text-[13px] font-medium text-slate-500">No admins assigned yet</p>
+                    <p className="mt-1 text-[12px] text-slate-400">Assigned admins will appear here once linked to this student.</p>
                   </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-4 border border-gray-100 text-gray-400">
-                  <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
-                    <User size={16} className="text-gray-400" />
-                  </div>
-                  <p className="text-sm font-medium">No admins assigned</p>
-                </div>
-              )}
-            </div>
-
-            {/* Account Info Card */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-900 mb-5 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-sky-50 flex items-center justify-center">
-                  <Shield size={14} className="text-sky-600" />
-                </div>
-                Account Details
-              </h3>
-              <div className="space-y-3">
-                {[
-                  { label: 'Account Status', value: detail.isActive ? 'Active' : 'Inactive', color: detail.isActive ? 'text-emerald-600' : 'text-red-600' },
-                  { label: 'Email Verified', value: detail.isEmailVerified ? 'Yes' : 'No', color: detail.isEmailVerified ? 'text-blue-600' : 'text-gray-400' },
-                  { label: 'Subscription Plan', value: normalizePlanKey(detail.subscriptionPlan) || 'None', color: normalizePlanKey(detail.subscriptionPlan) === 'ULTRA' ? 'text-amber-600' : normalizePlanKey(detail.subscriptionPlan) === 'PRO' ? 'text-violet-600' : normalizePlanKey(detail.subscriptionPlan) === 'BASIC' ? 'text-blue-600' : 'text-gray-500' },
-                  { label: 'Registration No.', value: detail.registrationNumber || '—', mono: true },
-                  { label: 'Member Since', value: new Date(detail.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) },
-                  { label: 'Last Updated', value: detail.updatedAt ? new Date(detail.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
-                    <span className="text-xs text-gray-500 font-medium">{item.label}</span>
-                    <span className={`text-xs font-semibold ${item.color || 'text-gray-700'} ${item.mono ? 'font-mono bg-blue-50 text-blue-700 px-2 py-0.5 rounded' : ''}`}>
-                      {item.value}
-                    </span>
-                  </div>
-                ))}
+                )}
               </div>
             </div>
-          </div>
-
-          {/* Right Column — Activities (2/3 width) */}
-          <div className="lg:col-span-2 space-y-6">
-
-            {/* Job Applications */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
-                    <Briefcase size={14} className="text-blue-600" />
-                  </div>
-                  Job Applications
-                </h3>
-                <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full">{detail.jobApplications?.length || 0}</span>
-              </div>
-              {detail.jobApplications?.length > 0 ? (
-                <div className="divide-y divide-gray-50">
-                  {detail.jobApplications.slice(0, 10).map((app) => (
-                    <div key={app.id} className="px-6 py-4 flex items-center gap-4 hover:bg-gray-50/50 transition-colors">
-                      <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 text-sm font-bold flex-shrink-0 border border-blue-100">
-                        {app.job?.company?.charAt(0) || '?'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{app.job?.title || 'Unknown Position'}</p>
-                        <p className="text-xs text-gray-500 mt-0.5 truncate">
-                          {app.job?.company}{app.job?.location ? ` · ${app.job.location}` : ''}{app.job?.source ? ` · via ${app.job.source}` : ''}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ring-1 ${statusColors[app.status] || 'bg-gray-50 text-gray-600 ring-gray-200'}`}>
-                          {statusIcons[app.status]}
-                          {app.status?.replace(/_/g, ' ')}
-                        </span>
-                        <span className="text-[11px] text-gray-400 whitespace-nowrap">{new Date(app.appliedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {detail.jobApplications.length > 10 && (
-                    <div className="px-6 py-3 text-center text-xs text-gray-400 bg-gray-50/50">
-                      +{detail.jobApplications.length - 10} more applications
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="px-6 py-12 text-center">
-                  <Briefcase size={28} className="mx-auto text-gray-200 mb-2" />
-                  <p className="text-sm text-gray-400">No job applications yet</p>
-                </div>
-              )}
-            </div>
-
-            {/* Mentor Sessions */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center">
-                    <BookOpen size={14} className="text-violet-600" />
-                  </div>
-                  Mentor Sessions
-                </h3>
-                <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full">{detail.bookings?.length || 0}</span>
-              </div>
-              {detail.bookings?.length > 0 ? (
-                <div className="divide-y divide-gray-50">
-                  {detail.bookings.slice(0, 8).map((booking) => (
-                    <div key={booking.id} className="px-6 py-4 flex items-center gap-4 hover:bg-gray-50/50 transition-colors">
-                      <div className="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center text-violet-600 text-sm font-bold flex-shrink-0 border border-violet-100">
-                        {booking.slot?.mentor?.fullName?.charAt(0) || 'M'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900">{booking.slot?.mentor?.fullName || 'Mentor'}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {booking.slot ? `${new Date(booking.slot.startTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${new Date(booking.slot.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} — ${new Date(booking.slot.endTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : 'Time not available'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ring-1 ${bookingColors[booking.status] || 'bg-gray-50 text-gray-600 ring-gray-200'}`}>
-                          {booking.status}
-                        </span>
-                        {booking.meetLink && (
-                          <a href={booking.meetLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700">
-                            <ExternalLink size={13} />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="px-6 py-12 text-center">
-                  <BookOpen size={28} className="mx-auto text-gray-200 mb-2" />
-                  <p className="text-sm text-gray-400">No mentor sessions booked</p>
-                </div>
-              )}
-            </div>
-
-            {/* Sheet Applications */}
-            {detail.sheetApplications?.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
-                      <Zap size={14} className="text-amber-600" />
-                    </div>
-                    Sheet Applications
-                  </h3>
-                  <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full">{detail.sheetApplications.length}</span>
-                </div>
-                <div className="divide-y divide-gray-50">
-                  {detail.sheetApplications.slice(0, 8).map((app) => (
-                    <div key={app.id} className="px-6 py-4 flex items-center gap-4 hover:bg-gray-50/50 transition-colors">
-                      <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 flex-shrink-0 border border-amber-100">
-                        <Zap size={15} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{app.employerName || 'Unknown Employer'}</p>
-                        <a href={app.jobLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:text-blue-600 truncate block mt-0.5 max-w-xs">
-                          {app.jobLink}
-                        </a>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        {app.matchScore && (
-                          <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full ring-1 ring-indigo-100">
-                            {app.matchScore}% match
-                          </span>
-                        )}
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ring-1 ${app.status === 'APPLIED' ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : app.status === 'FAILED' ? 'bg-red-50 text-red-700 ring-red-200' : 'bg-amber-50 text-amber-700 ring-amber-200'}`}>
-                          {app.appliedMethod === 'BOT' && <Zap size={10} />}
-                          {app.status}
-                        </span>
-                        <span className="text-[11px] text-gray-400 whitespace-nowrap">{new Date(app.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {detail.sheetApplications.length > 8 && (
-                    <div className="px-6 py-3 text-center text-xs text-gray-400 bg-gray-50/50">
-                      +{detail.sheetApplications.length - 8} more sheet applications
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Training Notes */}
-            {detail.trainingNotes?.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
-                      <FileText size={14} className="text-emerald-600" />
-                    </div>
-                    Recent Notes
-                  </h3>
-                  <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full">{detail.trainingNotes.length}</span>
-                </div>
-                <div className="divide-y divide-gray-50">
-                  {detail.trainingNotes.map((note) => (
-                    <div key={note.id} className="px-6 py-3.5 flex items-center gap-3 hover:bg-gray-50/50 transition-colors">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
-                        <FileText size={14} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">{note.title}</p>
-                      </div>
-                      {note.category && (
-                        <span className="text-[11px] text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full flex-shrink-0">{note.category}</span>
-                      )}
-                      <span className="text-[11px] text-gray-400 whitespace-nowrap flex-shrink-0">{new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -736,6 +498,10 @@ const ManageStudents = () => {
               <tbody className="divide-y divide-gray-100">
                 {paginated.map((student) => (
                   <tr key={student.id} className="hover:bg-gray-50/60 transition-colors">
+                    {(() => {
+                      const assignedAdmins = getAssignedAdmins(student);
+                      return (
+                        <>
                     <td className="px-5 py-3.5">
                       <span className="text-[13px] font-mono font-semibold text-slate-700">{student.registrationNumber || '—'}</span>
                     </td>
@@ -782,18 +548,15 @@ const ManageStudents = () => {
                     <td className="px-5 py-3.5">
                       <div className="relative" ref={openMentorDropdown === student.id ? dropdownRef : null}>
                         <div className="flex flex-wrap items-center gap-1 max-w-[260px]">
-                          {(student.adminAssignments || []).map(a => {
-                            const dept = a.department || a.admin?.department;
-                            const dc = dept && DEPT_COLORS[dept];
+                          {assignedAdmins.map((assignment) => {
                             return (
-                              <span key={a.id} className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ring-1 ${dc ? `${dc.bg} ${dc.text} ${dc.ring}` : 'bg-gray-50 text-gray-600 ring-gray-200'}`}>
-                                {a.admin?.fullName?.split(' ')[0]}
-                                {dc && <span className={`text-[9px] opacity-70`}>({dc.label})</span>}
-                                <button onClick={() => removeAdmin(student.id, a.admin?.id)} className="ml-0.5 opacity-60 hover:opacity-100 hover:text-red-500 transition-colors"><X size={10} /></button>
+                              <span key={assignment.id} className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ring-1 bg-gray-50 text-gray-600 ring-gray-200">
+                                {assignment.admin?.fullName?.split(' ')[0]}
+                                <button onClick={() => removeAdmin(student.id, assignment.admin?.id)} className="ml-0.5 opacity-60 hover:opacity-100 hover:text-red-500 transition-colors"><X size={10} /></button>
                               </span>
                             );
                           })}
-                          {(student.adminAssignments || []).length < 5 && (
+                          {assignedAdmins.length === 0 && (
                             <button
                               onClick={() => setOpenMentorDropdown(openMentorDropdown === student.id ? null : student.id)}
                               className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-blue-600 border border-dashed border-gray-300 hover:border-blue-400 rounded-full px-2 py-0.5 transition-colors"
@@ -805,45 +568,21 @@ const ManageStudents = () => {
                         {openMentorDropdown === student.id && (
                           <div className="absolute z-50 mt-1.5 w-[220px] bg-white rounded-xl border border-gray-200 shadow-lg py-1.5 max-h-[240px] overflow-y-auto">
                             {(() => {
-                              const hasAny = (student.adminAssignments || []).length > 0;
                               const available = mentors.filter(m => {
-                                if ((student.adminAssignments || []).some(a => a.admin?.id === m.id)) return false;
-                                if (!hasAny && m.department !== 'MARKETING') return false;
+                                if (assignedAdmins.some((assignment) => assignment.admin?.id === m.id)) return false;
                                 return true;
                               });
-                              if (!hasAny) {
-                                return (
-                                  <>
-                                    <p className="px-3.5 py-1.5 text-[10px] font-semibold text-blue-600 uppercase tracking-wider border-b border-gray-100">Marketing Admin First</p>
-                                    {available.length === 0 ? (
-                                      <p className="px-3.5 py-2 text-[12px] text-gray-400">No Marketing admins available</p>
-                                    ) : (
-                                      available.map(m => (
-                                        <button key={m.id} onClick={() => { addAdmin(student.id, m.id); setOpenMentorDropdown(null); }}
-                                          className="w-full flex items-center gap-2 px-3.5 py-2 text-[13px] text-gray-700 hover:bg-blue-50 transition-colors">
-                                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold ${avatarStyle(m.fullName)}`}>{m.fullName?.charAt(0)}</div>
-                                          <span className="flex-1 text-left">{m.fullName}</span>
-                                          <span className="text-[9px] text-blue-500 font-medium">Marketing</span>
-                                        </button>
-                                      ))
-                                    )}
-                                  </>
-                                );
-                              }
+
                               return available.length === 0 ? (
-                                <p className="px-3.5 py-2 text-[12px] text-gray-400">All admins assigned</p>
+                                <p className="px-3.5 py-2 text-[12px] text-gray-400">No available admins</p>
                               ) : (
-                                available.map(m => {
-                                  const dc = m.department && DEPT_COLORS[m.department];
-                                  return (
-                                    <button key={m.id} onClick={() => { addAdmin(student.id, m.id); setOpenMentorDropdown(null); }}
-                                      className="w-full flex items-center gap-2 px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors">
-                                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold ${avatarStyle(m.fullName)}`}>{m.fullName?.charAt(0)}</div>
-                                      <span className="flex-1 text-left">{m.fullName}</span>
-                                      {dc && <span className={`text-[9px] font-medium ${dc.text}`}>{dc.label}</span>}
-                                    </button>
-                                  );
-                                })
+                                available.map(m => (
+                                  <button key={m.id} onClick={() => { addAdmin(student.id, m.id); setOpenMentorDropdown(null); }}
+                                    className="w-full flex items-center gap-2 px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors">
+                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold ${avatarStyle(m.fullName)}`}>{m.fullName?.charAt(0)}</div>
+                                    <span className="flex-1 text-left">{m.fullName}</span>
+                                  </button>
+                                ))
                               );
                             })()}
                           </div>
@@ -856,6 +595,9 @@ const ManageStudents = () => {
                         <Info size={16} />
                       </button>
                     </td>
+                        </>
+                      );
+                    })()}
                   </tr>
                 ))}
               </tbody>

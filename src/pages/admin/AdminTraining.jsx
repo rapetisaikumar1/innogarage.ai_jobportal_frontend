@@ -574,20 +574,20 @@ const AdminTraining = () => {
         ) : (
           <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {notes.map((note) => (
-              <div key={note.id} className="bg-amber-50/60 rounded-xl border border-amber-100 hover:border-amber-200 hover:shadow-md transition-all duration-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-amber-100 flex items-center justify-between">
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-100 border border-amber-200">
+              <div key={note.id} className="rounded-xl border border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm transition-all duration-200 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-amber-200 bg-transparent">
                     <StickyNote size={12} className="text-amber-600" />
                     <span className="text-xs font-semibold text-amber-700">Note</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => openNoteAssignModal(note)} className="p-1.5 rounded-lg hover:bg-amber-100 text-gray-400 hover:text-violet-600 transition-colors" title="Assign Students">
+                    <button onClick={() => openNoteAssignModal(note)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-violet-600 transition-colors" title="Assign Students">
                       <UserPlus size={13} />
                     </button>
-                    <button onClick={() => handleEditNote(note)} className="p-1.5 rounded-lg hover:bg-amber-100 text-gray-400 hover:text-blue-600 transition-colors" title="Edit">
+                    <button onClick={() => handleEditNote(note)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors" title="Edit">
                       <Edit size={13} />
                     </button>
-                    <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 rounded-lg hover:bg-amber-100 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
+                    <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
                       <Trash2 size={13} />
                     </button>
                   </div>

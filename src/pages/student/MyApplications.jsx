@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import html2pdf from 'html2pdf.js';
 import { downloadResumeAsDocx } from '../../utils/resumeDocx';
+import ResumeDocument from '../../components/resume/ResumeDocument';
 import {
   STUDENT_PORTAL_MODE,
   buildPortalRequestConfig,
@@ -53,7 +54,7 @@ const parseJDSections = (jdText) => {
   return sections.map(s => ({ ...s, lines: s.lines.join('\n').trim().split('\n') })).filter(s => s.lines.some(l => l.trim()));
 };
 
-const parseResumeSections = (text, candidateName, sheetCandidateName) => {
+const parseResumeSections = (text, candidateName, pipelineCandidateName) => {
   if (!text) return { contact: '', roleTitle: '', sections: [] };
   const nameVariants = new Set();
   const nameParts = new Set();
@@ -68,7 +69,7 @@ const parseResumeSections = (text, candidateName, sheetCandidateName) => {
     }
   };
   addN(candidateName);
-  addN(sheetCandidateName);
+  addN(pipelineCandidateName);
   const isNameLine = (line) => {
     const lower = line.trim().toLowerCase().replace(/[.,\-]+$/,'').trim();
     if (!lower) return false;
@@ -123,6 +124,7 @@ const MyApplications = ({
 }) => {
   const { user: authUser } = useAuth();
   const portalUser = viewerUser || authUser;
+  const isCompactView = embedded;
   const getPortalUrl = useCallback(
     (endpointKey) => getPortalEndpoint(endpointKey, { portalMode, studentId }),
     [portalMode, studentId]
@@ -136,7 +138,7 @@ const MyApplications = ({
     [portalMode, studentId]
   );
   const [applications, setApplications] = useState([]);
-  const [sheetJobsMap, setSheetJobsMap] = useState({});  // jobLink -> full job data
+  const [externalJobsMap, setExternalJobsMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [detailJob, setDetailJob] = useState(null);
@@ -156,15 +158,15 @@ const MyApplications = ({
         api.get(getPortalUrl('matchedJobs'), requestConfig()),
       ]);
       const dbRes = results[0].status === 'fulfilled' ? results[0].value : { data: { applications: [] } };
-      const sheetRes = results[1].status === 'fulfilled' ? results[1].value : { data: { applications: [] } };
-      const sheetJobsRes = results[2].status === 'fulfilled' ? results[2].value : { data: { jobs: [] } };
+      const externalRes = results[1].status === 'fulfilled' ? results[1].value : { data: { applications: [] } };
+      const matchedJobsRes = results[2].status === 'fulfilled' ? results[2].value : { data: { jobs: [] } };
 
-      // Build a map of jobLink -> full sheet job object
+      // Build a map of jobLink -> full matched job object
       const jobsMap = {};
-      (sheetJobsRes.data.jobs || []).forEach(j => {
+      (matchedJobsRes.data.jobs || []).forEach(j => {
         if (j.job_apply_link) jobsMap[j.job_apply_link] = j;
       });
-      setSheetJobsMap(jobsMap);
+      setExternalJobsMap(jobsMap);
 
       const dbApps = (dbRes.data.applications || []).map(app => ({
         id: app.id,
@@ -176,7 +178,7 @@ const MyApplications = ({
         source: 'db',
         appliedBy: app.appliedBy || null,
       }));
-      const sheetApps = (sheetRes.data.applications || []).map(app => {
+      const externalApps = (externalRes.data.applications || []).map(app => {
         const fullJob = jobsMap[app.jobLink];
         return {
           id: app.jobLink,
@@ -186,7 +188,7 @@ const MyApplications = ({
           appliedAt: app.createdAt,
           matchScore: app.matchScore,
           jobLink: app.jobLink,
-          source: 'sheet',
+          source: 'external',
           fullJob,
           appliedBy: null,
         };
@@ -200,12 +202,12 @@ const MyApplications = ({
       const pendingApplied = (() => {
         try { return JSON.parse(sessionStorage.getItem(pendingAppliedKey) || '[]'); } catch { return []; }
       })().filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
-      const apiJobLinks = new Set((sheetRes.data.applications || []).map(a => a.jobLink));
+      const apiJobLinks = new Set((externalRes.data.applications || []).map(a => a.jobLink));
       const stillPending = pendingApplied.filter(p => !apiJobLinks.has(p.jobLink));
       if (stillPending.length !== pendingApplied.length) {
         try { sessionStorage.setItem(pendingAppliedKey, JSON.stringify(stillPending)); } catch { /* ignore */ }
       }
-      const pendingSheetApps = stillPending.map(p => ({
+      const pendingExternalApps = stillPending.map(p => ({
         id: p.jobLink,
         title: p.jobTitle || p.employerName || 'Job Application',
         company: p.employerName || '—',
@@ -213,14 +215,14 @@ const MyApplications = ({
         appliedAt: p.appliedAt,
         matchScore: p.matchScore,
         jobLink: p.jobLink,
-        source: 'sheet',
+        source: 'external',
         fullJob: jobsMap[p.jobLink] || null,
         appliedBy: null,
       }));
 
       const seenLinks = new Set(dbApps.map(a => a.jobLink).filter(Boolean));
-      const uniqueSheetApps = [...sheetApps, ...pendingSheetApps].filter(a => !seenLinks.has(a.jobLink));
-      const all = [...dbApps, ...uniqueSheetApps].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
+      const uniqueExternalApps = [...externalApps, ...pendingExternalApps].filter(a => !seenLinks.has(a.jobLink));
+      const all = [...dbApps, ...uniqueExternalApps].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
       setApplications(all);
     } catch (error) {
       console.error('Failed to fetch applications:', error);
@@ -259,25 +261,25 @@ const MyApplications = ({
   }
 
   return (
-    <div className={embedded ? 'flex flex-col h-full min-h-0' : 'flex flex-col h-[calc(100vh-4rem)]'}>
+    <div className={embedded ? 'flex h-full min-h-0 flex-col' : 'flex flex-col h-[calc(100vh-4rem)]'}>
 
       {/* Header bar */}
-      <div className="flex items-center justify-between mb-4 shrink-0">
+      <div className={`shrink-0 ${isCompactView ? 'mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2.5 shadow-sm' : 'mb-4 flex items-center justify-between'}`}>
         <div className="flex items-center gap-3">
-          <h1 className="text-[16px] font-bold text-gray-900">My Applications</h1>
+          <h1 className={`${isCompactView ? 'text-[15px]' : 'text-[16px]'} font-bold text-gray-900`}>My Applications</h1>
           {applications.length > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold">
+            <span className={`inline-flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 font-bold ${isCompactView ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-1 text-xs'}`}>
               <Briefcase size={12} />
               {stats.total} Applied
             </span>
           )}
         </div>
         {/* Search */}
-        <div className="flex-1 max-w-xs ml-6 bg-white rounded-xl border border-gray-100 px-4 py-2.5 flex items-center gap-2 shadow-sm">
+        <div className={`bg-white rounded-xl border border-gray-100 flex items-center gap-2 shadow-sm ${isCompactView ? 'w-full max-w-sm px-3 py-2' : 'ml-6 flex-1 max-w-xs px-4 py-2.5'}`}>
           <Search size={14} className="text-gray-400 shrink-0" />
           <input
             type="text"
-            className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-800"
+            className={`${isCompactView ? 'text-[13px]' : 'text-sm'} flex-1 bg-transparent outline-none placeholder-gray-400 text-gray-800`}
             placeholder="Search company, role..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -308,7 +310,7 @@ const MyApplications = ({
               <tbody>
                 {filtered.map((app, idx) => {
                   const fullJob = app.fullJob
-                    || (app.jobLink ? sheetJobsMap[app.jobLink] : null)
+                    || (app.jobLink ? externalJobsMap[app.jobLink] : null)
                     // Synthesize a minimal job object so Resume/Details always render
                     || (app.title || app.company ? {
                         job_title: app.title,
@@ -330,61 +332,61 @@ const MyApplications = ({
                   return (
                     <tr key={app.id} className="border-b border-gray-50 hover:bg-gray-50/60 group">
                       {/* # */}
-                      <td className="pl-5 pr-2 py-3.5 w-10">
-                        <span className="text-sm text-gray-400 font-medium">{idx + 1}</span>
+                      <td className={`pl-4 pr-2 w-10 ${isCompactView ? 'py-2.5' : 'py-3.5'}`}>
+                        <span className={`${isCompactView ? 'text-[13px]' : 'text-sm'} font-medium text-gray-400`}>{idx + 1}</span>
                       </td>
 
                       {/* Logo + Info */}
-                      <td className="px-3 py-3.5">
-                        <div className="flex items-center gap-3.5">
+                      <td className={`px-3 ${isCompactView ? 'py-2.5' : 'py-3.5'}`}>
+                        <div className={`flex items-center ${isCompactView ? 'gap-3' : 'gap-3.5'}`}>
                           {logoDomain ? (
                             <img
                               src={`https://logo.clearbit.com/${logoDomain}`}
                               alt={company}
-                              className="w-10 h-10 rounded-xl object-contain bg-white border border-gray-100 shadow-sm shrink-0 p-0.5"
+                              className={`${isCompactView ? 'h-9 w-9 rounded-lg' : 'h-10 w-10 rounded-xl'} object-contain bg-white border border-gray-100 shadow-sm shrink-0 p-0.5`}
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                                 e.currentTarget.nextSibling.style.display = 'flex';
                               }}
                             />
                           ) : null}
-                          <div className={`w-10 h-10 rounded-xl ${avatarBg(company)} text-white items-center justify-center font-bold text-sm shrink-0 shadow-sm ${logoDomain ? 'hidden' : 'flex'}`}>
+                          <div className={`${isCompactView ? 'h-9 w-9 rounded-lg text-[13px]' : 'h-10 w-10 rounded-xl text-sm'} ${avatarBg(company)} text-white items-center justify-center font-bold shrink-0 shadow-sm ${logoDomain ? 'hidden' : 'flex'}`}>
                             {company?.charAt(0)?.toUpperCase() || '?'}
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-[13px] text-gray-900 truncate leading-snug">{company}</h3>
+                              <h3 className={`${isCompactView ? 'text-[12px]' : 'text-[13px]'} font-semibold text-gray-900 truncate leading-snug`}>{company}</h3>
                               {app.appliedBy && (app.appliedBy.role === 'ADMIN' || app.appliedBy.role === 'SUPER_ADMIN') && (
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
                                   <Bot size={9} /> Mentor
                                 </span>
                               )}
                             </div>
-                            <p className="text-[12px] text-gray-500 truncate mt-0.5 max-w-md font-medium">{role}</p>
+                            <p className={`${isCompactView ? 'text-[11px] mt-0' : 'text-[12px] mt-0.5'} max-w-md truncate font-medium text-gray-500`}>{role}</p>
                           </div>
                         </div>
                       </td>
 
                       {/* Score */}
-                      <td className="px-4 py-3.5 text-right w-24">
+                      <td className={`px-4 text-right w-24 ${isCompactView ? 'py-2.5' : 'py-3.5'}`}>
                         {score > 0 && (
                           <div className="text-right">
-                            <span className={`text-lg font-bold ${score >= 80 ? 'text-emerald-600' : score >= 70 ? 'text-blue-600' : score >= 60 ? 'text-orange-500' : 'text-gray-400'}`}>
+                            <span className={`${isCompactView ? 'text-base' : 'text-lg'} font-bold ${score >= 80 ? 'text-emerald-600' : score >= 70 ? 'text-blue-600' : score >= 60 ? 'text-orange-500' : 'text-gray-400'}`}>
                               {score}%
                             </span>
-                            <p className="text-[10px] text-gray-400 leading-none mt-0.5">Match</p>
+                            <p className={`${isCompactView ? 'text-[9px] mt-0' : 'text-[10px] mt-0.5'} text-gray-400 leading-none`}>Match</p>
                           </div>
                         )}
                       </td>
 
                       {/* Actions */}
-                      <td className="pl-4 pr-5 py-3.5 w-[380px]">
+                      <td className={`pl-4 pr-4 ${isCompactView ? 'py-2.5 w-[270px]' : 'py-3.5 w-[380px]'}`}>
                         <div className="flex items-center justify-end gap-2 flex-nowrap">
                           {fullJob && (
                             <>
                               <button
                                 onClick={() => setResumeJob(fullJob)}
-                                className={`inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border transition-colors shadow-sm whitespace-nowrap ${
+                                className={`inline-flex items-center gap-1.5 rounded-lg border transition-colors shadow-sm whitespace-nowrap ${isCompactView ? 'px-3 py-1.5 text-[11px] font-semibold' : 'px-3.5 py-[7px] text-[12px] font-semibold'} ${
                                   fullJob.resume_text
                                     ? 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
                                     : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
@@ -397,13 +399,13 @@ const MyApplications = ({
                               </button>
                               <button
                                 onClick={() => setDetailJob(fullJob)}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
+                                className={`inline-flex items-center gap-1.5 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap ${isCompactView ? 'px-3 py-1.5 text-[11px] font-semibold' : 'px-3.5 py-[7px] text-[12px] font-semibold'}`}
                               >
                                 <Info size={13} /> Details
                               </button>
                             </>
                           )}
-                          <span className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 whitespace-nowrap ${isCompactView ? 'px-3 py-1.5 text-[11px] font-semibold' : 'px-3.5 py-[7px] text-[12px] font-semibold'}`}>
                             <CheckCircle2 size={13} /> Applied
                           </span>
                           {app.jobLink && (
@@ -411,7 +413,7 @@ const MyApplications = ({
                               href={app.jobLink}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] font-semibold rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
+                              className={`inline-flex items-center gap-1.5 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap ${isCompactView ? 'px-3 py-1.5 text-[11px] font-semibold' : 'px-3.5 py-[7px] text-[12px] font-semibold'}`}
                               title="Open job posting"
                             >
                               <RotateCcw size={13} /> Re-apply
@@ -556,8 +558,9 @@ const MyApplications = ({
       {resumeJob && (() => {
         const resumeText = resumeJob.resume_text || '';
         const candidateName = portalUser?.fullName || '';
-        const sheetCandidateName = resumeJob.candidate_name || '';
-        const { roleTitle, sections } = parseResumeSections(resumeText, candidateName, sheetCandidateName);
+        const pipelineCandidateName = resumeJob.candidate_name || '';
+        const { roleTitle, sections } = parseResumeSections(resumeText, candidateName, pipelineCandidateName);
+        const headline = roleTitle || extractRole(resumeJob);
 
         const handleDownloadPDF = () => {
           const el = resumeRef.current; if (!el) return;
@@ -568,42 +571,32 @@ const MyApplications = ({
         };
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setResumeJob(null)}>
-            <div className="bg-white/80 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 w-[660px] max-h-[88vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-              <div className="flex justify-end px-4 pt-3 pb-0 shrink-0">
-                <button onClick={() => setResumeJob(null)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"><X size={18} /></button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4" onClick={() => setResumeJob(null)}>
+            <div className="bg-white/90 text-slate-900 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/60 w-[1120px] max-w-[96vw] max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="px-5 py-4 border-b border-slate-200/70 flex items-center justify-between shrink-0">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white"><FileText size={16} /></span>
+                    <h3 className="text-base font-bold">ATS Resume</h3>
+                  </div>
+                  <p className="text-xs mt-1 text-slate-500">{headline} {resumeJob.employer_name ? `at ${resumeJob.employer_name}` : ''}</p>
+                </div>
+                <button onClick={() => setResumeJob(null)} className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors"><X size={18} /></button>
               </div>
-              <div className="overflow-y-auto flex-1 px-8 pb-4">
+
+              <main className="flex-1 min-h-0 overflow-y-auto p-5 bg-slate-100/80">
                 {resumeText ? (
-                  <div ref={resumeRef} className="border border-gray-200 rounded-xl bg-white shadow-sm">
-                    <div className="px-10 py-8" style={{ fontFamily: 'Georgia, serif' }}>
-                      <h1 className="text-2xl font-bold text-center" style={{ color: '#1e3a5f', textTransform: 'capitalize' }}>{portalUser?.fullName || 'Resume'}</h1>
-                      {(roleTitle || extractRole(resumeJob) !== 'View Details') && (
-                        <p className="text-center text-sm font-medium mt-1" style={{ color: '#2d3748' }}>{roleTitle || extractRole(resumeJob)}</p>
-                      )}
-                      {(portalUser?.phone || portalUser?.email) && (
-                        <p className="text-center text-xs mt-2 leading-relaxed" style={{ color: '#4a5568' }}>{[portalUser?.phone, portalUser?.email].filter(Boolean).join(' | ')}</p>
-                      )}
-                      {portalUser?.linkedinProfile && <p className="text-center text-xs mt-1" style={{ color: '#4a5568' }}>{portalUser.linkedinProfile}</p>}
-                      <div className="mt-5 mb-4" style={{ borderBottom: '2px solid #cbd5e0' }} />
-                      {sections.map((section, si) => (
-                        <div key={si} className="mb-4">
-                          <h2 className="text-sm font-bold tracking-wider pb-1 mb-2" style={{ color: '#1e3a5f', borderBottom: '1.5px solid #1e3a5f', letterSpacing: '0.08em' }}>{section.heading}</h2>
-                          <div className="text-sm leading-relaxed" style={{ color: '#333', fontSize: '12.5px', lineHeight: '1.7' }}>
-                            {section.lines.map((line, li) => {
-                              const t = line.trim();
-                              if (!t) return <div key={li} className="h-2" />;
-                              const isBullet = /^[-•*○◦▪●]/.test(t)||/^(\d+[\.\)])/.test(t);
-                              if (isBullet) { const text=t.replace(/^[-•*○◦▪●]\s*/,'').replace(/^(\d+[\.\)])\s*/,''); return <div key={li} className="flex gap-2 pl-3 py-0.5"><span className="shrink-0 mt-[7px]" style={{width:'5px',height:'5px',borderRadius:'50%',background:'#1e3a5f',display:'inline-block'}}/><span>{text}</span></div>; }
-                              const isBold = /^[A-Z].*\d{4}/.test(t)||/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s/i.test(t)||/–\s*(Present|Current)/i.test(t);
-                              if (isBold) return <p key={li} className="font-semibold mt-1" style={{ color: '#1e3a5f' }}>{t}</p>;
-                              return <p key={li} className="py-0.5">{t}</p>;
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                      {sections.length === 0 && <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: '#333', lineHeight: '1.7' }}>{resumeText}</div>}
-                    </div>
+                  <div className="mx-auto max-w-[800px] border border-slate-200 rounded-lg bg-white shadow-xl overflow-hidden">
+                    <ResumeDocument
+                      ref={resumeRef}
+                      displayName={portalUser?.fullName || candidateName || 'Resume'}
+                      headline={headline}
+                      contactItems={[portalUser?.phone, portalUser?.email].filter(Boolean)}
+                      linkedinProfile={portalUser?.linkedinProfile}
+                      sections={sections}
+                      rawText={resumeText}
+                      template="enterprise"
+                    />
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -612,13 +605,14 @@ const MyApplications = ({
                     <p className="text-sm text-gray-400 mt-1">Resume data will appear after the job search workflow processes this listing</p>
                   </div>
                 )}
-              </div>
+              </main>
+
               {resumeText && (
                 <div className="flex items-center justify-center gap-3 px-8 py-4 border-t border-gray-100 shrink-0 bg-gray-50/50">
                   {resumeJob.pdf_link ? (
                     <a href={resumeJob.pdf_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-gray-800 hover:bg-gray-900 text-white transition-colors shadow-sm"><Eye size={15}/> View</a>
                   ) : (
-                    <button onClick={() => { if(resumeRef.current)resumeRef.current.scrollIntoView({behavior:'smooth'}); }} className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-gray-800 hover:bg-gray-900 text-white transition-colors shadow-sm"><Eye size={15}/> View</button>
+                    <button onClick={() => { if (resumeRef.current) resumeRef.current.scrollIntoView({ behavior: 'smooth' }); }} className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-gray-800 hover:bg-gray-900 text-white transition-colors shadow-sm"><Eye size={15}/> View</button>
                   )}
                   <button onClick={handleDownloadPDF} className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg text-white transition-colors shadow-sm" style={{background:'#dc2626'}} onMouseEnter={e=>e.currentTarget.style.background='#b91c1c'} onMouseLeave={e=>e.currentTarget.style.background='#dc2626'}><Download size={15}/> PDF</button>
                   <button onClick={handleDownloadWord} className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg text-white transition-colors shadow-sm" style={{background:'#2563eb'}} onMouseEnter={e=>e.currentTarget.style.background='#1d4ed8'} onMouseLeave={e=>e.currentTarget.style.background='#2563eb'}><Download size={15}/> Word</button>

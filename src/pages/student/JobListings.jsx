@@ -212,9 +212,9 @@ const parseTags = (str) => {
 const PAGE_SIZE = 8;
 
 /* ── parse resume text into structured sections ── */
-const parseResumeSections = (text, candidateName, sheetCandidateName) => {
+const parseResumeSections = (text, candidateName, pipelineCandidateName) => {
   if (!text) return { contact: '', sections: [] };
-  // Build variations of candidate name to strip from content (both auth name and sheet name)
+  // Build variations of candidate name to strip from content (both auth name and pipeline name)
   const nameVariants = new Set();
   const nameParts = new Set();
   const addName = (raw) => {
@@ -233,7 +233,7 @@ const parseResumeSections = (text, candidateName, sheetCandidateName) => {
     }
   };
   addName(candidateName);
-  addName(sheetCandidateName);
+  addName(pipelineCandidateName);
 
   const isNameLine = (line) => {
     const lower = line.trim().toLowerCase().replace(/[.,\-]+$/, '').trim();
@@ -410,7 +410,7 @@ const parseResumeSections = (text, candidateName, sheetCandidateName) => {
 };
 
 /* ── Extract role title from resume text (matches parseResumeSections logic) ── */
-const extractResumeRoleTitle = (resumeText, candidateName, sheetCandidateName) => {
+const extractResumeRoleTitle = (resumeText, candidateName, pipelineCandidateName) => {
   if (!resumeText) return '';
 
   // Build name variants from BOTH authUser.fullName AND job.candidate_name
@@ -433,7 +433,7 @@ const extractResumeRoleTitle = (resumeText, candidateName, sheetCandidateName) =
     }
   };
   addName(candidateName);
-  addName(sheetCandidateName);
+  addName(pipelineCandidateName);
 
   // A line is a name if it exactly matches a name variant
   // OR if most of its words are known name parts (fuzzy)
