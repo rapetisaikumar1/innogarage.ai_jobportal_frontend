@@ -184,6 +184,30 @@ a, button {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+button:not(:disabled),
+a[href],
+[role='button'],
+summary,
+label[for],
+select:not(:disabled),
+input[type='button']:not(:disabled),
+input[type='submit']:not(:disabled),
+input[type='reset']:not(:disabled),
+input[type='checkbox']:not(:disabled),
+input[type='radio']:not(:disabled),
+input[type='range']:not(:disabled),
+input[type='file']:not(:disabled),
+input[type='color']:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled='true'],
+select:disabled,
+input:disabled {
+  cursor: not-allowed;
+}
+
 /* Hide scrollbar in sidebar nav */
 .sidebar-nav-scroll {
   scrollbar-width: none;

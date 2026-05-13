@@ -17,7 +17,7 @@ const plans = [
     accentBtn: 'from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 shadow-blue-200/50',
     features: [
       'Smart Job Matching',
-      'Basic Resume Builder',
+      'Profile Setup & Resume Upload',
       'Up to 35 Job Searches',
       '1 Job Search per Day',
       'Email Support',
@@ -38,7 +38,7 @@ const plans = [
     accentBtn: 'from-violet-600 to-indigo-500 hover:from-violet-700 hover:to-indigo-600 shadow-violet-200/50',
     features: [
       'AI-Powered Job Matching',
-      'ATS-Optimized Resume Builder',
+      'Advanced Match Insights',
       'Up to 200 Applications',
       'Mentor Connect (2 sessions/month)',
       'Priority Support',

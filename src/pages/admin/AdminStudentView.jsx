@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Briefcase, Eye, FileText, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Briefcase, Eye, FileText, Sparkles, TrendingUp } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import StudentDashboard from '../student/StudentDashboard';
 import JobListings from '../student/JobListings';
 import MyApplications from '../student/MyApplications';
+import YourJobs from '../student/YourJobs';
 import { STUDENT_PORTAL_MODE } from '../../utils/studentPortalView';
 
 const TABS = [
   { key: 'dashboard', label: 'Dashboard', icon: TrendingUp },
   { key: 'jobs', label: 'Find Jobs', icon: Briefcase },
+  { key: 'your-jobs', label: 'Your Jobs', icon: Sparkles },
   { key: 'applications', label: 'My Applications', icon: FileText },
 ];
 
@@ -135,6 +137,7 @@ const AdminStudentView = () => {
       <div className="min-h-0 flex-1">
         {activeTab === 'dashboard' && <StudentDashboard {...sharedProps} />}
         {activeTab === 'jobs' && <JobListings {...sharedProps} />}
+        {activeTab === 'your-jobs' && <YourJobs {...sharedProps} />}
         {activeTab === 'applications' && <MyApplications {...sharedProps} />}
       </div>
     </div>

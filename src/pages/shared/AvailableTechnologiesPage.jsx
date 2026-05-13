@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { ChevronDown, Cpu, Plus, Search, Trash2, X } from 'lucide-react';
+import { ChevronDown, Copy, Cpu, Plus, Save, Search, Trash2, X } from 'lucide-react';
 
 const CATEGORY_ORDER = [
   'Marketing Automation & Adobe Stack',
@@ -50,7 +50,10 @@ const AvailableTechnologiesPage = ({ canManage = false }) => {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedTechnology, setSelectedTechnology] = useState(null);
+  const [contentDraft, setContentDraft] = useState('');
   const [creating, setCreating] = useState(false);
+  const [savingContent, setSavingContent] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [form, setForm] = useState({
     name: '',
@@ -76,6 +79,47 @@ const AvailableTechnologiesPage = ({ canManage = false }) => {
     if (creating && !force) return;
     setShowCreateModal(false);
     setForm({ name: '', category: CATEGORY_ORDER[0] });
+  };
+
+  const openTechnologyContent = (technology) => {
+    setSelectedTechnology(technology);
+    setContentDraft(technology.content || '');
+  };
+
+  const closeContentModal = () => {
+    if (savingContent) return;
+    setSelectedTechnology(null);
+    setContentDraft('');
+  };
+
+  const handleCopyContent = async () => {
+    try {
+      await navigator.clipboard.writeText(contentDraft || '');
+      toast.success('Technology content copied');
+    } catch {
+      toast.error('Failed to copy content');
+    }
+  };
+
+  const handleSaveContent = async () => {
+    if (!canManage || !selectedTechnology) return;
+
+    setSavingContent(true);
+    try {
+      const res = await api.patch(`/admin/available-technologies/${selectedTechnology.id}`, {
+        content: contentDraft,
+      });
+      setTechnologies((prev) => sortTechnologies(prev.map((technology) => (
+        technology.id === selectedTechnology.id ? { ...technology, ...res.data } : technology
+      ))));
+      setSelectedTechnology((prev) => ({ ...prev, ...res.data }));
+      setContentDraft(res.data.content || '');
+      toast.success('Technology content saved');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to save content');
+    } finally {
+      setSavingContent(false);
+    }
   };
 
   const handleCreateTechnology = async (e) => {
@@ -232,10 +276,14 @@ const AvailableTechnologiesPage = ({ canManage = false }) => {
               {items.map((technology) => (
                 <article
                   key={technology.id}
-                  className="flex min-h-[48px] items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 transition-shadow hover:shadow-sm"
+                  onClick={() => openTechnologyContent(technology)}
+                  className="flex min-h-[48px] cursor-pointer items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 transition-all hover:border-blue-200 hover:shadow-sm"
                 >
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-[13px] font-bold text-slate-900">{technology.name}</h3>
+                    <p className="mt-0.5 truncate text-[11px] font-medium text-slate-400">
+                      {technology.content ? 'Content available' : canManage ? 'Click to add content' : 'No content yet'}
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -245,7 +293,10 @@ const AvailableTechnologiesPage = ({ canManage = false }) => {
 
                     {canManage && (
                       <button
-                        onClick={() => handleDeleteTechnology(technology)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDeleteTechnology(technology);
+                        }}
                         disabled={deletingId === technology.id}
                         className="rounded-md p-0.5 text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
                         title={`Delete ${technology.name}`}
@@ -333,6 +384,61 @@ const AvailableTechnologiesPage = ({ canManage = false }) => {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {selectedTechnology && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm" onClick={closeContentModal}>
+          <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
+                  {canManage ? 'Edit Technology Content' : 'Technology Content'}
+                </p>
+                <h2 className="mt-1 truncate text-lg font-bold tracking-tight text-slate-950">{selectedTechnology.name}</h2>
+                <p className="mt-1 text-xs font-medium text-slate-500">{selectedTechnology.category}</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeContentModal}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm transition-colors hover:bg-blue-700"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 p-5">
+              <textarea
+                value={contentDraft}
+                onChange={(event) => setContentDraft(event.target.value)}
+                readOnly={!canManage}
+                placeholder={canManage ? 'Write, paste, or edit the content for this technology...' : 'No content has been added for this technology yet.'}
+                className={`min-h-[420px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 ${!canManage ? 'cursor-text' : ''}`}
+              />
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
+              <button
+                type="button"
+                onClick={handleCopyContent}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                <Copy size={15} />
+                Copy
+              </button>
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={handleSaveContent}
+                  disabled={savingContent}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Save size={15} />
+                  {savingContent ? 'Saving...' : 'Save'}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

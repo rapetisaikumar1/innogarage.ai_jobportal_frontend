@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import GroupChatPanel from '../../components/chat/GroupChatPanel';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
 
 const ChatPage = () => {
   const { user } = useAuth();
@@ -35,6 +36,7 @@ const ChatPage = () => {
   const matchRefs = useRef({});
   const inputRef = useRef(null);
   const activeContactRef = useRef(null);
+  const debouncedContactSearch = useDebouncedValue(contactSearch.trim(), 250);
 
   useEffect(() => {
     const newSocket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
@@ -46,7 +48,7 @@ const ChatPage = () => {
     newSocket.on('newMessage', (msg) => {
       const current = activeContactRef.current;
       if (current && (msg.senderId === current.id || msg.receiverId === current.id)) {
-        setMessages((prev) => [...prev, msg]);
+        setMessages((prev) => (prev.some((item) => item.id === msg.id) ? prev : [...prev, msg]));
       }
       fetchContacts();
     });
@@ -237,12 +239,12 @@ const ChatPage = () => {
     );
   };
 
-  const groupedMessages = messages.reduce((groups, msg) => {
+  const groupedMessages = useMemo(() => messages.reduce((groups, msg) => {
     const dateKey = format(new Date(msg.createdAt), 'yyyy-MM-dd');
     if (!groups[dateKey]) groups[dateKey] = [];
     groups[dateKey].push(msg);
     return groups;
-  }, {});
+  }, {}), [messages]);
 
   const sharedFiles = useMemo(() => {
     return messages
@@ -264,12 +266,16 @@ const ChatPage = () => {
     return { text: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' };
   };
 
-  const filteredContacts = contacts.filter(c =>
-    c.fullName?.toLowerCase().includes(contactSearch.toLowerCase()) ||
-    c.email?.toLowerCase().includes(contactSearch.toLowerCase())
-  );
+  const filteredContacts = useMemo(() => {
+    const query = debouncedContactSearch.toLowerCase();
+    if (!query) return contacts;
+    return contacts.filter(c =>
+      c.fullName?.toLowerCase().includes(query) ||
+      c.email?.toLowerCase().includes(query)
+    );
+  }, [contacts, debouncedContactSearch]);
 
-  const totalUnread = contacts.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  const totalUnread = useMemo(() => contacts.reduce((sum, c) => sum + (c.unreadCount || 0), 0), [contacts]);
 
   // @mention logic
   const mentionSuggestions = useMemo(() => {

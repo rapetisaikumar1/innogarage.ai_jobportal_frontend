@@ -361,7 +361,7 @@ const AchieversPage = () => {
               </span>
             </h3>
             <p className="text-[11px] text-gray-500 mt-1.5 leading-relaxed">
-              Your all-in-one career companion — matching you with the right jobs, building your resume, and preparing you for interviews.
+              Your all-in-one career companion — matching you with the right jobs, tracking your progress, and preparing you for interviews.
             </p>
 
             {/* Feature list */}
@@ -369,7 +369,7 @@ const AchieversPage = () => {
               {[
                 { icon: Target, title: 'AI-Powered Job Matching', color: 'text-violet-600', bg: 'bg-violet-50' },
                 { icon: GraduationCap, title: 'Dedicated Mentor Support', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                { icon: Zap, title: 'Tailored Resume Builder', color: 'text-amber-600', bg: 'bg-amber-50' },
+                { icon: Zap, title: 'Quick Apply Workflow', color: 'text-amber-600', bg: 'bg-amber-50' },
                 { icon: Headphones, title: 'Interview Preparation', color: 'text-sky-600', bg: 'bg-sky-50' },
                 { icon: BarChart3, title: 'Career Growth Tracking', color: 'text-rose-600', bg: 'bg-rose-50' },
               ].map(({ icon: Icon, title, bg, color }) => (

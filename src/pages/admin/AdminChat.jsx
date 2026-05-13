@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import GroupChatPanel from '../../components/chat/GroupChatPanel';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
 
 const AdminChat = () => {
   const { user } = useAuth();
@@ -30,6 +31,12 @@ const AdminChat = () => {
   const messagesContainerRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
+  const activeContactRef = useRef(null);
+  const debouncedSearchQuery = useDebouncedValue(searchQuery.trim(), 250);
+
+  useEffect(() => {
+    activeContactRef.current = activeContact;
+  }, [activeContact]);
 
   useEffect(() => {
     const newSocket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
@@ -37,13 +44,14 @@ const AdminChat = () => {
     });
     setSocket(newSocket);
     newSocket.on('newMessage', (msg) => {
-      if (msg.senderId === activeContact?.id || msg.receiverId === activeContact?.id) {
-        setMessages((prev) => [...prev, msg]);
+      const currentContact = activeContactRef.current;
+      if (msg.senderId === currentContact?.id || msg.receiverId === currentContact?.id) {
+        setMessages((prev) => (prev.some((item) => item.id === msg.id) ? prev : [...prev, msg]));
       }
       fetchContacts();
     });
     return () => newSocket.disconnect();
-  }, [activeContact]);
+  }, []);
 
   useEffect(() => { fetchContacts(); fetchGroupUnread(); }, []);
 
@@ -70,6 +78,7 @@ const AdminChat = () => {
   };
 
   const selectContact = async (contact) => {
+    activeContactRef.current = contact;
     setActiveContact(contact);
     setShowMobileSidebar(false);
     setLoadingMessages(true);
@@ -175,19 +184,23 @@ const AdminChat = () => {
   };
 
   // Group messages by date
-  const groupedMessages = messages.reduce((groups, msg) => {
+  const groupedMessages = useMemo(() => messages.reduce((groups, msg) => {
     const dateKey = format(new Date(msg.createdAt), 'yyyy-MM-dd');
     if (!groups[dateKey]) groups[dateKey] = [];
     groups[dateKey].push(msg);
     return groups;
-  }, {});
+  }, {}), [messages]);
 
-  const filteredContacts = contacts.filter(c =>
-    c.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredContacts = useMemo(() => {
+    const query = debouncedSearchQuery.toLowerCase();
+    if (!query) return contacts;
+    return contacts.filter(c =>
+      c.fullName?.toLowerCase().includes(query) ||
+      c.email?.toLowerCase().includes(query)
+    );
+  }, [contacts, debouncedSearchQuery]);
 
-  const totalUnread = contacts.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  const totalUnread = useMemo(() => contacts.reduce((sum, c) => sum + (c.unreadCount || 0), 0), [contacts]);
 
   const getRoleLabel = (role) => {
     if (role === 'SUPER_ADMIN') return 'Super Admin';

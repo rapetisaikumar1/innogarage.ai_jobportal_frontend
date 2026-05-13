@@ -131,13 +131,13 @@ const SignupPage = () => {
               </h1>
 
               <p className="text-gray-500 text-[15px] leading-relaxed mb-8 max-w-[420px]">
-                One platform to craft perfect resumes, track every application, and get 1:1 mentorship — all powered by AI, all completely free.
+                One platform to build a strong profile, track every application, and get 1:1 mentorship — all powered by AI, all completely free.
               </p>
 
               {/* Feature list */}
               <div className="space-y-4 mb-8">
                 {[
-                  { icon: Zap, title: 'Instant AI Resumes', desc: 'Paste a job link, get a tailored resume in under 60 seconds.' },
+                  { icon: Zap, title: 'Smart Job Matching', desc: 'Run a search and surface the strongest-fit roles for your profile in seconds.' },
                   { icon: Layers, title: 'All-in-One Tracker', desc: 'One dashboard for every application, status, and deadline.' },
                   { icon: Compass, title: 'Matched Mentorship', desc: 'Get paired with industry mentors who\'ve been where you want to go.' },
                   { icon: TrendingUp, title: 'Real-Time Insights', desc: 'See exactly where you stand with interview-readiness scores.' },

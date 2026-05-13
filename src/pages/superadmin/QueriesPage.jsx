@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { MessageSquareMore, Search, Clock, CheckCircle2, XCircle, AlertCircle, User, UserCheck, ArrowRightLeft } from 'lucide-react';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
 
 const STATUS_OPTIONS = ['OPEN', 'IN_PROGRESS', 'CLOSED'];
 
@@ -20,18 +21,11 @@ const QueriesPage = () => {
   const [replyText, setReplyText] = useState('');
   const [updating, setUpdating] = useState(false);
   const [staffList, setStaffList] = useState([]);
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
 
   useEffect(() => {
     fetchQueries();
-    fetchStaff();
   }, []);
-
-  const fetchStaff = async () => {
-    try {
-      const { data } = await api.get('/queries/staff-admin');
-      setStaffList(data);
-    } catch {}
-  };
 
   const fetchQueries = async () => {
     try {
@@ -76,22 +70,26 @@ const QueriesPage = () => {
     }
   };
 
-  const filtered = queries.filter((q) => {
-    const matchesSearch = !search.trim() ||
-      q.subject.toLowerCase().includes(search.toLowerCase()) ||
-      q.description.toLowerCase().includes(search.toLowerCase()) ||
-      q.user?.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-      q.user?.email?.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = !filterStatus || q.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  const filtered = useMemo(() => {
+    const query = debouncedSearch.toLowerCase();
 
-  const stats = {
+    return queries.filter((item) => {
+      const matchesSearch = !query ||
+        item.subject.toLowerCase().includes(query) ||
+        item.description.toLowerCase().includes(query) ||
+        item.user?.fullName?.toLowerCase().includes(query) ||
+        item.user?.email?.toLowerCase().includes(query);
+      const matchesStatus = !filterStatus || item.status === filterStatus;
+      return matchesSearch && matchesStatus;
+    });
+  }, [queries, debouncedSearch, filterStatus]);
+
+  const stats = useMemo(() => ({
     total: queries.length,
     open: queries.filter((q) => q.status === 'OPEN').length,
     inProgress: queries.filter((q) => q.status === 'IN_PROGRESS').length,
     closed: queries.filter((q) => q.status === 'CLOSED').length,
-  };
+  }), [queries]);
 
   if (loading) {
     return (

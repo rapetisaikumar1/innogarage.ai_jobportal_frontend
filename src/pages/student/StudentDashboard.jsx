@@ -13,7 +13,7 @@ import {
 } from '../../utils/studentPortalView';
 import {
   Briefcase, FileText, Calendar, Clock,
-  XCircle, Search, ArrowRight
+  XCircle, Search, ArrowRight, MessageSquare
 } from 'lucide-react';
 
 const AVATAR_BG = [
@@ -23,7 +23,24 @@ const AVATAR_BG = [
 ];
 const avatarBg = (name) => AVATAR_BG[Math.abs([...(name||'')].reduce((a,c)=>a+c.charCodeAt(0),0)) % AVATAR_BG.length];
 
-const DonutChart = ({ value, max, color, trackColor = '#e0e7ff', size = 80, strokeWidth = 8 }) => {
+const APPLICATION_STATUS_MENTOR_APPLIED = 'mentor applied';
+const APPLICATION_STATUS_STUDENT_APPLIED = 'student applied';
+const APPLICATION_STATUS_STUDENT_ACTION_REQUIRED = 'student action required';
+
+const normalizeApplicationStatus = (status, appliedById = null) => {
+  const normalized = String(status || '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+  if (normalized === APPLICATION_STATUS_MENTOR_APPLIED) return APPLICATION_STATUS_MENTOR_APPLIED;
+  if (normalized === APPLICATION_STATUS_STUDENT_APPLIED) return APPLICATION_STATUS_STUDENT_APPLIED;
+  if (normalized === APPLICATION_STATUS_STUDENT_ACTION_REQUIRED) return APPLICATION_STATUS_STUDENT_ACTION_REQUIRED;
+  if (normalized === 'applied') return appliedById ? APPLICATION_STATUS_MENTOR_APPLIED : APPLICATION_STATUS_STUDENT_APPLIED;
+  if (!normalized && !appliedById) return APPLICATION_STATUS_STUDENT_APPLIED;
+  return appliedById ? APPLICATION_STATUS_MENTOR_APPLIED : APPLICATION_STATUS_STUDENT_APPLIED;
+};
+
+const formatApplicationStatus = (status) => String(status || '')
+  .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+const DonutChart = ({ value, max, color, trackColor = '#e0e7ff', size = 88, strokeWidth = 9 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const percentage = max > 0 ? Math.min(value / max, 1) : 0;
@@ -150,6 +167,26 @@ const extractResumeRoleTitle = (resumeText, candidateName, pipelineCandidateName
   return '';
 };
 
+const getRecentYourJobTime = (job) => new Date(job?.matchedAt || job?.updatedAt || job?.createdAt || 0).getTime();
+
+const getInitials = (name = '') => {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() || '').join('') || '?';
+};
+
+const formatShortDateTime = (value) => {
+  if (!value) return 'Not scheduled';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not scheduled';
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
 const PortalLink = ({ portalMode, section, navigate, onPortalNavigate, className, children }) => {
   if (isAdminPortalView(portalMode)) {
     return (
@@ -181,6 +218,8 @@ const StudentDashboard = ({
   const [stats, setStats] = useState(null);
   const [recentApps, setRecentApps] = useState([]);
   const [recentJobs, setRecentJobs] = useState([]);
+  const [upcomingSessions, setUpcomingSessions] = useState([]);
+  const [recentChats, setRecentChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const lastRefreshAtRef = useRef(0);
 
@@ -192,188 +231,94 @@ const StudentDashboard = ({
           setStats(null);
           setRecentApps([]);
           setRecentJobs([]);
+          setUpcomingSessions([]);
+          setRecentChats([]);
           return;
         }
-
-        const [dashboardRes, jobsRes] = await Promise.all([
-          api.get(
-            getPortalEndpoint('dashboardData', { portalMode, studentId }),
-            buildPortalRequestConfig(portalMode)
-          ),
-          api.get(
-            getPortalEndpoint('matchedJobs', { portalMode, studentId }),
-            buildPortalRequestConfig(portalMode)
-          ),
-        ]);
-
-        const allJobs = jobsRes.data.jobs || [];
-        const externalApplied = dashboardRes.data.externalApplications || [];
-        const dashboardStats = dashboardRes.data.stats || {};
-
-        const PENDING_TTL_MS = 10 * 60 * 1000;
-        const now = Date.now();
-        const pendingApplied = (() => {
-          try { return JSON.parse(sessionStorage.getItem(pendingAppliedKey) || '[]'); } catch { return []; }
-        })().filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
-        const apiJobLinks = new Set(externalApplied.map(a => a.jobLink));
-        const stillPending = pendingApplied.filter(p => !apiJobLinks.has(p.jobLink));
-        if (stillPending.length !== pendingApplied.length) {
-          try { sessionStorage.setItem(pendingAppliedKey, JSON.stringify(stillPending)); } catch { /* ignore */ }
-        }
-        const combinedExternalApplied = [
-          ...externalApplied,
-          ...stillPending.map(p => ({
-            jobLink: p.jobLink,
-            employerName: p.employerName,
-            jobTitle: p.jobTitle,
-            status: 'APPLIED',
-            appliedMethod: 'MANUAL',
-            matchScore: p.matchScore,
-            createdAt: p.appliedAt,
-          })),
-        ];
-
-        setStats({
-          ...dashboardStats,
-          totalJobs: allJobs.length,
-          totalMatchedJobs: allJobs.length,
-          externalAppliedCount: combinedExternalApplied.length,
-          totalApplications: (dashboardStats.totalApplied || 0) + combinedExternalApplied.length,
-          adminApplyCount: (dashboardStats.adminApplyCount || 0) + stillPending.length,
-          candidateApplyCount: dashboardStats.candidateApplyCount || 0,
-        });
-
-        const jobsMap = {};
-        allJobs.forEach(j => { if (j.job_apply_link) jobsMap[j.job_apply_link] = j; });
-
-        const dbApps = (dashboardRes.data.recentApplications || []).map(app => ({
-          id: app.id,
-          title: app.job?.title || 'Untitled',
-          company: app.job?.company || '—',
-          status: app.status,
-          appliedAt: app.appliedAt,
-          jobLink: null,
-          matchScore: null,
-          source: 'db',
-          fullJob: null,
-        }));
-
-        const externalApps = combinedExternalApplied.map(app => {
-          const fullJob = jobsMap[app.jobLink];
-          return {
-            id: app.jobLink,
-            title: app.jobTitle || app.employerName || 'Job Application',
-            company: app.employerName || '—',
-            status: app.status || 'APPLIED',
-            appliedAt: app.createdAt,
-            matchScore: app.matchScore,
-            jobLink: app.jobLink,
-            source: 'external',
-            fullJob,
-          };
-        });
-
-        const seenLinks = new Set(dbApps.map(a => a.jobLink).filter(Boolean));
-        const uniqueExternal = externalApps.filter(a => !seenLinks.has(a.jobLink));
-        const allApps = [...dbApps, ...uniqueExternal].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
-        setRecentApps(allApps.slice(0, 5));
-        setRecentJobs(
-          [...allJobs]
-            .sort((a, b) => new Date(b.saved_at || 0) - new Date(a.saved_at || 0))
-            .slice(0, 5)
-        );
-      } else {
-        const [statsRes, appsRes, jobsRes, externalAppliedRes] = await Promise.all([
-          api.get('/jobs/stats?refresh=1'),
-          api.get('/jobs/applications/mine?limit=5'),
-          api.get('/jobs/matched'),
-          api.get('/jobs/external-applied-status'),
-        ]);
-        const allJobs = jobsRes.data.jobs || [];
-        const externalApplied = externalAppliedRes.data.applications || [];
-
-        // Merge pending applies from sessionStorage (covers race condition: user
-        // navigated to Dashboard before the mark-applied API call completed)
-        const PENDING_TTL_MS = 10 * 60 * 1000; // 10 minutes
-        const now = Date.now();
-        const pendingApplied = (() => {
-          try { return JSON.parse(sessionStorage.getItem(pendingAppliedKey) || '[]'); } catch { return []; }
-        })().filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
-        const apiJobLinks = new Set(externalApplied.map(a => a.jobLink));
-        const stillPending = pendingApplied.filter(p => !apiJobLinks.has(p.jobLink));
-        if (stillPending.length !== pendingApplied.length) {
-          try { sessionStorage.setItem(pendingAppliedKey, JSON.stringify(stillPending)); } catch { /* ignore */ }
-        }
-        const combinedExternalApplied = [
-          ...externalApplied,
-          ...stillPending.map(p => ({
-            jobLink: p.jobLink,
-            employerName: p.employerName,
-            jobTitle: p.jobTitle,
-            status: 'APPLIED',
-            appliedMethod: 'MANUAL',
-            matchScore: p.matchScore,
-            createdAt: p.appliedAt,
-          })),
-        ];
-
-        // candidateApplyCount from backend only reflects saved DB records;
-        // add any still-pending (not yet confirmed) applies — they're always candidate-initiated
-        const updatedCandidateCount = (statsRes.data.candidateApplyCount || 0) + stillPending.length;
-        setStats({
-          ...statsRes.data,
-          externalAppliedCount: combinedExternalApplied.length,
-          totalMatchedJobs: allJobs.length,
-          candidateApplyCount: updatedCandidateCount,
-        });
-
-        // Build jobLink -> full job map
-        const jobsMap = {};
-        allJobs.forEach(j => { if (j.job_apply_link) jobsMap[j.job_apply_link] = j; });
-
-        // Merge internal + external applications (same as MyApplications)
-        const dbApps = (appsRes.data.applications || []).map(app => ({
-          id: app.id,
-          title: app.job?.title || 'Untitled',
-          company: app.job?.company || '—',
-          status: app.status,
-          appliedAt: app.appliedAt,
-          jobLink: null,
-          matchScore: null,
-          source: 'db',
-          fullJob: null,
-        }));
-        const externalApps = combinedExternalApplied.map(app => {
-          const fullJob = jobsMap[app.jobLink];
-          return {
-            id: app.jobLink,
-            title: app.jobTitle || app.employerName || 'Job Application',
-            company: app.employerName || '—',
-            status: app.status || 'APPLIED',
-            appliedAt: app.createdAt,
-            matchScore: app.matchScore,
-            jobLink: app.jobLink,
-            source: 'external',
-            fullJob,
-          };
-        });
-        const seenLinks = new Set(dbApps.map(a => a.jobLink).filter(Boolean));
-        const uniqueExternal = externalApps.filter(a => !seenLinks.has(a.jobLink));
-        const allApps = [...dbApps, ...uniqueExternal].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
-        setRecentApps(allApps.slice(0, 5));
-
-        // Show newest 5 jobs (by saved_at descending)
-        setRecentJobs(
-          [...allJobs]
-            .sort((a, b) => new Date(b.saved_at || 0) - new Date(a.saved_at || 0))
-            .slice(0, 5)
-        );
       }
-      } catch (error) {
-        console.error('Failed to load dashboard:', error);
-      } finally {
-        setLoading(false);
+
+      const portalOptions = { portalMode, studentId };
+      const baseConfig = buildPortalRequestConfig(portalMode);
+      const [statsRes, appsRes, yourJobsRes, bookingsResult, chatsResult] = await Promise.all([
+        api.get(getPortalEndpoint('stats', portalOptions), baseConfig),
+        api.get(
+          getPortalEndpoint('applications', portalOptions),
+          buildPortalRequestConfig(portalMode, { params: { limit: 5, t: Date.now() } })
+        ),
+        api.get(
+          getPortalEndpoint('yourJobs', portalOptions),
+          buildPortalRequestConfig(portalMode, { params: { fast: 1 } })
+        ),
+        isAdminView ? Promise.resolve({ status: 'fulfilled', value: { data: [] } }) : api.get('/mentoring/my-bookings').then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })),
+        isAdminView ? Promise.resolve({ status: 'fulfilled', value: { data: [] } }) : api.get('/chat/contacts').then((value) => ({ status: 'fulfilled', value })).catch((reason) => ({ status: 'rejected', reason })),
+      ]);
+
+      const recentYourJobs = yourJobsRes.data.jobs || [];
+      const savedApplications = appsRes.data.applications || [];
+      const PENDING_TTL_MS = 10 * 60 * 1000;
+      const now = Date.now();
+      const pendingApplied = (() => {
+        try { return JSON.parse(sessionStorage.getItem(pendingAppliedKey) || '[]'); } catch { return []; }
+      })().filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
+      const apiJobLinks = new Set(savedApplications.map(a => a.applyLink || a.jobLink));
+      const stillPending = pendingApplied.filter(p => !apiJobLinks.has(p.jobLink));
+      if (stillPending.length !== pendingApplied.length) {
+        try { sessionStorage.setItem(pendingAppliedKey, JSON.stringify(stillPending)); } catch { /* ignore */ }
       }
+      const combinedApplications = [
+        ...savedApplications,
+        ...stillPending.map(p => ({
+          id: p.jobLink,
+          applyLink: p.jobLink,
+          company: p.employerName,
+          title: p.jobTitle,
+          status: normalizeApplicationStatus(p.status),
+          matchingScore: p.matchScore,
+          appliedAt: p.appliedAt,
+        })),
+      ];
+
+      const getApplicationStatus = (application) => normalizeApplicationStatus(application.status, application.appliedById);
+
+      setStats({
+        ...statsRes.data,
+        totalApplied: combinedApplications.length,
+        externalAppliedCount: 0,
+        totalApplications: combinedApplications.length,
+        totalMatchedJobs: recentYourJobs.length,
+        adminApplyCount: combinedApplications.filter(app => getApplicationStatus(app) === APPLICATION_STATUS_MENTOR_APPLIED).length,
+        candidateApplyCount: combinedApplications.filter(app => getApplicationStatus(app) === APPLICATION_STATUS_STUDENT_APPLIED).length,
+      });
+      setRecentApps(combinedApplications.map(app => ({
+        id: app.id || app.applyLink,
+        title: app.title || app.job?.title || 'Job Application',
+        company: app.company || app.job?.company || '-',
+        status: getApplicationStatus(app),
+        appliedAt: app.appliedAt || app.createdAt,
+        jobLink: app.applyLink || app.jobLink || app.job?.applyLink || null,
+        matchScore: app.matchingScore || app.matchScore || 0,
+        fullJob: null,
+      })).slice(0, 5));
+      setRecentJobs(
+        [...recentYourJobs]
+          .sort((a, b) => getRecentYourJobTime(b) - getRecentYourJobTime(a))
+          .slice(0, 5)
+      );
+      const currentDate = new Date();
+      const bookings = bookingsResult.status === 'fulfilled' ? bookingsResult.value.data || [] : [];
+      const chats = chatsResult.status === 'fulfilled' ? chatsResult.value.data || [] : [];
+      setUpcomingSessions(bookings
+        .filter((booking) => booking?.slot?.startTime && new Date(booking.slot.startTime) > currentDate && ['PENDING', 'CONFIRMED'].includes(booking.status))
+        .sort((left, right) => new Date(left.slot.startTime) - new Date(right.slot.startTime))
+        .slice(0, 4));
+      setRecentChats(chats
+        .sort((left, right) => (right.unreadCount || 0) - (left.unreadCount || 0))
+        .slice(0, 4));
+    } catch (error) {
+      console.error('Failed to load dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
   }, [isAdminView, pendingAppliedKey, portalMode, studentId]);
 
   useEffect(() => {
@@ -409,19 +354,17 @@ const StudentDashboard = ({
   })();
 
   const firstName = user?.fullName?.split(' ')[0] || 'User';
-  const externalAppliedCount = stats?.externalAppliedCount || 0;
-  const dbAppliedCount = stats?.totalApplied || 0;
-  const totalApplied = externalAppliedCount + dbAppliedCount;
+  const totalApplied = stats?.totalApplications || stats?.totalApplied || 0;
   const interviewCount = stats?.interviewScheduled || 0;
   const rejectedCount = stats?.rejected || 0;
   const totalMatchedJobs = stats?.totalMatchedJobs || stats?.totalJobs || 0;
-  const jobsToApply = Math.max(totalMatchedJobs - externalAppliedCount, 0);
+  const jobsToApply = Math.max(totalMatchedJobs - totalApplied, 0);
   const adminApplyCount = stats?.adminApplyCount || 0;
   const candidateApplyCount = stats?.candidateApplyCount || 0;
   const totalCount = totalApplied;
 
   const statCards = [
-    { label: 'Applied', value: totalApplied, icon: FileText, light: 'bg-blue-50', text: 'text-blue-600' },
+    { label: 'Applications', value: totalApplied, icon: FileText, light: 'bg-blue-50', text: 'text-blue-600' },
     { label: 'Interviews', value: interviewCount, icon: Calendar, light: 'bg-violet-50', text: 'text-violet-600' },
     { label: 'Jobs to Apply', value: jobsToApply, icon: Briefcase, light: 'bg-emerald-50', text: 'text-emerald-600' },
     { label: 'Rejected', value: rejectedCount, icon: XCircle, light: 'bg-red-50', text: 'text-red-600' },
@@ -429,15 +372,17 @@ const StudentDashboard = ({
 
   const getStatusLabel = (status) => {
     const map = {
-      APPLIED: 'Applied',
       INTERVIEW_SCHEDULED: 'Interview',
       REJECTED: 'Rejected',
       OFFER_RECEIVED: 'Offer',
     };
-    return map[status] || status;
+    return map[status] || formatApplicationStatus(status);
   };
 
   const statusStyle = (status) => {
+    if (status === APPLICATION_STATUS_STUDENT_ACTION_REQUIRED) return 'bg-orange-50 text-orange-700 border-orange-200';
+    if (status === APPLICATION_STATUS_MENTOR_APPLIED) return 'bg-blue-50 text-blue-700 border-blue-200';
+    if (status === APPLICATION_STATUS_STUDENT_APPLIED) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
     if (status === 'INTERVIEW_SCHEDULED') return 'bg-cyan-50 text-cyan-700 border-cyan-200';
     if (status === 'REJECTED') return 'bg-red-50 text-red-600 border-red-200';
     if (status === 'OFFER_RECEIVED') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
@@ -465,7 +410,7 @@ const StudentDashboard = ({
       </div>
 
       {/* ── KPI Strip ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {statCards.map(({ label, value, icon: Icon, light, text }) => (
           <div key={label} className="bg-white border border-gray-100 rounded-xl px-3.5 py-2.5 flex items-center gap-2.5 shadow-sm">
             <div className={`w-8 h-8 ${light} rounded-lg flex items-center justify-center shrink-0`}>
@@ -480,7 +425,7 @@ const StudentDashboard = ({
       </div>
 
       {/* ── Main two-column grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_300px]">
 
         {/* Left: Recent Apps + Recent Jobs */}
         <div className="space-y-3 min-w-0">
@@ -541,6 +486,44 @@ const StudentDashboard = ({
             )}
           </div>
 
+          {/* Upcoming Sessions */}
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/40">
+              <h2 className="text-[14px] font-bold text-gray-700 flex items-center gap-1.5">
+                <Calendar size={14} className="text-gray-400" />
+                Upcoming Sessions
+              </h2>
+              {!isAdminView && upcomingSessions.length > 0 && (
+                <PortalLink portalMode={portalMode} section="mentoring" navigate={navigate} onPortalNavigate={onPortalNavigate} className="text-[12px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
+                  View All <ArrowRight size={10} />
+                </PortalLink>
+              )}
+            </div>
+            {upcomingSessions.length === 0 ? (
+              <div className="flex items-center gap-3 px-4 py-4">
+                <Calendar size={20} className="text-gray-200 shrink-0" />
+                <p className="text-[13px] font-medium text-gray-500">No upcoming mentoring sessions</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50/80 max-h-[250px] overflow-y-auto">
+                {upcomingSessions.map((booking) => (
+                  <div key={booking.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
+                    <div className="w-8 h-8 rounded-md bg-violet-50 text-violet-600 flex items-center justify-center font-bold text-[12px] shrink-0">
+                      {getInitials(booking.slot?.mentor?.fullName)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-gray-900 truncate">{booking.slot?.mentor?.fullName || 'Mentor'}</p>
+                      <p className="text-[11px] font-medium text-gray-500 flex items-center gap-1"><Clock size={9} />{formatShortDateTime(booking.slot?.startTime)}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${booking.status === 'CONFIRMED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                      {booking.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Recent Jobs */}
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/40">
@@ -549,7 +532,7 @@ const StudentDashboard = ({
                 Recent Jobs
               </h2>
               {recentJobs.length > 0 && (
-                <PortalLink portalMode={portalMode} section="jobs" navigate={navigate} onPortalNavigate={onPortalNavigate} className="text-[12px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
+                <PortalLink portalMode={portalMode} section="your-jobs" navigate={navigate} onPortalNavigate={onPortalNavigate} className="text-[12px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
                   View All <ArrowRight size={10} />
                 </PortalLink>
               )}
@@ -557,7 +540,7 @@ const StudentDashboard = ({
             {recentJobs.length === 0 ? (
               <div className="flex items-center gap-3 px-4 py-4">
                 <Search size={20} className="text-gray-200 shrink-0" />
-                <p className="text-[13px] font-medium text-gray-600">No matched jobs yet — use <span className="font-semibold text-gray-800">Find Jobs</span> to load roles.</p>
+                <p className="text-[13px] font-medium text-gray-600">No Your Jobs matches yet — matched roles from <span className="font-semibold text-gray-800">Find Jobs</span> will appear here.</p>
               </div>
             ) : (
               <div className="overflow-x-auto max-h-[340px] overflow-y-auto">
@@ -567,32 +550,26 @@ const StudentDashboard = ({
                       <th className="px-4 py-2 font-semibold">Role</th>
                       <th className="px-4 py-2 font-semibold">Company</th>
                       <th className="px-4 py-2 font-semibold">Score</th>
-                      <th className="px-4 py-2 font-semibold">Type</th>
                     </tr>
                   </thead>
                   <tbody>
                     {recentJobs.map((job) => {
-                      const resumeRole = extractResumeRoleTitle(job.resume_text, user?.fullName, job.candidate_name);
-                      const title = resumeRole || extractRole(job);
-                      const score = parseInt(job.match_score) || 0;
+                      const rawJob = job.rawPayload || job;
+                      const title = job.title || extractRole(rawJob);
+                      const score = parseInt(job.matchingScore || job.matchScore || job.match_score) || 0;
                       return (
                         <tr
                           key={job.id}
                           className="border-t border-gray-50/80 hover:bg-gray-50/40 cursor-pointer transition-colors"
-                          onClick={() => navigatePortalSection({ portalMode, section: 'jobs', navigate, onPortalNavigate })}
+                          onClick={() => navigatePortalSection({ portalMode, section: 'your-jobs', navigate, onPortalNavigate })}
                         >
                           <td className="px-4 py-2">
                             <p className="text-[13px] font-semibold text-gray-800 truncate max-w-[180px]">{title}</p>
                           </td>
-                          <td className="px-4 py-2 text-[13px] font-medium text-gray-600 truncate max-w-[140px]">{job.employer_name || '—'}</td>
+                          <td className="px-4 py-2 text-[13px] font-medium text-gray-600 truncate max-w-[140px]">{job.company || job.employer_name || '—'}</td>
                           <td className="px-4 py-2">
                             {score > 0
                               ? <span className={`text-[13px] font-bold ${score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-blue-600' : 'text-amber-600'}`}>{score}%</span>
-                              : <span className="text-gray-300 text-[12px]">—</span>}
-                          </td>
-                          <td className="px-4 py-2">
-                            {job.job_employment_type
-                              ? <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[11px] font-medium rounded">{job.job_employment_type}</span>
                               : <span className="text-gray-300 text-[12px]">—</span>}
                           </td>
                         </tr>
@@ -608,12 +585,50 @@ const StudentDashboard = ({
         {/* Right sidebar: donut charts */}
         <div className="space-y-3">
 
+          {/* Recent Chat */}
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/40">
+              <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                <MessageSquare size={13} className="text-gray-400" />
+                Recent Chat
+              </h3>
+              {!isAdminView && recentChats.length > 0 && (
+                <PortalLink portalMode={portalMode} section="chat" navigate={navigate} onPortalNavigate={onPortalNavigate} className="text-[12px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-0.5">
+                  Open <ArrowRight size={10} />
+                </PortalLink>
+              )}
+            </div>
+            {recentChats.length === 0 ? (
+              <div className="px-4 py-5 text-center">
+                <MessageSquare size={24} className="mx-auto text-gray-200" />
+                <p className="mt-2 text-[13px] font-medium text-gray-500">No recent chats</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50/80 max-h-[240px] overflow-y-auto">
+                {recentChats.map((contact) => (
+                  <div key={contact.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-[11px] font-bold shrink-0">
+                      {getInitials(contact.fullName)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-semibold text-gray-900">{contact.fullName}</p>
+                      <p className="text-[11px] font-medium text-gray-400">{contact.role?.replace('_', ' ') || 'Contact'}</p>
+                    </div>
+                    {contact.unreadCount > 0 && (
+                      <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">{contact.unreadCount}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Applications Overview */}
           <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-4">Applications</h3>
-            <div className="flex items-center gap-4">
+            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-3">Applications</h3>
+            <div className="flex items-center gap-3">
               <div className="relative shrink-0">
-                <DonutChart value={totalApplied} max={totalMatchedJobs || 1} color="#1e40af" trackColor="#d1fae5" size={88} strokeWidth={9} />
+                <DonutChart value={totalApplied} max={totalMatchedJobs || 1} color="#1e40af" trackColor="#d1fae5" />
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-[17px] font-extrabold text-gray-900 leading-none">{totalCount}</span>
                   <span className="text-[9px] font-medium text-gray-500">Total</span>
@@ -621,7 +636,7 @@ const StudentDashboard = ({
               </div>
               <div className="space-y-2 flex-1 min-w-0">
                 {[
-                  { dot: 'bg-blue-800',    label: 'Applied',    val: totalApplied },
+                  { dot: 'bg-blue-800',    label: 'Applications',    val: totalApplied },
                   { dot: 'bg-cyan-500',    label: 'Candidate',  val: candidateApplyCount },
                   { dot: 'bg-amber-500',   label: 'Admin',      val: adminApplyCount },
                   { dot: 'bg-emerald-400', label: 'To Apply',   val: jobsToApply },

@@ -7,7 +7,7 @@ import api from '../../services/api';
 import {
   LayoutDashboard, Briefcase, FileText, GraduationCap, Users, MessageSquare,
   UserCog, BookOpen, Calendar, LogOut, Menu, X, Bell, ChevronDown,
-  Settings, StickyNote, UserPlus, Contact, Hash, Trophy, Crown, Megaphone, HelpCircle, Zap
+  Settings, StickyNote, UserPlus, Contact, Hash, Trophy, Crown, Megaphone, HelpCircle, Zap, Sparkles
 } from 'lucide-react';
 
 const verifiedStripeUpgradeUsers = new Set();
@@ -46,7 +46,7 @@ const DashboardLayout = () => {
     fetchNotificationCount();
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') fetchNotificationCount();
-    }, 30000);
+    }, 60000);
     return () => clearInterval(interval);
   }, [fetchNotificationCount]);
 
@@ -95,12 +95,35 @@ const DashboardLayout = () => {
     navigate('/login');
   };
 
+  const getNotificationTarget = (notification) => {
+    const targetLink = notification.link === '/dashboard/help' ? '/dashboard/help-support' : notification.link;
+    if (targetLink) return targetLink;
+    if (notification.type === 'CHAT_MESSAGE' || notification.type === 'message' || notification.type === 'mention') return user?.role === 'STUDENT' ? '/dashboard/chat' : user?.role === 'ADMIN' ? '/admin/chat' : '/superadmin/chat';
+    if (notification.type === 'JOB_APPLIED_BY_ADMIN' || notification.type === 'application') return user?.role === 'STUDENT' ? '/dashboard/applications' : user?.role === 'ADMIN' ? '/admin/students' : '/superadmin';
+    if (notification.type === 'admin_request') return user?.role === 'ADMIN' ? '/admin/raise-request' : '/superadmin/requests';
+    if (notification.type === 'query') return user?.role === 'STUDENT' ? '/dashboard/help-support' : user?.role === 'ADMIN' ? '/admin/queries' : '/superadmin/queries';
+    if (notification.type?.startsWith('BOOKING_')) return user?.role === 'STUDENT' ? '/dashboard/mentoring' : '/admin/bookings';
+    return null;
+  };
+
+  const handleNotificationClick = (notification) => {
+    if (!notification.isRead) {
+      setNotifCount((prev) => Math.max(0, prev - 1));
+      setNotifications((prev) => prev.map((item) => item.id === notification.id ? { ...item, isRead: true } : item));
+      api.put(`/notifications/${notification.id}/read`).catch(fetchNotificationCount);
+    }
+    setNotifDropdown(false);
+    const target = getNotificationTarget(notification);
+    if (target) navigate(target);
+  };
+
   const getNavItems = () => {
     switch (user?.role) {
       case 'STUDENT':
         return [
           { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', end: true },
           { to: '/dashboard/jobs', icon: Briefcase, label: 'Find Jobs' },
+          { to: '/dashboard/your-jobs', icon: Sparkles, label: 'Your Jobs' },
           { to: '/dashboard/applications', icon: FileText, label: 'My Applications' },
           { to: '/dashboard/training', icon: GraduationCap, label: 'Training' },
           { to: '/dashboard/notes', icon: StickyNote, label: 'My Notes' },
@@ -146,7 +169,7 @@ const DashboardLayout = () => {
   const isStudent = user?.role === 'STUDENT';
   const useHorizontalNav = false;
   const roleLabel = isSuperAdmin ? 'Super Admin' : isAdmin ? 'Mentor' : 'Student';
-  const isAdminStudentPortalView = /^\/admin\/students\/[^/]+\/view(?:\/resume-view)?$/.test(location.pathname);
+  const isAdminStudentPortalView = /^\/admin\/students\/[^/]+\/view$/.test(location.pathname);
 
   return (
     <div className="h-screen bg-gradient-to-br from-slate-100 via-blue-50/80 to-indigo-100/60 flex overflow-hidden">
@@ -171,7 +194,7 @@ const DashboardLayout = () => {
             // Define section groups per role
             const sectionGroups = role === 'STUDENT'
               ? [
-                  { label: 'Main', names: ['Dashboard', 'Find Jobs', 'My Applications'] },
+                  { label: 'Main', names: ['Dashboard', 'Find Jobs', 'Your Jobs', 'My Applications'] },
                   { label: 'Learning', names: ['Training', 'My Notes', 'Mentoring'] },
                   { label: 'Community', names: ['Chat', 'Shoutboard', 'Help & Support'] },
                 ]
@@ -323,14 +346,18 @@ const DashboardLayout = () => {
                   <div className="absolute right-0 mt-2 w-80 bg-white/80 backdrop-blur-2xl rounded-xl shadow-[0_8px_30px_-8px_rgba(0,0,0,0.18)] border border-white/50 z-50 overflow-hidden">
                     <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
                       <p className="text-sm font-bold text-gray-800">Notifications</p>
-                      {notifCount > 0 && (
+                      {notifications.length > 0 && (
                         <button
                           onClick={async () => {
-                            try { await api.put('/notifications/read-all'); setNotifCount(0); setNotifications(prev => prev.map(n => ({ ...n, isRead: true }))); } catch {}
+                            try {
+                              setNotifCount(0);
+                              setNotifications([]);
+                              await api.delete('/notifications');
+                            } catch {}
                           }}
-                          className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                          className="text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
                         >
-                          Mark all read
+                          Clear all
                         </button>
                       )}
                     </div>
@@ -359,19 +386,7 @@ const DashboardLayout = () => {
                             <button
                               key={n.id}
                               className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-blue-50/50 transition-colors text-left border-b border-gray-50 last:border-0 ${!n.isRead ? 'bg-blue-50/30' : ''}`}
-                              onClick={async () => {
-                                if (!n.isRead) {
-                                  try { await api.put(`/notifications/${n.id}/read`); setNotifCount(prev => Math.max(0, prev - 1)); setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, isRead: true } : x)); } catch {}
-                                }
-                                setNotifDropdown(false);
-                                const targetLink = n.link === '/dashboard/help' ? '/dashboard/help-support' : n.link;
-                                if (targetLink) navigate(targetLink);
-                                else if (n.type === 'CHAT_MESSAGE' || n.type === 'message' || n.type === 'mention') navigate(user?.role === 'STUDENT' ? '/dashboard/chat' : user?.role === 'ADMIN' ? '/admin/chat' : '/superadmin/chat');
-                                else if (n.type === 'JOB_APPLIED_BY_ADMIN' || n.type === 'application') navigate(user?.role === 'STUDENT' ? '/dashboard/applications' : user?.role === 'ADMIN' ? '/admin/students' : '/superadmin');
-                                else if (n.type === 'admin_request') navigate(user?.role === 'ADMIN' ? '/admin/raise-request' : '/superadmin/requests');
-                                else if (n.type === 'query') navigate(user?.role === 'STUDENT' ? '/dashboard/help-support' : user?.role === 'ADMIN' ? '/admin/queries' : '/superadmin/queries');
-                                else if (n.type?.startsWith('BOOKING_')) navigate(user?.role === 'STUDENT' ? '/dashboard/mentoring' : '/admin/bookings');
-                              }}
+                              onClick={() => handleNotificationClick(n)}
                             >
                               <div className={`w-8 h-8 ${iconConfig.bg} rounded-lg flex items-center justify-center shrink-0 mt-0.5`}>
                                 {iconConfig.icon}
@@ -400,17 +415,15 @@ const DashboardLayout = () => {
             {/* Profile dropdown */}
             <div className="relative">
               <button
-                className="flex items-center gap-2.5 py-1 px-1 rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2.5 py-1 px-1 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
                 onClick={() => { setProfileDropdown(!profileDropdown); setNotifDropdown(false); }}
               >
                 <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-primary-700 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-sm">
                   {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
                 <div className="hidden md:flex flex-col items-start">
-                  {user?.registrationNumber && (
-                    <span className="text-xs font-bold text-gray-800 leading-tight tracking-wide">{user.registrationNumber}</span>
-                  )}
-                  <span className="text-xs text-gray-400 leading-tight mt-0.5">{user?.fullName}</span>
+                  <span className="max-w-[180px] truncate text-sm font-bold leading-tight text-gray-900">{user?.fullName || 'User'}</span>
+                  <span className="text-xs font-normal leading-tight text-gray-900">{roleLabel}</span>
                 </div>
                 <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${profileDropdown ? 'rotate-180' : ''}`} />
               </button>
@@ -487,7 +500,7 @@ const DashboardLayout = () => {
                     <h4 className="text-gray-900 font-semibold mb-4 text-sm uppercase tracking-wider">Platform</h4>
                     <ul className="space-y-3 text-sm">
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Job Discovery</span></li>
-                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Resume Builder</span></li>
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Application Tracker</span></li>
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Mentorship</span></li>
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Training Hub</span></li>
                     </ul>
@@ -498,7 +511,7 @@ const DashboardLayout = () => {
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Smart Matching</span></li>
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Quick Apply</span></li>
                       <li><span className="hover:text-gray-900 transition-colors cursor-default">Skill Insights</span></li>
-                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Tailored Resumes</span></li>
+                      <li><span className="hover:text-gray-900 transition-colors cursor-default">Application Tracker</span></li>
                     </ul>
                   </div>
                   <div>

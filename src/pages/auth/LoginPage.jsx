@@ -218,7 +218,7 @@ const LoginPage = () => {
               {/* Feature list */}
               <div className="space-y-4 mb-8">
                 {[
-                  { icon: FileText, title: 'Saved Resumes', desc: 'Your latest drafts and tailored versions, just a click away.' },
+                  { icon: FileText, title: 'Saved Job Matches', desc: 'Your latest matched roles and saved opportunities, ready when you are.' },
                   { icon: Target, title: 'Active Applications', desc: 'All your application statuses, updated in real time.' },
                   { icon: Calendar, title: 'Upcoming Sessions', desc: 'Mentor sessions booked and reminders already set for you.' },
                   { icon: Award, title: 'New Milestones', desc: 'Check your latest career score and unlocked achievements.' },

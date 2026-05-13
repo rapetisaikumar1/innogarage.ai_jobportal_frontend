@@ -4,7 +4,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, Search, Mail, Phone, GraduationCap,
-  MapPin, ExternalLink, Shield, Hash, Users, Eye
+  MapPin, ExternalLink, Shield, Hash, Users, Eye, Zap
 } from 'lucide-react';
 
 const isStudentActive = (student) => {
@@ -59,7 +59,8 @@ const AdminStudents = () => {
   const filtered = students.filter(s =>
     s.fullName?.toLowerCase().includes(search.toLowerCase()) ||
     s.email?.toLowerCase().includes(search.toLowerCase()) ||
-    s.registrationNumber?.toLowerCase().includes(search.toLowerCase())
+    s.registrationNumber?.toLowerCase().includes(search.toLowerCase()) ||
+    s.assignedTechnology?.name?.toLowerCase().includes(search.toLowerCase())
   );
 
   const getInitials = (name) => {
@@ -161,6 +162,10 @@ const AdminStudents = () => {
                   Reg: {detail.registrationNumber}
                 </div>
               )}
+              <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[13px] font-semibold text-blue-700">
+                <Zap size={13} className="text-blue-500" />
+                Technology: {detail.assignedTechnology?.name || 'Unassigned'}
+              </div>
             </div>
           </div>
         </div>
@@ -192,6 +197,10 @@ const AdminStudents = () => {
                       <p className="text-[13px] leading-5 text-slate-800">{detail.jobRole}</p>
                     </div>
                   )}
+                  <div className="rounded-lg bg-blue-50 px-3 py-2.5 sm:col-span-2">
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-400">Assigned Technology</p>
+                    <p className="text-[13px] font-semibold leading-5 text-blue-800">{detail.assignedTechnology?.name || 'Unassigned'}</p>
+                  </div>
                 </div>
                 {skills.length > 0 && (
                   <div>
@@ -322,6 +331,7 @@ const AdminStudents = () => {
                 <th className="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Reg No</th>
                 <th className="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Name</th>
                 <th className="text-center px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Applications</th>
+                <th className="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Technology</th>
                 <th className="text-center px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Joined</th>
                 <th className="text-center px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Action</th>
@@ -340,7 +350,13 @@ const AdminStudents = () => {
                   </td>
                   <td className="px-5 py-3.5 text-center">
                     <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 bg-blue-50 text-blue-700 text-[12px] font-bold rounded-full ring-1 ring-blue-100">
-                      {(student._count?.jobApplications || 0) + (student._count?.externalApplications || 0)}
+                      {student._count?.jobApplications || 0}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span className={`inline-flex max-w-[190px] items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${student.assignedTechnology ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100' : 'bg-gray-50 text-gray-400 ring-1 ring-gray-200'}`}>
+                      <Zap size={12} className="shrink-0" />
+                      <span className="truncate">{student.assignedTechnology?.name || 'Unassigned'}</span>
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-center">

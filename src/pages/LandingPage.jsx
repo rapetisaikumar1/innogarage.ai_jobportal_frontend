@@ -60,7 +60,7 @@ const LandingPage = () => {
           </h1>
 
           <p className="mt-6 text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
-            From resume tailoring to one-click applications, mentorship scheduling to real-time chat — everything you need to land your dream job, in one platform.
+            From smart job discovery to one-click applications, mentorship scheduling to real-time chat — everything you need to land your dream job, in one platform.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -129,11 +129,11 @@ const LandingPage = () => {
               },
               {
                 icon: FileText,
-                title: 'AI Resume Tailor',
-                desc: 'Generate ATS-optimized resumes tailored to each job description. Keywords, formatting, and bullet points — automatically refined.',
+                title: 'Profile & Resume Setup',
+                desc: 'Upload your resume once, keep your profile current, and let the platform use that information to surface better matches and mentor guidance.',
                 color: 'from-violet-500 to-purple-600',
                 bgLight: 'bg-violet-50',
-                items: ['Keyword extraction', 'ATS score matching', 'PDF download'],
+                items: ['Resume upload', 'Skills extraction', 'Profile sync'],
               },
               {
                 icon: Target,
@@ -225,7 +225,7 @@ const LandingPage = () => {
                 {
                   step: '02',
                   title: 'Discover & Apply',
-                  desc: 'Browse jobs, let AI tailor your resume, and apply with one click.',
+                  desc: 'Browse jobs, find the strongest matches, and apply with one click.',
                   gradient: 'from-violet-500 to-purple-600',
                   shadow: 'shadow-violet-200/50',
                   dotColor: 'bg-violet-500',
@@ -395,7 +395,7 @@ const LandingPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
-                quote: "The AI resume tailor is a game-changer. My ATS match score went from 58% to 94%. I landed 3 interview calls in the first week itself.",
+                quote: "The job matching and mentor guidance were a game-changer. I went from scattered searching to three interview calls in the first week.",
                 name: 'Emily Chen',
                 title: 'Frontend Developer at Hootsuite',
                 avatar: 'EC',
@@ -430,7 +430,7 @@ const LandingPage = () => {
                 color: 'bg-rose-100 text-rose-700',
               },
               {
-                quote: "The one-click easy apply saved me hours every day. Combined with the ATS-optimized resumes, my response rate tripled compared to applying manually.",
+                quote: "The one-click easy apply saved me hours every day. Combined with the tracker and mentor feedback, my response rate tripled compared to applying manually.",
                 name: 'Daniel Kim',
                 title: 'DevOps Engineer at Datadog',
                 avatar: 'DK',
@@ -476,7 +476,7 @@ const LandingPage = () => {
             Ready to Land Your Dream Job?
           </h2>
           <p className="mt-6 text-lg sm:text-xl text-violet-100 max-w-2xl mx-auto leading-relaxed">
-            Thousands of professionals have transformed their job search with <span className="text-white font-bold">INNOGARAGE.ai</span>. AI-powered resumes, smart applications, and expert mentorship — your unfair advantage in today's job market.
+            Thousands of professionals have transformed their job search with <span className="text-white font-bold">INNOGARAGE.ai</span>. Smart applications, job matching, and expert mentorship — your unfair advantage in today's job market.
           </p>
           <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-5">
             <Link
@@ -504,7 +504,7 @@ const LandingPage = () => {
             <div className="md:col-span-1">
               <Logo size="md" />
               <p className="mt-4 text-sm leading-relaxed">
-                Your AI-powered career copilot. Build resumes, apply to jobs, connect with mentors — all in one platform.
+                Your AI-powered career copilot. Track opportunities, apply to jobs, connect with mentors — all in one platform.
               </p>
               <div className="flex items-center gap-3 mt-5">
                 <span className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full">✉ support@innogarage.ai</span>
@@ -526,7 +526,7 @@ const LandingPage = () => {
               <h4 className="text-gray-900 font-semibold mb-4 text-sm uppercase tracking-wider">Product</h4>
               <ul className="space-y-2.5 text-sm">
                 <li><span className="hover:text-gray-900 transition-colors cursor-default">Job Discovery</span></li>
-                <li><span className="hover:text-gray-900 transition-colors cursor-default">Resume Builder</span></li>
+                <li><span className="hover:text-gray-900 transition-colors cursor-default">Application Tracker</span></li>
                 <li><span className="hover:text-gray-900 transition-colors cursor-default">Mentorship</span></li>
                 <li><span className="hover:text-gray-900 transition-colors cursor-default">Training Hub</span></li>
               </ul>

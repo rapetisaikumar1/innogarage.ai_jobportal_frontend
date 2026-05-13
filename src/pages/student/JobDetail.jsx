@@ -2,16 +2,14 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { ArrowLeft, MapPin, Building, Calendar, ExternalLink, Download, Zap } from 'lucide-react';
+import { ArrowLeft, MapPin, Building, Calendar, ExternalLink, Zap } from 'lucide-react';
 
 const JobDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [job, setJob] = useState(null);
-  const [tailoredResume, setTailoredResume] = useState(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
-  const [generatingResume, setGeneratingResume] = useState(false);
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -37,19 +35,6 @@ const JobDetail = () => {
       toast.error(error.response?.data?.message || 'Failed to apply');
     } finally {
       setApplying(false);
-    }
-  };
-
-  const handleGenerateResume = async () => {
-    setGeneratingResume(true);
-    try {
-      const { data } = await api.get(`/jobs/${id}/tailored-resume`);
-      setTailoredResume(data);
-      toast.success('Tailored resume generated!');
-    } catch (error) {
-      toast.error('Failed to generate resume');
-    } finally {
-      setGeneratingResume(false);
     }
   };
 
@@ -106,24 +91,7 @@ const JobDetail = () => {
               </a>
             )
           )}
-
-          <button onClick={handleGenerateResume} disabled={generatingResume} className="btn-secondary flex items-center gap-2">
-            <Download size={18} />
-            {generatingResume ? 'Generating...' : 'Generate Tailored Resume'}
-          </button>
         </div>
-
-        {/* Tailored Resume Info */}
-        {tailoredResume && (
-          <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
-            <h3 className="font-semibold text-green-800">Tailored Resume Generated!</h3>
-            <p className="text-sm text-green-600 mt-1">Match Score: {tailoredResume.matchScore}%</p>
-            <p className="text-sm text-green-600">Keywords: {tailoredResume.keywords?.join(', ')}</p>
-            <a href={tailoredResume.resumeUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-green-700 font-medium mt-2 hover:underline">
-              <Download size={14} /> Download Resume
-            </a>
-          </div>
-        )}
       </div>
     </div>
   );

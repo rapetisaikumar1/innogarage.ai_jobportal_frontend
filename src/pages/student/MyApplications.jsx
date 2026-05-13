@@ -1,132 +1,191 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import api from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import html2pdf from 'html2pdf.js';
-import { downloadResumeAsDocx } from '../../utils/resumeDocx';
-import ResumeDocument from '../../components/resume/ResumeDocument';
+import {
+  Briefcase,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  ExternalLink,
+  FileText,
+  Loader2,
+  MapPin,
+  Search,
+  X,
+} from 'lucide-react';
+import api from '../../services/api';
+import TailoredResumeModal from '../../components/resume/TailoredResumeModal';
 import {
   STUDENT_PORTAL_MODE,
   buildPortalRequestConfig,
   getPortalEndpoint,
   getPortalStorageKey,
+  isAdminPortalView,
 } from '../../utils/studentPortalView';
-import {
-  Search, Briefcase, Bot, FileText, CheckCircle2, RotateCcw,
-  X, ExternalLink, Eye, Download, AlertTriangle, Info
-} from 'lucide-react';
 
-/* ── helpers (shared with JobListings) ── */
-const AVATAR_BG = [
-  'bg-blue-600','bg-emerald-600','bg-violet-600','bg-rose-600',
-  'bg-amber-600','bg-cyan-600','bg-fuchsia-600','bg-teal-600',
-  'bg-indigo-600','bg-pink-600','bg-sky-600','bg-lime-600',
+const PENDING_TTL_MS = 10 * 60 * 1000;
+
+const getScoreTone = (score) => {
+  if (score >= 85) return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+  if (score >= 75) return 'text-blue-700 bg-blue-50 border-blue-200';
+  return 'text-amber-700 bg-amber-50 border-amber-200';
+};
+
+const APPLICATION_STATUS_MENTOR_APPLIED = 'mentor applied';
+const APPLICATION_STATUS_STUDENT_APPLIED = 'student applied';
+const APPLICATION_STATUS_STUDENT_ACTION_REQUIRED = 'student action required';
+const ADMIN_APPLICATION_STATUS_OPTIONS = [
+  APPLICATION_STATUS_MENTOR_APPLIED,
+  APPLICATION_STATUS_STUDENT_ACTION_REQUIRED,
 ];
-const avatarBg = (name) => AVATAR_BG[Math.abs([...(name||'')].reduce((a,c)=>a+c.charCodeAt(0),0)) % AVATAR_BG.length];
 
-const extractSkillsFromJD = (jdText) => {
-  if (!jdText) return [];
-  const techPatterns = /\b(Java|Python|JavaScript|TypeScript|React|Angular|Vue|Node\.?js|Express|Spring|Django|Flask|AWS|Azure|GCP|Docker|Kubernetes|SQL|NoSQL|MongoDB|PostgreSQL|MySQL|Redis|GraphQL|REST|API|Git|CI\/CD|Agile|Scrum|HTML|CSS|Tailwind|Bootstrap|C\+\+|C#|\.NET|Go|Rust|Swift|Kotlin|PHP|Ruby|Rails|Laravel|TensorFlow|PyTorch|Machine Learning|AI|Data Science|DevOps|Linux|Terraform|Jenkins|Elasticsearch|Kafka|RabbitMQ|Microservices)\b/gi;
-  const matches = jdText.match(techPatterns) || [];
-  return [...new Set(matches.map(m => m.trim()))].slice(0, 12);
+const normalizeApplicationStatus = (status, appliedById = null) => {
+  const normalized = String(status || '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+
+  if (normalized === APPLICATION_STATUS_MENTOR_APPLIED) return APPLICATION_STATUS_MENTOR_APPLIED;
+  if (normalized === APPLICATION_STATUS_STUDENT_APPLIED) return APPLICATION_STATUS_STUDENT_APPLIED;
+  if (normalized === APPLICATION_STATUS_STUDENT_ACTION_REQUIRED) return APPLICATION_STATUS_STUDENT_ACTION_REQUIRED;
+  if (normalized === 'applied') return appliedById ? APPLICATION_STATUS_MENTOR_APPLIED : APPLICATION_STATUS_STUDENT_APPLIED;
+  if (!normalized && !appliedById) return APPLICATION_STATUS_STUDENT_APPLIED;
+  return appliedById ? APPLICATION_STATUS_MENTOR_APPLIED : APPLICATION_STATUS_STUDENT_APPLIED;
 };
 
-const parseTags = (str) => {
-  if (!str) return [];
-  return str.split(/[,;]+/).map(s => s.replace(/^[\s\-•]+/, '').trim()).filter(Boolean).slice(0, 5);
+const formatApplicationStatus = (status) => String(status || '')
+  .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+const getApplicationStatusTone = (status) => {
+  if (status === APPLICATION_STATUS_STUDENT_ACTION_REQUIRED) return 'border-orange-500 bg-orange-500 text-white';
+  if (status === APPLICATION_STATUS_MENTOR_APPLIED || status === APPLICATION_STATUS_STUDENT_APPLIED) return 'border-emerald-600 bg-emerald-600 text-white';
+  return 'border-slate-200 bg-white text-slate-700';
 };
 
-const parseJDSections = (jdText) => {
-  if (!jdText) return [];
-  const sectionPatterns = /^\s*(About\b|Company\s*Overview|Overview|Position\s*Description|Job\s*Description|Description|Responsibilities|Key\s*Responsibilities|What\s*You|What\s*We|Who\s*You|Your\s*Role|Role\s*Overview|Requirements|Qualifications|Required|Preferred|Desired|Minimum|Nice\s*to\s*Have|Skills|Technical\s*Skills|Key\s*Skills|Core\s*Competencies|Experience|Education|Benefits|Compensation|Salary|How\s*to\s*Apply|Summary|In\s*this|Our\s*Team|The\s*Role|The\s*Position|We\s*are|Location|Job\s*Type|Employment|Duties|Essential\s*Functions|Scope|Objectives?|Mission|Purpose|Why\s*Join|Perks|Culture|Team|About\s*Us|About\s*the|Day\s*to\s*Day|What\s*You.*Bring|What\s*You.*Do|What\s*You.*Need|You\s*Will|You\s*Should|Must\s*Have|Bonus|Additional|Tools|Technology|Tech\s*Stack|Stack|Platforms?|Certifications?|Clearance|Travel|Reports?\s*To|Work\s*Environment|Physical|EEO|Equal)[^\n]*$/im;
-  const lines = jdText.split('\n');
-  const sections = [];
-  let cur = { heading: 'Overview', lines: [] };
-  for (const line of lines) {
-    const t = line.trim();
-    if (!t) { if (cur.lines.length > 0) cur.lines.push(''); continue; }
-    const isH = sectionPatterns.test(t) || /^[A-Z][A-Z\s&/,\-–]{2,60}:?\s*$/.test(t) || /^[A-Z][^.!?]{2,60}:$/.test(t);
-    if (isH && cur.lines.length > 0) { sections.push({ ...cur, lines: [...cur.lines] }); cur = { heading: t.replace(/:+\s*\*?$/, '').trim(), lines: [] }; }
-    else if (isH && cur.lines.length === 0) { cur.heading = t.replace(/:+\s*\*?$/, '').trim(); }
-    else { cur.lines.push(t); }
+const formatDate = (value) => {
+  if (!value) return 'Not available';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+const normalizeList = (value) => (
+  Array.isArray(value)
+    ? value.map((item) => String(item || '').trim()).filter(Boolean)
+    : []
+);
+
+const normalizeApplication = (application) => ({
+  ...application,
+  id: application.id || application.applyLink || application.jobLink,
+  title: application.title || application.job?.title || application.jobTitle || 'Untitled role',
+  company: application.company || application.job?.company || application.employerName || 'Unknown company',
+  location: application.location || application.job?.location || '',
+  applyLink: application.applyLink || application.job?.applyLink || application.jobLink || null,
+  appliedAt: application.appliedAt || application.createdAt || null,
+  status: normalizeApplicationStatus(application.status, application.appliedById),
+  matchingScore: Number(application.matchingScore || application.matchScore || application.match_score || 0),
+  matchProvider: application.matchProvider || null,
+  matchSummary: application.matchSummary || null,
+  matchWarning: application.matchWarning || null,
+  matchLabel: application.matchLabel || 'Match',
+  tailoredResume: {
+    ...(application.tailoredResume || {}),
+    generated: Boolean(application.tailoredResume?.generated),
+  },
+  strongMatches: normalizeList(application.strongMatches),
+  missingSkills: normalizeList(application.missingSkills),
+});
+
+const getResumeErrorMessage = (error) => {
+  const responseData = error?.response?.data;
+  if (typeof responseData === 'string' && responseData.trim()) return responseData.trim();
+  return responseData?.error
+    || responseData?.message
+    || error?.message
+    || 'Failed to generate resume';
+};
+
+const readPendingApplications = (storageKey) => {
+  try {
+    const now = Date.now();
+    return JSON.parse(sessionStorage.getItem(storageKey) || '[]')
+      .filter((item) => item.appliedAt && (now - new Date(item.appliedAt).getTime()) < PENDING_TTL_MS)
+      .map((item) => normalizeApplication({
+        id: item.jobLink,
+        title: item.jobTitle,
+        company: item.employerName,
+        applyLink: item.jobLink,
+        appliedAt: item.appliedAt,
+        matchingScore: item.matchScore,
+        status: normalizeApplicationStatus(item.status),
+      }));
+  } catch {
+    return [];
   }
-  if (cur.lines.length > 0) sections.push(cur);
-  return sections.map(s => ({ ...s, lines: s.lines.join('\n').trim().split('\n') })).filter(s => s.lines.some(l => l.trim()));
 };
 
-const parseResumeSections = (text, candidateName, pipelineCandidateName) => {
-  if (!text) return { contact: '', roleTitle: '', sections: [] };
-  const nameVariants = new Set();
-  const nameParts = new Set();
-  const addN = (raw) => {
-    if (!raw) return;
-    const n = raw.trim().toLowerCase(); if (!n) return;
-    nameVariants.add(n);
-    const parts = n.split(/\s+/);
-    parts.forEach(p => { if (p.length >= 2) nameParts.add(p); });
-    if (parts.length >= 2) { nameVariants.add(parts.join(' ')); nameVariants.add(parts[0]+' '+parts[parts.length-1]);
-      for (let i=0;i<parts.length;i++) for (let j=i+1;j<parts.length;j++) nameVariants.add(parts[i]+' '+parts[j]);
-    }
-  };
-  addN(candidateName);
-  addN(pipelineCandidateName);
-  const isNameLine = (line) => {
-    const lower = line.trim().toLowerCase().replace(/[.,\-]+$/,'').trim();
-    if (!lower) return false;
-    for (const v of nameVariants) if (lower===v) return true;
-    if (nameParts.size>=2){const words=lower.split(/\s+/).filter(w=>w.length>=2);if(words.length>=1&&words.length<=4){const m=words.filter(w=>nameParts.has(w)).length;if(m>=Math.ceil(words.length*0.6))return true;}}
-    return false;
-  };
-  const looksLikePersonName = (t) => {
-    if (!/^[A-Z][a-zA-Z\-']+(\s+[A-Z][a-zA-Z\-']+){0,3}$/.test(t)&&!/^[A-Z\-']+(\s+[A-Z\-']+){0,3}$/.test(t)) return false;
-    return !/\b(engineer|developer|manager|analyst|designer|architect|consultant|specialist|coordinator|director|lead|admin|officer|scientist|intern|assistant|associate|senior|junior|staff|principal|head|chief|vp|cto|ceo|cfo|coo)\b/i.test(t);
-  };
-  const isContact = (l) => {
-    const hasEmail=/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i.test(l);
-    const hasPhone=/(\+?\(?\d[\d\s\-().]{6,}\d)/i.test(l);
-    if(hasEmail||hasPhone){const r=l.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi,'').replace(/\(?\+?\d[\d\s\-().]{6,}\d/g,'').replace(/[|,;\s]/g,'').trim();if(r.length<5)return true;}
-    return false;
-  };
-  const isLoc = (l) => /^\s*(remote|on-?site|hybrid)?\s*\(?.*(?:usa|india|uk|canada|germany|australia|arizona|california|texas|new york|florida|illinois|ohio|georgia|north carolina|virginia|washington|massachusetts|colorado|oregon|utah|nevada|michigan|minnesota|maryland|wisconsin|tennessee|missouri|connecticut|iowa|kansas|arkansas|nebraska|idaho|hawaii|alabama|louisiana|oklahoma|kentucky|south carolina|mississippi|pennsylvania|new jersey)[^a-z]*\)?\s*$/i.test(l);
-  const secH = /^\s*(PROFESSIONAL\s*SUMMARY|SUMMARY|OBJECTIVE|PROFESSIONAL\s*EXPERIENCE|EXPERIENCE|WORK\s*EXPERIENCE|EDUCATION|SKILLS|KEY\s*SKILLS|TECHNICAL\s*SKILLS|CERTIFICATIONS|PROJECTS|ACHIEVEMENTS|AWARDS|LANGUAGES|INTERESTS|REFERENCES|CONTACT\s*INFORMATION|PROFESSIONAL\s*PROFILE|PROFILE|QUALIFICATIONS|CORE\s*COMPETENCIES|NOTES?\s*(?:ON\s*)?ADDRESSED\s*GAPS?|ADDITIONAL\s*NOTES?|NOTES?)\s*:?\s*$/i;
-  const sections=[]; let cur=null; let roleTitle=''; let foundFirst=false;
-  for (const line of text.split('\n')) {
-    let t=line.trim(); if(!t){if(cur)cur.lines.push('');continue;}
-    if(isNameLine(t))continue;
-    if(!foundFirst&&looksLikePersonName(t))continue;
-    if(!foundFirst&&isLoc(t))continue;
-    if(!foundFirst&&isContact(t))continue;
-    if(secH.test(t)){foundFirst=true;if(cur)sections.push(cur);cur={heading:t.replace(/:$/,'').trim().toUpperCase(),lines:[]};}
-    else if(!foundFirst){
-      if(!roleTitle){const m=t.match(/^\(?\s*(?:job\s*title\s*[:–\-]?)\s*(.+?)\s*\)?$/i);if(m){roleTitle=m[1].trim();continue;}
-      if(t.length<=80&&!/@/.test(t)&&!/^\(?\+/.test(t)){roleTitle=t;continue;}}
-    } else {if(!cur)cur={heading:'DETAILS',lines:[]};cur.lines.push(t);}
-  }
-  if(cur)sections.push(cur);
-  const filtered=sections.filter(s=>!/^NOTES?/i.test(s.heading)&&!/^ADDITIONAL\s*NOTES?/i.test(s.heading)&&!/^ADDRESSED\s*GAPS?/i.test(s.heading));
-  return { contact:'', roleTitle, sections: filtered };
+const sortApplications = (items) => [...items].sort((left, right) => (
+  new Date(right.appliedAt || right.updatedAt || 0).getTime()
+  - new Date(left.appliedAt || left.updatedAt || 0).getTime()
+));
+
+const mergePendingApplications = (applications, pendingApplications) => {
+  const seenLinks = new Set(applications.map((item) => item.applyLink).filter(Boolean));
+  return sortApplications([
+    ...applications,
+    ...pendingApplications.filter((item) => !item.applyLink || !seenLinks.has(item.applyLink)),
+  ]);
 };
 
-const extractRole = (job) => {
-  if (!job) return 'View Details';
-  if (job.job_title) {
-    const t = job.job_title.trim();
-    if (t.length > 3 && !/^(this is|we are|company desc)/i.test(t)) return t.slice(0, 80);
-  }
-  return job.employer_name || 'View Details';
+const openApplyLink = (applyLink) => {
+  const openedWindow = window.open(applyLink, '_blank', 'noopener,noreferrer');
+  if (openedWindow) return;
+
+  const anchor = document.createElement('a');
+  anchor.href = applyLink;
+  anchor.target = '_blank';
+  anchor.rel = 'noopener noreferrer';
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
 };
+
+const ApplicationsLoader = () => (
+  <div className="flex flex-1 items-center justify-center bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_100%)] px-6 py-10">
+    <div className="w-full max-w-lg rounded-[28px] border border-white/80 bg-white/92 p-6 shadow-[0_28px_65px_rgba(79,70,229,0.12)] backdrop-blur sm:p-7">
+      <div className="flex items-center gap-4">
+        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 shadow-inner shadow-indigo-100">
+          <span className="absolute inset-0 rounded-2xl border border-indigo-100" />
+          <Loader2 size={22} className="animate-spin" />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-black tracking-tight text-slate-900">Loading My Applications</h2>
+          <p className="mt-1 text-sm text-slate-500">Fetching applied jobs saved from Your Jobs.</p>
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
+          <span>Preparing application cards</span>
+          <span>Starting</span>
+        </div>
+        <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full w-[42%] animate-pulse rounded-full bg-[linear-gradient(90deg,#4f46e5_0%,#2563eb_55%,#38bdf8_100%)]" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 const MyApplications = ({
   portalMode = STUDENT_PORTAL_MODE.STUDENT,
   studentId = null,
-  viewerUser = null,
   embedded = false,
 }) => {
-  const { user: authUser } = useAuth();
-  const portalUser = viewerUser || authUser;
-  const isCompactView = embedded;
   const getPortalUrl = useCallback(
-    (endpointKey) => getPortalEndpoint(endpointKey, { portalMode, studentId }),
+    (endpointKey, extraOptions = {}) => getPortalEndpoint(endpointKey, { portalMode, studentId, ...extraOptions }),
     [portalMode, studentId]
   );
   const requestConfig = useCallback(
@@ -137,491 +196,356 @@ const MyApplications = ({
     () => getPortalStorageKey('pendingApplied', { portalMode, studentId }),
     [portalMode, studentId]
   );
+
   const [applications, setApplications] = useState([]);
-  const [externalJobsMap, setExternalJobsMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [detailJob, setDetailJob] = useState(null);
-  const [resumeJob, setResumeJob] = useState(null);
-  const resumeRef = useRef(null);
+  const [expandedKeys, setExpandedKeys] = useState({});
+  const [updatingStatusKey, setUpdatingStatusKey] = useState(null);
+  const [generatingResumeKey, setGeneratingResumeKey] = useState(null);
+  const [resumeModal, setResumeModal] = useState(null);
+  const isAdminView = isAdminPortalView(portalMode);
 
   const fetchApplications = useCallback(async () => {
+    setLoading(true);
     try {
-      // Use allSettled so one slow or failed endpoint does not block this page.
-      // does not break the entire My Applications page.
-      const results = await Promise.allSettled([
-        api.get(
-          portalMode === STUDENT_PORTAL_MODE.ADMIN_VIEW ? getPortalUrl('applications') : '/jobs/applications/mine?status=APPLIED',
-          portalMode === STUDENT_PORTAL_MODE.ADMIN_VIEW ? requestConfig({ params: { status: 'APPLIED', t: Date.now() } }) : undefined
-        ),
-        api.get(getPortalUrl('externalAppliedStatus'), requestConfig()),
-        api.get(getPortalUrl('matchedJobs'), requestConfig()),
-      ]);
-      const dbRes = results[0].status === 'fulfilled' ? results[0].value : { data: { applications: [] } };
-      const externalRes = results[1].status === 'fulfilled' ? results[1].value : { data: { applications: [] } };
-      const matchedJobsRes = results[2].status === 'fulfilled' ? results[2].value : { data: { jobs: [] } };
-
-      // Build a map of jobLink -> full matched job object
-      const jobsMap = {};
-      (matchedJobsRes.data.jobs || []).forEach(j => {
-        if (j.job_apply_link) jobsMap[j.job_apply_link] = j;
-      });
-      setExternalJobsMap(jobsMap);
-
-      const dbApps = (dbRes.data.applications || []).map(app => ({
-        id: app.id,
-        title: app.job?.title || 'Untitled',
-        company: app.job?.company || '—',
-        status: app.status,
-        appliedAt: app.appliedAt,
-        jobLink: null,
-        source: 'db',
-        appliedBy: app.appliedBy || null,
-      }));
-      const externalApps = (externalRes.data.applications || []).map(app => {
-        const fullJob = jobsMap[app.jobLink];
-        return {
-          id: app.jobLink,
-          title: app.jobTitle || app.employerName || 'Job Application',
-          company: app.employerName || '—',
-          status: app.status || 'APPLIED',
-          appliedAt: app.createdAt,
-          matchScore: app.matchScore,
-          jobLink: app.jobLink,
-          source: 'external',
-          fullJob,
-          appliedBy: null,
-        };
-      });
-
-      // Merge pending applies from sessionStorage (race condition fix: user navigated
-      // here before the mark-applied API call completed). Ignore entries older than 10 min
-      // so failed applies don't permanently appear.
-      const PENDING_TTL_MS = 10 * 60 * 1000;
-      const now = Date.now();
-      const pendingApplied = (() => {
-        try { return JSON.parse(sessionStorage.getItem(pendingAppliedKey) || '[]'); } catch { return []; }
-      })().filter(p => p.appliedAt && (now - new Date(p.appliedAt).getTime()) < PENDING_TTL_MS);
-      const apiJobLinks = new Set((externalRes.data.applications || []).map(a => a.jobLink));
-      const stillPending = pendingApplied.filter(p => !apiJobLinks.has(p.jobLink));
-      if (stillPending.length !== pendingApplied.length) {
-        try { sessionStorage.setItem(pendingAppliedKey, JSON.stringify(stillPending)); } catch { /* ignore */ }
-      }
-      const pendingExternalApps = stillPending.map(p => ({
-        id: p.jobLink,
-        title: p.jobTitle || p.employerName || 'Job Application',
-        company: p.employerName || '—',
-        status: 'APPLIED',
-        appliedAt: p.appliedAt,
-        matchScore: p.matchScore,
-        jobLink: p.jobLink,
-        source: 'external',
-        fullJob: jobsMap[p.jobLink] || null,
-        appliedBy: null,
-      }));
-
-      const seenLinks = new Set(dbApps.map(a => a.jobLink).filter(Boolean));
-      const uniqueExternalApps = [...externalApps, ...pendingExternalApps].filter(a => !seenLinks.has(a.jobLink));
-      const all = [...dbApps, ...uniqueExternalApps].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
-      setApplications(all);
+      const { data } = await api.get(
+        getPortalUrl('applications'),
+        requestConfig({ params: { limit: 100, t: Date.now() } })
+      );
+      const savedApplications = sortApplications((data.applications || []).map(normalizeApplication));
+      const pendingApplications = readPendingApplications(pendingAppliedKey);
+      setApplications(mergePendingApplications(savedApplications, pendingApplications));
     } catch (error) {
       console.error('Failed to fetch applications:', error);
+      toast.error(error.response?.data?.message || 'Failed to load applications');
     } finally {
       setLoading(false);
     }
-  }, [getPortalUrl, pendingAppliedKey, portalMode, requestConfig]);
+  }, [getPortalUrl, pendingAppliedKey, requestConfig]);
 
   useEffect(() => {
     fetchApplications();
   }, [fetchApplications]);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return applications;
-    const q = search.toLowerCase();
-    return applications.filter(app =>
-      (app.title || '').toLowerCase().includes(q) ||
-      (app.company || '').toLowerCase().includes(q)
-    );
+  const filteredApplications = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return applications;
+
+    return applications.filter((application) => [
+      application.title,
+      application.company,
+      application.location,
+      application.matchLabel,
+      application.matchSummary,
+      application.strongMatches?.join(' '),
+      application.missingSkills?.join(' '),
+    ].filter(Boolean).join(' ').toLowerCase().includes(query));
   }, [applications, search]);
 
-  const stats = useMemo(() => {
-    const total = applications.length;
-    const interviews = applications.filter(a => a.status === 'INTERVIEW_SCHEDULED').length;
-    const offers = applications.filter(a => a.status === 'OFFER_RECEIVED').length;
-    const adminApplied = applications.filter(a => a.appliedBy && (a.appliedBy.role === 'ADMIN' || a.appliedBy.role === 'SUPER_ADMIN')).length;
-    return { total, interviews, offers, adminApplied };
-  }, [applications]);
+  const toggleApplicationDetails = (applicationKey) => {
+    setExpandedKeys((current) => ({
+      ...current,
+      [applicationKey]: !current[applicationKey],
+    }));
+  };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const handleStatusChange = async (application, nextStatus) => {
+    const applicationKey = application.yourJobId || application.applyLink || application.id;
+    if (!isAdminView || !application.id || updatingStatusKey === applicationKey) return;
+
+    const previousApplications = applications;
+    setUpdatingStatusKey(applicationKey);
+    setApplications((currentApplications) => currentApplications.map((currentApplication) => (
+      (currentApplication.yourJobId || currentApplication.applyLink || currentApplication.id) === applicationKey
+        ? { ...currentApplication, status: nextStatus }
+        : currentApplication
+    )));
+
+    try {
+      const { data } = await api.patch(
+        getPortalUrl('applicationStatus', { applicationId: application.id }),
+        { status: nextStatus },
+        requestConfig()
+      );
+      const updatedStatus = normalizeApplicationStatus(data?.application?.status, data?.application?.appliedById);
+      if (updatedStatus === APPLICATION_STATUS_STUDENT_ACTION_REQUIRED) {
+        setApplications((currentApplications) => currentApplications.filter((currentApplication) => (
+          (currentApplication.yourJobId || currentApplication.applyLink || currentApplication.id) !== applicationKey
+        )));
+      } else {
+        setApplications((currentApplications) => currentApplications.map((currentApplication) => (
+          (currentApplication.yourJobId || currentApplication.applyLink || currentApplication.id) === applicationKey
+            ? normalizeApplication({ ...currentApplication, ...(data?.application || {}), status: updatedStatus })
+            : currentApplication
+        )));
+      }
+      toast.success('Application status updated.');
+    } catch (error) {
+      setApplications(previousApplications);
+      toast.error(error.response?.data?.message || 'Failed to update application status');
+    } finally {
+      setUpdatingStatusKey(null);
+    }
+  };
+
+  const handleResume = async (application) => {
+    const applicationKey = application.yourJobId || application.applyLink || application.id;
+    if (!application.yourJobId || generatingResumeKey === applicationKey) return;
+
+    setGeneratingResumeKey(applicationKey);
+    try {
+      const { data } = await api.post(
+        getPortalUrl('yourJobResume', { yourJobId: application.yourJobId }),
+        {},
+        requestConfig()
+      );
+
+      if (!data?.resume?.resumeText) {
+        throw new Error('Generated resume content was not returned');
+      }
+
+      const nextTailoredResume = {
+        ...(data.job?.tailoredResume || {}),
+        ...data.resume,
+        generated: true,
+      };
+
+      setApplications((currentApplications) => currentApplications.map((currentApplication) => (
+        (currentApplication.yourJobId || currentApplication.applyLink || currentApplication.id) === applicationKey
+          ? { ...currentApplication, tailoredResume: nextTailoredResume }
+          : currentApplication
+      )));
+      setResumeModal({
+        job: {
+          ...application,
+          ...(data.job || {}),
+        },
+        resume: data.resume,
+      });
+
+      toast.success(data.cached ? 'Saved resume loaded.' : 'Tailored resume generated.');
+      if (data.resume.warning) {
+        toast(data.resume.warning, { icon: '!' });
+      }
+    } catch (error) {
+      console.error('Application resume generation failed', error);
+      toast.error(getResumeErrorMessage(error));
+    } finally {
+      setGeneratingResumeKey(null);
+    }
+  };
 
   return (
-    <div className={embedded ? 'flex h-full min-h-0 flex-col' : 'flex flex-col h-[calc(100vh-4rem)]'}>
+    <div className={embedded ? 'flex h-full min-h-0 flex-col' : 'flex h-[calc(100vh-4rem)] flex-col overflow-hidden'}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_18px_40px_rgba(15,23,42,0.06)] backdrop-blur">
+        <div className="shrink-0 border-b border-slate-100 px-4 py-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                  <Briefcase size={19} />
+                </div>
+                <div>
+                  <h1 className="text-lg font-extrabold text-slate-900">My Applications</h1>
+                  <p className="mt-0.5 text-xs font-medium text-slate-400">
+                    {loading ? 'Loading applied jobs from Your Jobs...' : `${filteredApplications.length} applied job${filteredApplications.length === 1 ? '' : 's'} from Your Jobs`}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-      {/* Header bar */}
-      <div className={`shrink-0 ${isCompactView ? 'mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2.5 shadow-sm' : 'mb-4 flex items-center justify-between'}`}>
-        <div className="flex items-center gap-3">
-          <h1 className={`${isCompactView ? 'text-[15px]' : 'text-[16px]'} font-bold text-gray-900`}>My Applications</h1>
-          {applications.length > 0 && (
-            <span className={`inline-flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 font-bold ${isCompactView ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-1 text-xs'}`}>
-              <Briefcase size={12} />
-              {stats.total} Applied
-            </span>
-          )}
+            <label className="inline-flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm shadow-slate-100 focus-within:border-indigo-300 focus-within:shadow-indigo-100">
+              <Search size={14} className="shrink-0 text-slate-400" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search applications"
+                className="w-48 bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
+              />
+              {search && (
+                <button type="button" onClick={() => setSearch('')} className="text-slate-300 transition-colors hover:text-slate-500">
+                  <X size={14} />
+                </button>
+              )}
+            </label>
+          </div>
         </div>
-        {/* Search */}
-        <div className={`bg-white rounded-xl border border-gray-100 flex items-center gap-2 shadow-sm ${isCompactView ? 'w-full max-w-sm px-3 py-2' : 'ml-6 flex-1 max-w-xs px-4 py-2.5'}`}>
-          <Search size={14} className="text-gray-400 shrink-0" />
-          <input
-            type="text"
-            className={`${isCompactView ? 'text-[13px]' : 'text-sm'} flex-1 bg-transparent outline-none placeholder-gray-400 text-gray-800`}
-            placeholder="Search company, role..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <button onClick={() => setSearch('')} className="text-gray-300 hover:text-gray-500">
-              <X size={13} />
-            </button>
-          )}
-        </div>
-      </div>
 
-      {/* Job Table */}
-      <div className="flex-1 overflow-hidden bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col">
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center flex-1 text-center py-16">
-            <Briefcase className="mx-auto text-gray-300 mb-3" size={32} />
-            <h3 className="text-base font-semibold text-gray-600">
-              {applications.length === 0 ? 'No applications yet' : 'No matching applications'}
-            </h3>
-            <p className="text-sm text-gray-400 mt-1">
-              {applications.length === 0 ? 'Start browsing jobs and apply!' : 'Try a different search term'}
+        {loading ? (
+          <ApplicationsLoader />
+        ) : filteredApplications.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center bg-slate-50/60 px-6 text-center">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+              <Briefcase size={24} />
+            </div>
+            <h2 className="text-base font-bold text-slate-800">
+              {applications.length === 0 ? 'No applications yet' : 'No applications match this search'}
+            </h2>
+            <p className="mt-1 max-w-md text-sm text-slate-500">
+              {applications.length === 0
+                ? 'Jobs applied from Your Jobs will appear here.'
+                : 'Try a different search term to browse your applied jobs.'}
             </p>
           </div>
         ) : (
-          <div className="overflow-y-auto flex-1">
-            <table className="w-full">
-              <tbody>
-                {filtered.map((app, idx) => {
-                  const fullJob = app.fullJob
-                    || (app.jobLink ? externalJobsMap[app.jobLink] : null)
-                    // Synthesize a minimal job object so Resume/Details always render
-                    || (app.title || app.company ? {
-                        job_title: app.title,
-                        employer_name: app.company,
-                        job_apply_link: app.jobLink || null,
-                        resume_text: null,
-                        _synthetic: true,
-                      } : null);
-                  const score = parseInt(app.matchScore) || (fullJob ? parseInt(fullJob.match_score) || 0 : 0);
-                  const role = app.title || (fullJob ? extractRole(fullJob) : 'Job Application');
-                  const company = app.company || '—';
+          <div className="min-h-0 flex-1 overflow-auto bg-slate-50/60 px-4 py-4">
+            <div className="space-y-2.5">
+              {filteredApplications.map((application) => {
+                const score = application.matchingScore;
+                const applicationKey = application.yourJobId || application.applyLink || application.id;
+                const isExpanded = Boolean(expandedKeys[applicationKey]);
+                const isUpdatingStatus = updatingStatusKey === applicationKey;
+                const isGeneratingResume = generatingResumeKey === applicationKey;
+                const hasGeneratedResume = Boolean(application.tailoredResume?.generated);
+                const applicationStatus = normalizeApplicationStatus(application.status, application.appliedById);
+                const hasDetails = Boolean(
+                  application.matchSummary
+                  || application.matchWarning
+                  || application.strongMatches.length > 0
+                  || application.missingSkills.length > 0
+                );
 
-                  const logoDomain = (() => {
-                    if (fullJob?.employer_website) return fullJob.employer_website.replace(/^https?:\/\//, '').split('/')[0];
-                    if (app.jobLink) return app.jobLink.replace(/^https?:\/\//, '').split('/')[0];
-                    return null;
-                  })();
-
-                  return (
-                    <tr key={app.id} className="border-b border-gray-50 hover:bg-gray-50/60 group">
-                      {/* # */}
-                      <td className={`pl-4 pr-2 w-10 ${isCompactView ? 'py-2.5' : 'py-3.5'}`}>
-                        <span className={`${isCompactView ? 'text-[13px]' : 'text-sm'} font-medium text-gray-400`}>{idx + 1}</span>
-                      </td>
-
-                      {/* Logo + Info */}
-                      <td className={`px-3 ${isCompactView ? 'py-2.5' : 'py-3.5'}`}>
-                        <div className={`flex items-center ${isCompactView ? 'gap-3' : 'gap-3.5'}`}>
-                          {logoDomain ? (
-                            <img
-                              src={`https://logo.clearbit.com/${logoDomain}`}
-                              alt={company}
-                              className={`${isCompactView ? 'h-9 w-9 rounded-lg' : 'h-10 w-10 rounded-xl'} object-contain bg-white border border-gray-100 shadow-sm shrink-0 p-0.5`}
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.nextSibling.style.display = 'flex';
-                              }}
-                            />
-                          ) : null}
-                          <div className={`${isCompactView ? 'h-9 w-9 rounded-lg text-[13px]' : 'h-10 w-10 rounded-xl text-sm'} ${avatarBg(company)} text-white items-center justify-center font-bold shrink-0 shadow-sm ${logoDomain ? 'hidden' : 'flex'}`}>
-                            {company?.charAt(0)?.toUpperCase() || '?'}
+                return (
+                  <article
+                    key={application.id || application.applyLink}
+                    className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_12px_28px_rgba(37,99,235,0.10)]"
+                  >
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                            <Briefcase size={18} />
                           </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h3 className={`${isCompactView ? 'text-[12px]' : 'text-[13px]'} font-semibold text-gray-900 truncate leading-snug`}>{company}</h3>
-                              {app.appliedBy && (app.appliedBy.role === 'ADMIN' || app.appliedBy.role === 'SUPER_ADMIN') && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
-                                  <Bot size={9} /> Mentor
+
+                          <div className="min-w-0 flex-1">
+                            <h2 className="truncate text-sm font-bold text-slate-900 md:text-base">{application.title}</h2>
+                            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-slate-600">
+                              <span>{application.company}</span>
+                              <span className="text-slate-300">•</span>
+                              <span className="inline-flex items-center gap-1 text-slate-500">
+                                <MapPin size={13} className="text-slate-400" />
+                                {application.location || 'Location not specified'}
+                              </span>
+                              {score > 0 && (
+                                <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${getScoreTone(score)}`}>
+                                  {score}% {application.matchLabel || 'Match'}
                                 </span>
                               )}
                             </div>
-                            <p className={`${isCompactView ? 'text-[11px] mt-0' : 'text-[12px] mt-0.5'} max-w-md truncate font-medium text-gray-500`}>{role}</p>
                           </div>
                         </div>
-                      </td>
+                      </div>
 
-                      {/* Score */}
-                      <td className={`px-4 text-right w-24 ${isCompactView ? 'py-2.5' : 'py-3.5'}`}>
-                        {score > 0 && (
-                          <div className="text-right">
-                            <span className={`${isCompactView ? 'text-base' : 'text-lg'} font-bold ${score >= 80 ? 'text-emerald-600' : score >= 70 ? 'text-blue-600' : score >= 60 ? 'text-orange-500' : 'text-gray-400'}`}>
-                              {score}%
-                            </span>
-                            <p className={`${isCompactView ? 'text-[9px] mt-0' : 'text-[10px] mt-0.5'} text-gray-400 leading-none`}>Match</p>
-                          </div>
-                        )}
-                      </td>
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleResume(application)}
+                          disabled={!application.yourJobId || isGeneratingResume}
+                          className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-70 ${hasGeneratedResume
+                            ? 'bg-slate-500 text-white shadow-slate-200 hover:bg-slate-600'
+                            : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+                        >
+                          {isGeneratingResume ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+                          Resume
+                        </button>
 
-                      {/* Actions */}
-                      <td className={`pl-4 pr-4 ${isCompactView ? 'py-2.5 w-[270px]' : 'py-3.5 w-[380px]'}`}>
-                        <div className="flex items-center justify-end gap-2 flex-nowrap">
-                          {fullJob && (
+                        <button
+                          type="button"
+                          onClick={() => toggleApplicationDetails(applicationKey)}
+                          className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+                        >
+                          {isExpanded ? (
                             <>
-                              <button
-                                onClick={() => setResumeJob(fullJob)}
-                                className={`inline-flex items-center gap-1.5 rounded-lg border transition-colors shadow-sm whitespace-nowrap ${isCompactView ? 'px-3 py-1.5 text-[11px] font-semibold' : 'px-3.5 py-[7px] text-[12px] font-semibold'} ${
-                                  fullJob.resume_text
-                                    ? 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                                    : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
-                                }`}
-                              >
-                                {fullJob.resume_text
-                                  ? <CheckCircle2 size={13} className="text-emerald-500" />
-                                  : <FileText size={13} />}
-                                Resume
-                              </button>
-                              <button
-                                onClick={() => setDetailJob(fullJob)}
-                                className={`inline-flex items-center gap-1.5 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap ${isCompactView ? 'px-3 py-1.5 text-[11px] font-semibold' : 'px-3.5 py-[7px] text-[12px] font-semibold'}`}
-                              >
-                                <Info size={13} /> Details
-                              </button>
+                              Hide Details <ChevronUp size={14} />
+                            </>
+                          ) : (
+                            <>
+                              Details <ChevronDown size={14} />
                             </>
                           )}
-                          <span className={`inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 whitespace-nowrap ${isCompactView ? 'px-3 py-1.5 text-[11px] font-semibold' : 'px-3.5 py-[7px] text-[12px] font-semibold'}`}>
-                            <CheckCircle2 size={13} /> Applied
+                        </button>
+
+                        {isAdminView ? (
+                          <select
+                            value={ADMIN_APPLICATION_STATUS_OPTIONS.includes(applicationStatus) ? applicationStatus : ''}
+                            onChange={(event) => handleStatusChange(application, event.target.value)}
+                            disabled={isUpdatingStatus}
+                            className={`h-9 rounded-xl border px-3 text-xs font-semibold outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-70 ${getApplicationStatusTone(applicationStatus)}`}
+                          >
+                            {!ADMIN_APPLICATION_STATUS_OPTIONS.includes(applicationStatus) && (
+                              <option value="" disabled hidden>{formatApplicationStatus(applicationStatus)}</option>
+                            )}
+                            {ADMIN_APPLICATION_STATUS_OPTIONS.map((statusOption) => (
+                              <option key={statusOption} value={statusOption}>{formatApplicationStatus(statusOption)}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold shadow-sm ${getApplicationStatusTone(applicationStatus)}`}>
+                            <CheckCircle2 size={14} /> {formatApplicationStatus(applicationStatus)}
                           </span>
-                          {app.jobLink && (
-                            <a
-                              href={app.jobLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`inline-flex items-center gap-1.5 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap ${isCompactView ? 'px-3 py-1.5 text-[11px] font-semibold' : 'px-3.5 py-[7px] text-[12px] font-semibold'}`}
-                              title="Open job posting"
-                            >
-                              <RotateCcw size={13} /> Re-apply
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        )}
+
+                        {application.applyLink && (
+                          <button
+                            type="button"
+                            onClick={() => openApplyLink(application.applyLink)}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+                          >
+                            Re-apply <ExternalLink size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="mt-4 border-t border-slate-100 pt-4">
+                        {(application.matchSummary || application.matchWarning) && (
+                          <div className={`rounded-xl border px-3 py-3 ${application.matchProvider === 'gemini' ? 'border-indigo-100 bg-indigo-50/60' : 'border-amber-100 bg-amber-50/60'}`}>
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Match Summary</p>
+                            {application.matchSummary && <p className="mt-1 text-sm leading-6 text-slate-700">{application.matchSummary}</p>}
+                            {application.matchWarning && <p className="mt-2 text-xs font-semibold text-amber-700">{application.matchWarning}</p>}
+                          </div>
+                        )}
+
+                        {(application.strongMatches.length > 0 || application.missingSkills.length > 0) && (
+                          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                            <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+                              <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-700">Strong Matches</p>
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {application.strongMatches.length > 0 ? application.strongMatches.map((item) => (
+                                  <span key={item} className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-100">{item}</span>
+                                )) : <span className="text-xs font-medium text-emerald-700">Not available</span>}
+                              </div>
+                            </div>
+
+                            <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3">
+                              <p className="text-xs font-black uppercase tracking-[0.12em] text-amber-700">Missing Skills</p>
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {application.missingSkills.length > 0 ? application.missingSkills.map((item) => (
+                                  <span key={item} className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-100">{item}</span>
+                                )) : <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><CheckCircle2 size={12} /> None detected</span>}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {!hasDetails && (
+                          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
+                            Match details are not available for this application yet.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
 
-      {/* ═══ Detail Modal ═══ */}
-      {detailJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setDetailJob(null)}>
-          <div className="bg-white/80 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 w-[700px] max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between shrink-0">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">{extractRole(detailJob)}</h2>
-                <p className="text-sm text-gray-500 mt-0.5">{detailJob.employer_name}</p>
-                {(detailJob.job_city || detailJob.job_state || detailJob.job_country || detailJob.job_employment_type) && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    {[detailJob.job_city, detailJob.job_state, detailJob.job_country].filter(Boolean).join(', ')}
-                    {detailJob.job_employment_type && <span className="ml-2 px-1.5 py-0.5 bg-gray-100 rounded text-[11px] font-medium">{detailJob.job_employment_type}</span>}
-                  </p>
-                )}
-              </div>
-              <button onClick={() => setDetailJob(null)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="overflow-y-auto flex-1 px-6 py-5">
-              {detailJob._synthetic ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <Info size={32} className="text-gray-300 mb-3" />
-                  <p className="text-sm font-semibold text-gray-500">Detailed job data unavailable</p>
-                  <p className="text-xs text-gray-400 mt-1">This job was applied before full details were indexed. Use Re-apply to view the original listing.</p>
-                </div>
-              ) : (<>
-              {/* Technologies */}
-              <div className="mb-5">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Technologies & Skills</h3>
-                {extractSkillsFromJD(detailJob.jd).length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {extractSkillsFromJD(detailJob.jd).map((skill, i) => (
-                      <span key={i} className="px-2.5 py-1 bg-gray-50 text-gray-600 text-xs font-medium rounded-lg border border-gray-200">{skill}</span>
-                    ))}
-                  </div>
-                ) : <p className="text-sm text-gray-400 italic">No specific technologies detected</p>}
-              </div>
-              {/* Match Score */}
-              <div className="mb-5">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Match Score</h3>
-                  <span className={`text-sm font-bold ${parseInt(detailJob.match_score)>=80?'text-emerald-600':parseInt(detailJob.match_score)>=60?'text-blue-600':parseInt(detailJob.match_score)>0?'text-amber-600':'text-gray-400'}`}>
-                    {parseInt(detailJob.match_score)>0?`${detailJob.match_score}%`:'—'}
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${parseInt(detailJob.match_score)>=80?'bg-emerald-500':parseInt(detailJob.match_score)>=60?'bg-blue-500':parseInt(detailJob.match_score)>0?'bg-amber-500':'bg-gray-200'}`}
-                    style={{ width: `${Math.min(parseInt(detailJob.match_score)||0,100)}%` }} />
-                </div>
-              </div>
-              {/* Strong Matches */}
-              <div className="mb-5">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Strong Matches</h3>
-                {parseTags(detailJob.strong_matches).length>0?(
-                  <div className="flex flex-wrap gap-1.5">
-                    {parseTags(detailJob.strong_matches).map((t,i)=>(
-                      <span key={i} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded border border-emerald-200">{t}</span>
-                    ))}
-                  </div>
-                ):<p className="text-sm text-gray-400 italic">—</p>}
-              </div>
-              {/* Missing Skills */}
-              <div className="mb-5">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Missing Skills</h3>
-                {parseTags(detailJob.missing_skills).length>0?(
-                  <div className="flex flex-wrap gap-1.5">
-                    {parseTags(detailJob.missing_skills).map((t,i)=>(
-                      <span key={i} className="px-2 py-0.5 bg-red-50 text-red-600 text-[11px] font-medium rounded border border-red-200">{t}</span>
-                    ))}
-                  </div>
-                ):<p className="text-sm text-gray-400 italic">None — great match!</p>}
-              </div>
-              {/* Summary */}
-              <div className="mb-5">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Summary</h3>
-                {detailJob.match_summary?<p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{detailJob.match_summary}</p>:<p className="text-sm text-gray-400 italic">—</p>}
-              </div>
-              {/* Job Description */}
-              {parseJDSections(detailJob.jd).length > 0 ? (
-                <div>
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Job Description</h3>
-                  <div className="space-y-4">
-                    {parseJDSections(detailJob.jd).map((section, si) => (
-                      <div key={si}>
-                        <h4 className="text-sm font-bold text-gray-800 mb-1.5 pb-1 border-b border-gray-100">{section.heading}</h4>
-                        <div className="text-sm text-gray-600 leading-relaxed">
-                          {section.lines.map((line, li) => {
-                            const trimmed = line.trim();
-                            if (!trimmed) return <div key={li} className="h-1.5" />;
-                            const isBullet = /^[-•*○◦▪]/.test(trimmed)||/^(\d+[\.\)])/.test(trimmed);
-                            if (isBullet) { const text=trimmed.replace(/^[-•*○◦▪]\s*/,'').replace(/^(\d+[\.\)])\s*/,''); return <div key={li} className="flex gap-2 pl-2 py-0.5"><span className="text-gray-400 shrink-0 mt-[3px] text-[8px]">●</span><span>{text}</span></div>; }
-                            const isSub = /^[A-Z].*:$/.test(trimmed)||(/^[A-Z]/.test(trimmed)&&trimmed.length<60&&!/[.!?]$/.test(trimmed)&&trimmed.split(' ').length<=6);
-                            if (isSub) return <p key={li} className="font-semibold text-gray-700 mt-2 mb-0.5">{trimmed}</p>;
-                            return <p key={li} className="py-0.5">{trimmed}</p>;
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : detailJob.jd ? (
-                <div>
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Job Description</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{detailJob.jd}</p>
-                </div>
-              ) : null}
-              </>
-              )}
-            </div>
-            <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0 bg-white">
-              <button onClick={() => { setDetailJob(null); setResumeJob(detailJob); }} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-violet-700 bg-violet-50 border border-violet-200 hover:bg-violet-100 transition-colors">
-                <FileText size={15} /> Resume
-              </button>
-              {detailJob.job_apply_link && (
-                <a href={detailJob.job_apply_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 border border-violet-600 transition-colors">
-                  <ExternalLink size={15} /> Apply
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ Resume Modal ═══ */}
-      {resumeJob && (() => {
-        const resumeText = resumeJob.resume_text || '';
-        const candidateName = portalUser?.fullName || '';
-        const pipelineCandidateName = resumeJob.candidate_name || '';
-        const { roleTitle, sections } = parseResumeSections(resumeText, candidateName, pipelineCandidateName);
-        const headline = roleTitle || extractRole(resumeJob);
-
-        const handleDownloadPDF = () => {
-          const el = resumeRef.current; if (!el) return;
-          html2pdf().set({ margin: [10,10,10,10], filename: `${(candidateName||'Resume').replace(/\s+/g,'_')}_Resume.pdf`, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} }).from(el).save();
-        };
-        const handleDownloadWord = () => {
-          downloadResumeAsDocx(resumeText, candidateName);
-        };
-
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4" onClick={() => setResumeJob(null)}>
-            <div className="bg-white/90 text-slate-900 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/60 w-[1120px] max-w-[96vw] max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-              <div className="px-5 py-4 border-b border-slate-200/70 flex items-center justify-between shrink-0">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white"><FileText size={16} /></span>
-                    <h3 className="text-base font-bold">ATS Resume</h3>
-                  </div>
-                  <p className="text-xs mt-1 text-slate-500">{headline} {resumeJob.employer_name ? `at ${resumeJob.employer_name}` : ''}</p>
-                </div>
-                <button onClick={() => setResumeJob(null)} className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors"><X size={18} /></button>
-              </div>
-
-              <main className="flex-1 min-h-0 overflow-y-auto p-5 bg-slate-100/80">
-                {resumeText ? (
-                  <div className="mx-auto max-w-[800px] border border-slate-200 rounded-lg bg-white shadow-xl overflow-hidden">
-                    <ResumeDocument
-                      ref={resumeRef}
-                      displayName={portalUser?.fullName || candidateName || 'Resume'}
-                      headline={headline}
-                      contactItems={[portalUser?.phone, portalUser?.email].filter(Boolean)}
-                      linkedinProfile={portalUser?.linkedinProfile}
-                      sections={sections}
-                      rawText={resumeText}
-                      template="enterprise"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <AlertTriangle className="text-gray-300 mb-3" size={32} />
-                    <h3 className="text-base font-semibold text-gray-600">No resume data available</h3>
-                    <p className="text-sm text-gray-400 mt-1">Resume data will appear after the job search workflow processes this listing</p>
-                  </div>
-                )}
-              </main>
-
-              {resumeText && (
-                <div className="flex items-center justify-center gap-3 px-8 py-4 border-t border-gray-100 shrink-0 bg-gray-50/50">
-                  {resumeJob.pdf_link ? (
-                    <a href={resumeJob.pdf_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-gray-800 hover:bg-gray-900 text-white transition-colors shadow-sm"><Eye size={15}/> View</a>
-                  ) : (
-                    <button onClick={() => { if (resumeRef.current) resumeRef.current.scrollIntoView({ behavior: 'smooth' }); }} className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-gray-800 hover:bg-gray-900 text-white transition-colors shadow-sm"><Eye size={15}/> View</button>
-                  )}
-                  <button onClick={handleDownloadPDF} className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg text-white transition-colors shadow-sm" style={{background:'#dc2626'}} onMouseEnter={e=>e.currentTarget.style.background='#b91c1c'} onMouseLeave={e=>e.currentTarget.style.background='#dc2626'}><Download size={15}/> PDF</button>
-                  <button onClick={handleDownloadWord} className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg text-white transition-colors shadow-sm" style={{background:'#2563eb'}} onMouseEnter={e=>e.currentTarget.style.background='#1d4ed8'} onMouseLeave={e=>e.currentTarget.style.background='#2563eb'}><Download size={15}/> Word</button>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
+      <TailoredResumeModal resumeModal={resumeModal} onClose={() => setResumeModal(null)} />
     </div>
   );
 };

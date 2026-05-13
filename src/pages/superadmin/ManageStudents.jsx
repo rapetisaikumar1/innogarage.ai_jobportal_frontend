@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Users, Search, Trash2, Info, Plus, ChevronLeft, ChevronRight, ArrowLeft, Mail, Phone, MapPin, Calendar, GraduationCap, Briefcase, Award, X, ExternalLink, Shield, Hash, Clock, User, FileText, BookOpen, Zap, TrendingUp, CheckCircle2, XCircle, AlertCircle, Star, ChevronDown, Check, Crown } from 'lucide-react';
+import { Users, Search, Trash2, Plus, ChevronLeft, ChevronRight, ArrowLeft, Mail, Phone, MapPin, Calendar, GraduationCap, Briefcase, Award, X, ExternalLink, Shield, Hash, Clock, FileText, BookOpen, Zap, TrendingUp, CheckCircle2, XCircle, AlertCircle, Star, ChevronDown, Check, Crown } from 'lucide-react';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
 
 const AVATAR_COLORS = [
   'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500',
@@ -44,13 +44,14 @@ const getAssignedAdmins = (student) => {
 };
 
 const ManageStudents = () => {
-  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [mentors, setMentors] = useState([]);
+  const [technologies, setTechnologies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [mentorFilter, setMentorFilter] = useState('all');
+  const [technologyFilter, setTechnologyFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -58,15 +59,23 @@ const ManageStudents = () => {
   const [addForm, setAddForm] = useState({ fullName: '', email: '', phone: '', education: '' });
   const [addLoading, setAddLoading] = useState(false);
   const [openMentorDropdown, setOpenMentorDropdown] = useState(null);
+  const [openTechnologyDropdown, setOpenTechnologyDropdown] = useState(null);
   const [openPlanDropdown, setOpenPlanDropdown] = useState(null);
+  const [technologySearch, setTechnologySearch] = useState('');
   const [planFilter, setPlanFilter] = useState('all');
   const dropdownRef = useRef(null);
+  const technologyDropdownRef = useRef(null);
   const planDropdownRef = useRef(null);
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
+  const debouncedTechnologySearch = useDebouncedValue(technologySearch.trim(), 250);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setOpenMentorDropdown(null);
+      }
+      if (technologyDropdownRef.current && !technologyDropdownRef.current.contains(e.target)) {
+        setOpenTechnologyDropdown(null);
       }
       if (planDropdownRef.current && !planDropdownRef.current.contains(e.target)) {
         setOpenPlanDropdown(null);
@@ -80,6 +89,7 @@ const ManageStudents = () => {
   useEffect(() => {
     fetchStudents();
     fetchMentors();
+    fetchTechnologies();
   }, []);
 
   const fetchStudents = async () => {
@@ -100,6 +110,15 @@ const ManageStudents = () => {
       setMentors(res.data || []);
     } catch {
       // silent
+    }
+  };
+
+  const fetchTechnologies = async () => {
+    try {
+      const res = await api.get('/admin/available-technologies', { params: { usage: 'false' } });
+      setTechnologies(res.data || []);
+    } catch {
+      toast.error('Failed to load technologies');
     }
   };
 
@@ -158,6 +177,33 @@ const ManageStudents = () => {
     }
   };
 
+  const assignTechnology = async (studentId, technologyId) => {
+    try {
+      const { data } = await api.patch(`/admin/students/${studentId}/technology`, { technologyId: technologyId || null });
+      setStudents((prev) => prev.map((student) => (
+        student.id === studentId
+          ? {
+              ...student,
+              assignedTechnologyId: data.assignedTechnologyId,
+              assignedTechnology: data.assignedTechnology,
+            }
+          : student
+      )));
+      if (detail?.id === studentId) {
+        setDetail((prev) => ({
+          ...prev,
+          assignedTechnologyId: data.assignedTechnologyId,
+          assignedTechnology: data.assignedTechnology,
+        }));
+      }
+      setOpenTechnologyDropdown(null);
+      setTechnologySearch('');
+      toast.success(data.assignedTechnology ? `Technology assigned: ${data.assignedTechnology.name}` : 'Technology unassigned');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to assign technology');
+    }
+  };
+
   const addAdmin = async (studentId, mentorId) => {
     try {
       const res = await api.post('/admin/assign-mentor', {
@@ -201,11 +247,14 @@ const ManageStudents = () => {
   };
 
   const filtered = useMemo(() => {
+    const query = debouncedSearch.toLowerCase();
+
     return students.filter(s => {
-      const matchesSearch = !search ||
-        s.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-        s.email?.toLowerCase().includes(search.toLowerCase()) ||
-        s.registrationNumber?.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = !query ||
+        s.fullName?.toLowerCase().includes(query) ||
+        s.email?.toLowerCase().includes(query) ||
+        s.registrationNumber?.toLowerCase().includes(query) ||
+        s.assignedTechnology?.name?.toLowerCase().includes(query);
       const matchesStatus = statusFilter === 'all' ||
         (statusFilter === 'active' && s.status === 'ACTIVE') ||
         (statusFilter === 'inactive' && s.status === 'INACTIVE');
@@ -218,14 +267,26 @@ const ManageStudents = () => {
       const matchesPlan = planFilter === 'all' ||
         (planFilter === 'none' && !s.subscriptionPlan) ||
         normalizePlanKey(s.subscriptionPlan) === planFilter;
-      return matchesSearch && matchesStatus && matchesMentor && matchesPlan;
+      const matchesTechnology = technologyFilter === 'all' ||
+        (technologyFilter === 'unassigned' && !s.assignedTechnologyId) ||
+        s.assignedTechnologyId === technologyFilter;
+      return matchesSearch && matchesStatus && matchesMentor && matchesPlan && matchesTechnology;
     });
-  }, [students, search, statusFilter, mentorFilter, planFilter]);
+  }, [students, debouncedSearch, statusFilter, mentorFilter, planFilter, technologyFilter]);
+
+  const searchedTechnologies = useMemo(() => {
+    const query = debouncedTechnologySearch.toLowerCase();
+    if (!query) return technologies;
+    return technologies.filter((technology) =>
+      technology.name.toLowerCase().includes(query) ||
+      technology.category.toLowerCase().includes(query)
+    );
+  }, [technologies, debouncedTechnologySearch]);
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  useEffect(() => { setPage(1); }, [search, statusFilter, mentorFilter, planFilter]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, mentorFilter, planFilter, technologyFilter]);
 
   if (loading) {
     return (
@@ -264,13 +325,6 @@ const ManageStudents = () => {
             <ArrowLeft size={15} />
             Back to Students
           </button>
-          <button
-            onClick={() => navigate(`/admin/students/${detail.id}/view`)}
-            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-1.5 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-slate-800"
-          >
-            <User size={15} />
-            View as Student
-          </button>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
@@ -300,6 +354,10 @@ const ManageStudents = () => {
                   Reg: {detail.registrationNumber}
                 </div>
               )}
+              <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[13px] font-semibold text-blue-700">
+                <Zap size={13} className="text-blue-500" />
+                Technology: {detail.assignedTechnology?.name || 'Unassigned'}
+              </div>
             </div>
           </div>
         </div>
@@ -330,6 +388,10 @@ const ManageStudents = () => {
                       <p className="text-[13px] leading-5 text-slate-800">{detail.jobRole}</p>
                     </div>
                   )}
+                  <div className="rounded-lg bg-blue-50 px-3 py-2.5 sm:col-span-2">
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-400">Assigned Technology</p>
+                    <p className="text-[13px] font-semibold leading-5 text-blue-800">{detail.assignedTechnology?.name || 'Unassigned'}</p>
+                  </div>
                 </div>
                 {skills.length > 0 && (
                   <div>
@@ -472,6 +534,17 @@ const ManageStudents = () => {
           <option value="PRO">Pro</option>
           <option value="ULTRA">Ultra</option>
         </select>
+        <select
+          value={technologyFilter}
+          onChange={(e) => setTechnologyFilter(e.target.value)}
+          className="px-3.5 py-2.5 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white"
+        >
+          <option value="all">All Technologies</option>
+          <option value="unassigned">Unassigned</option>
+          {technologies.map((technology) => (
+            <option key={technology.id} value={technology.id}>{technology.name}</option>
+          ))}
+        </select>
       </div>
 
       {/* Table */}
@@ -490,6 +563,7 @@ const ManageStudents = () => {
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Plan</th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Technology</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Admins</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Joined</th>
                   <th className="px-5 py-3.5 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wider">Actions</th>
@@ -546,6 +620,66 @@ const ManageStudents = () => {
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
+                      <div className="relative min-w-[210px]" ref={openTechnologyDropdown === student.id ? technologyDropdownRef : null}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenTechnologyDropdown(openTechnologyDropdown === student.id ? null : student.id);
+                            setTechnologySearch('');
+                          }}
+                          className={`inline-flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-left text-[12px] font-semibold transition-colors ${student.assignedTechnology ? 'border-blue-100 bg-blue-50 text-blue-700' : 'border-dashed border-gray-300 bg-white text-gray-400 hover:border-blue-300 hover:text-blue-600'}`}
+                        >
+                          <span className="inline-flex min-w-0 items-center gap-1.5">
+                            <Zap size={12} className="shrink-0" />
+                            <span className="truncate">{student.assignedTechnology?.name || 'Assign technology'}</span>
+                          </span>
+                          <ChevronDown size={12} className={`shrink-0 transition-transform ${openTechnologyDropdown === student.id ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {openTechnologyDropdown === student.id && (
+                          <div className="absolute z-50 mt-1.5 w-[280px] rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
+                            <label className="relative mb-2 block">
+                              <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                              <input
+                                type="text"
+                                value={technologySearch}
+                                onChange={(event) => setTechnologySearch(event.target.value)}
+                                placeholder="Search technology..."
+                                className="h-8 w-full rounded-lg border border-gray-200 pl-8 pr-2 text-[12px] outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                                autoFocus
+                              />
+                            </label>
+                            <div className="max-h-[220px] overflow-y-auto">
+                              <button
+                                type="button"
+                                onClick={() => assignTechnology(student.id, '')}
+                                className={`mb-1 flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[12px] transition-colors hover:bg-gray-50 ${!student.assignedTechnologyId ? 'bg-blue-50 font-semibold text-blue-700' : 'text-gray-600'}`}
+                              >
+                                Unassigned
+                                {!student.assignedTechnologyId && <Check size={13} className="text-blue-500" />}
+                              </button>
+                              {searchedTechnologies.length === 0 ? (
+                                <p className="px-2.5 py-3 text-[12px] text-gray-400">No technologies found</p>
+                              ) : searchedTechnologies.map((technology) => (
+                                <button
+                                  key={technology.id}
+                                  type="button"
+                                  onClick={() => assignTechnology(student.id, technology.id)}
+                                  className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[12px] transition-colors hover:bg-gray-50 ${student.assignedTechnologyId === technology.id ? 'bg-blue-50 font-semibold text-blue-700' : 'text-gray-700'}`}
+                                >
+                                  <span className="min-w-0">
+                                    <span className="block truncate">{technology.name}</span>
+                                    <span className="block truncate text-[10px] font-medium text-gray-400">{technology.category}</span>
+                                  </span>
+                                  {student.assignedTechnologyId === technology.id && <Check size={13} className="shrink-0 text-blue-500" />}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5">
                       <div className="relative" ref={openMentorDropdown === student.id ? dropdownRef : null}>
                         <div className="flex flex-wrap items-center gap-1 max-w-[260px]">
                           {assignedAdmins.map((assignment) => {
@@ -591,8 +725,8 @@ const ManageStudents = () => {
                     </td>
                     <td className="px-5 py-3.5 text-[13px] text-gray-500">{new Date(student.createdAt).toLocaleDateString()}</td>
                     <td className="px-5 py-3.5 text-center">
-                      <button onClick={() => viewStudent(student.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="View details">
-                        <Info size={16} />
+                      <button onClick={() => viewStudent(student.id)} className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 transition-colors hover:bg-slate-50" title="View details">
+                        Details
                       </button>
                     </td>
                         </>

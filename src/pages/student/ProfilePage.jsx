@@ -112,7 +112,7 @@ const ProfilePage = () => {
     try {
       const { data } = await api.put('/users/profile', form);
       setProfile(data);
-      updateUser({ ...user, fullName: data.fullName });
+      updateUser({ ...user, ...data });
       toast.success('Profile updated!');
     } catch (error) {
       toast.error('Failed to update profile');

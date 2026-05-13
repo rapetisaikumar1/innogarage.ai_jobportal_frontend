@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { UserPlus, Search, Info, Mail, Phone, Users, Calendar, Shield, ShieldOff, X, PencilLine } from 'lucide-react';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
 
 const ManageAdmins = () => {
   const [admins, setAdmins] = useState([]);
@@ -14,6 +15,7 @@ const ManageAdmins = () => {
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [editAdminId, setEditAdminId] = useState(null);
   const [editForm, setEditForm] = useState({ fullName: '', email: '', password: '', phone: '' });
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
 
   useEffect(() => { fetchAdmins(); }, []);
 
@@ -122,10 +124,14 @@ const ManageAdmins = () => {
     }
   };
 
-  const filtered = admins.filter(a =>
-    a.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-    a.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    const query = debouncedSearch.toLowerCase();
+    if (!query) return admins;
+    return admins.filter(a =>
+      a.fullName?.toLowerCase().includes(query) ||
+      a.email?.toLowerCase().includes(query)
+    );
+  }, [admins, debouncedSearch]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div></div>;

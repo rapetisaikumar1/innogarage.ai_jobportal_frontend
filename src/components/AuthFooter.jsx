@@ -32,7 +32,7 @@ const AuthFooter = () => {
             <h4 className="text-gray-900 font-semibold mb-4 text-sm uppercase tracking-wider">Product</h4>
             <ul className="space-y-2.5 text-sm">
               <li><span className="hover:text-gray-900 transition-colors cursor-default">Job Discovery</span></li>
-              <li><span className="hover:text-gray-900 transition-colors cursor-default">Resume Builder</span></li>
+              <li><span className="hover:text-gray-900 transition-colors cursor-default">Application Tracker</span></li>
               <li><span className="hover:text-gray-900 transition-colors cursor-default">Mentorship</span></li>
               <li><span className="hover:text-gray-900 transition-colors cursor-default">Training Hub</span></li>
             </ul>

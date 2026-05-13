@@ -16,6 +16,7 @@ import CompleteProfilePage from './pages/auth/CompleteProfilePage';
 // Student Pages
 import StudentDashboard from './pages/student/StudentDashboard';
 import JobListings from './pages/student/JobListings';
+import YourJobs from './pages/student/YourJobs';
 import JobDetail from './pages/student/JobDetail';
 import MyApplications from './pages/student/MyApplications';
 import ProfilePage from './pages/student/ProfilePage';
@@ -26,7 +27,6 @@ import NotesPage from './pages/student/NotesPage';
 import AchieversPage from './pages/student/AchieversPage';
 import ShoutboardPage from './pages/student/ShoutboardPage';
 import HelpSupportPage from './pages/student/HelpSupportPage';
-import ResumeViewPage from './pages/student/ResumeViewPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -100,6 +100,7 @@ function App() {
       <Route path="/dashboard" element={<ProtectedRoute roles={['STUDENT']}><DashboardLayout /></ProtectedRoute>}>
         <Route index element={<StudentDashboard />} />
         <Route path="jobs" element={<JobListings />} />
+        <Route path="your-jobs" element={<YourJobs />} />
         <Route path="jobs/:id" element={<JobDetail />} />
         <Route path="applications" element={<MyApplications />} />
         <Route path="profile" element={<ProfilePage />} />
@@ -110,7 +111,6 @@ function App() {
         <Route path="achievers" element={<AchieversPage />} />
         <Route path="shoutboard" element={<ShoutboardPage />} />
         <Route path="help-support" element={<HelpSupportPage />} />
-        <Route path="resume-view" element={<ResumeViewPage />} />
       </Route>
 
       {/* Admin/Mentor Routes */}
@@ -118,7 +118,6 @@ function App() {
         <Route index element={<AdminDashboard />} />
         <Route path="students" element={<AdminStudents />} />
         <Route path="students/:studentId/view" element={<AdminStudentView />} />
-        <Route path="students/:studentId/view/resume-view" element={<ResumeViewPage />} />
         <Route path="training" element={<AdminTraining />} />
         <Route path="available-technologies" element={<AvailableTechnologiesPage />} />
         <Route path="raise-request" element={<AdminRaiseRequests />} />
