@@ -31,6 +31,7 @@ const AdminStudentView = () => {
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [adminJobsFoundAt, setAdminJobsFoundAt] = useState(null);
+  const [adminYourJobsActiveAt, setAdminYourJobsActiveAt] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -119,7 +120,10 @@ const AdminStudentView = () => {
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setActiveTab(key)}
+                  onClick={() => {
+                    setActiveTab(key);
+                    if (key === 'your-jobs') setAdminYourJobsActiveAt(Date.now());
+                  }}
                   className={`inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-all xl:flex-none ${
                     active
                       ? 'bg-white text-blue-700 shadow-sm'
@@ -141,7 +145,7 @@ const AdminStudentView = () => {
           <JobListings {...sharedProps} onSearchFound={() => setAdminJobsFoundAt(Date.now())} />
         </div>
         <div className={activeTab !== 'your-jobs' ? 'hidden' : 'h-full'}>
-          <YourJobs {...sharedProps} adminJobsFoundAt={adminJobsFoundAt} />
+          <YourJobs {...sharedProps} adminJobsFoundAt={adminJobsFoundAt} adminTabActiveAt={adminYourJobsActiveAt} />
         </div>
         {activeTab === 'applications' && <MyApplications {...sharedProps} />}
       </div>

@@ -275,6 +275,7 @@ const YourJobs = ({
   studentId = null,
   embedded = false,
   adminJobsFoundAt = null,
+  adminTabActiveAt = null,
 }) => {
   // Admin/portal view owns its own state; student mode reads from YourJobsContext.
   const yourJobsCtx = useContext(YourJobsContext);
@@ -330,6 +331,24 @@ const YourJobs = ({
     [portalMode]
   );
   const isAdminView = isAdminPortalView(portalMode);
+
+  // Silently reloads persisted jobs for admin view — used by tab-switch and focus refresh.
+  const loadAdminPersistedJobs = useCallback(async () => {
+    if (isStudentMode) return;
+    const { data } = await api.get(
+      getPortalUrl('yourJobs'),
+      requestConfig({ params: { fast: 1 } })
+    );
+    const normalizedJobs = sortJobsByScore((data.jobs || []).map(normalizeJob));
+    setAdminJobs(normalizedJobs);
+    setAdminProfile(data.profile || null);
+    setAdminScoringProvider(data.scoringProvider || 'gemini');
+    setAdminTotalSavedJobs(data.totalSavedJobs || 0);
+    setAdminPendingSourceCount(data.pendingSourceCount || 0);
+    setAdminRefreshNeeded(Boolean(data.refreshNeeded));
+    setAdminMatchedCount(data.totalMatchedJobs || normalizedJobs.length);
+    setAdminProcessedCount(0);
+  }, [isStudentMode, getPortalUrl, requestConfig]);
 
   // Effect: Admin/portal mode — self-managed stream, cleaned up on unmount.
   useEffect(() => {
@@ -573,6 +592,29 @@ const YourJobs = ({
       abortController.abort();
     };
   }, [getPortalUrl, isStudentMode, portalMode, requestConfig, yourJobsRefreshKey, adminJobsFoundAt]);
+
+  // Admin tab-switch refresh: silently reload when admin clicks "Your Jobs" tab.
+  useEffect(() => {
+    if (isStudentMode || !adminTabActiveAt) return;
+    if (streamAbortRef.current) return; // stream is running — skip
+    loadAdminPersistedJobs().catch(() => {});
+  }, [adminTabActiveAt, isStudentMode, loadAdminPersistedJobs]);
+
+  // Admin visibility/focus refresh: silently reload when window regains focus.
+  useEffect(() => {
+    if (isStudentMode) return;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (streamAbortRef.current) return; // stream is running — skip
+      loadAdminPersistedJobs().catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [isStudentMode, loadAdminPersistedJobs]);
 
   const patchJobByKey = useCallback((jobKey, patch) => {
     if (isStudentMode) {
