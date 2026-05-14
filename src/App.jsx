@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
+import { FindJobsProvider } from './contexts/FindJobsContext';
+import { YourJobsProvider } from './contexts/YourJobsContext';
 
 // Layouts
 import DashboardLayout from './components/layouts/DashboardLayout';
@@ -97,7 +99,7 @@ function App() {
       <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       {/* Student Routes */}
-      <Route path="/dashboard" element={<ProtectedRoute roles={['STUDENT']}><DashboardLayout /></ProtectedRoute>}>
+      <Route path="/dashboard" element={<ProtectedRoute roles={['STUDENT']}><FindJobsProvider><YourJobsProvider><DashboardLayout /></YourJobsProvider></FindJobsProvider></ProtectedRoute>}>
         <Route index element={<StudentDashboard />} />
         <Route path="jobs" element={<JobListings />} />
         <Route path="your-jobs" element={<YourJobs />} />

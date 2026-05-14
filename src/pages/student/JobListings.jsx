@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Briefcase, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, Eye, Loader2, MapPin, Search } from 'lucide-react';
 import api, { getTokenForRole } from '../../services/api';
+import { FindJobsContext } from '../../contexts/FindJobsContext';
 import {
   STUDENT_PORTAL_MODE,
   buildPortalRequestConfig,
@@ -180,19 +181,35 @@ const JobListings = ({
   studentId = null,
   embedded = false,
 }) => {
-  const [jobs, setJobs] = useState([]);
-  const [loadingSavedJobs, setLoadingSavedJobs] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+  // ── Context (only available in student mode; null in admin mode) ─────────
+  const findJobsCtx = useContext(FindJobsContext);
+  const isStudentMode = !isAdminPortalView(portalMode) && findJobsCtx !== null;
+
+  // ── UI-only state (always local, regardless of mode) ─────────────────────
   const [page, setPage] = useState(1);
   const [searchDaysInput, setSearchDaysInput] = useState(String(DEFAULT_SEARCH_DAYS));
-  const [activeSearchDays, setActiveSearchDays] = useState(DEFAULT_SEARCH_DAYS);
-  const [statusMessage, setStatusMessage] = useState('');
   const [applyingJobKey, setApplyingJobKey] = useState(null);
-  const streamAbortRef = useRef(null);
   const panelRef = useRef(null);
   const resultsScrollRef = useRef(null);
   const autoPinnedRef = useRef(false);
+
+  // ── Admin-only local state (ignored in student mode) ─────────────────────
+  const [adminJobs, setAdminJobs] = useState([]);
+  const [adminLoadingSavedJobs, setAdminLoadingSavedJobs] = useState(true);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminSearched, setAdminSearched] = useState(false);
+  const [adminActiveSearchDays, setAdminActiveSearchDays] = useState(DEFAULT_SEARCH_DAYS);
+  const [adminStatusMessage, setAdminStatusMessage] = useState('');
+  const adminStreamAbortRef = useRef(null);
+
+  // ── Bridge: unified values from context (student) or local state (admin) ──
+  const jobs             = isStudentMode ? findJobsCtx.jobs             : adminJobs;
+  const loadingSavedJobs = isStudentMode ? findJobsCtx.loadingSavedJobs : adminLoadingSavedJobs;
+  const loading          = isStudentMode ? findJobsCtx.isRunning        : adminLoading;
+  const searched         = isStudentMode ? findJobsCtx.searched         : adminSearched;
+  const activeSearchDays = isStudentMode ? findJobsCtx.activeSearchDays : adminActiveSearchDays;
+  const statusMessage    = isStudentMode ? findJobsCtx.statusMessage    : adminStatusMessage;
+
   const yourJobsRefreshKey = useMemo(
     () => getPortalStorageKey('yourJobsRefreshNeeded', { portalMode, studentId }),
     [portalMode, studentId]
@@ -209,16 +226,16 @@ const JobListings = ({
     [portalMode]
   );
 
-  const loadPersistedJobs = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoadingSavedJobs(true);
-
+  // ── Admin-only: load persisted jobs from DB ───────────────────────────────
+  const loadAdminPersistedJobs = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setAdminLoadingSavedJobs(true);
     try {
       const { data } = await api.get(
         getPortalEndpoint('matchedJobs', { portalMode, studentId }),
         requestConfig({ params: { limit: 80 } })
       );
       const persistedJobs = sortJobsByDate((data.jobs || []).map(normalizeClientJob));
-      setJobs(persistedJobs);
+      setAdminJobs(persistedJobs);
       return persistedJobs;
     } catch (error) {
       if (!silent) {
@@ -226,49 +243,60 @@ const JobListings = ({
       }
       return [];
     } finally {
-      if (!silent) setLoadingSavedJobs(false);
+      if (!silent) setAdminLoadingSavedJobs(false);
     }
   }, [portalMode, requestConfig, studentId]);
 
+  // Admin mode: abort stream on unmount.
   useEffect(() => {
+    if (isStudentMode) return;
     return () => {
-      streamAbortRef.current?.abort();
+      adminStreamAbortRef.current?.abort();
     };
-  }, []);
+  }, [isStudentMode]);
 
+  // Admin mode: load persisted jobs on mount.
   useEffect(() => {
-    loadPersistedJobs();
-  }, [loadPersistedJobs]);
+    if (isStudentMode) return;
+    loadAdminPersistedJobs();
+  }, [isStudentMode, loadAdminPersistedJobs]);
 
   const pinResultsIntoView = (behavior = 'smooth') => {
     panelRef.current?.scrollIntoView({ block: 'start', behavior });
     resultsScrollRef.current?.scrollTo({ top: 0, behavior });
   };
 
-  const runSearch = async ({ searchDays }) => {
-    streamAbortRef.current?.abort();
+  // ── Student mode: delegate search to context ──────────────────────────────
+  const runStudentSearch = useCallback(({ searchDays }) => {
+    setPage(1);
+    autoPinnedRef.current = false;
+    requestAnimationFrame(() => pinResultsIntoView());
+    findJobsCtx.startSearch({ searchDays });
+  }, [findJobsCtx]);
+
+  // ── Admin mode: local SSE stream (component-scoped, cancelled on unmount) ─
+  const runAdminSearch = async ({ searchDays }) => {
+    adminStreamAbortRef.current?.abort();
 
     const abortController = new AbortController();
-    streamAbortRef.current = abortController;
-    const existingJobs = jobs;
+    adminStreamAbortRef.current = abortController;
+    const existingJobs = adminJobs;
     const existingJobCount = existingJobs.length;
     const receivedKeys = new Set(existingJobs.map((job) => job.applyLink || job.id));
     autoPinnedRef.current = false;
     const resolvedSearchDays = normalizeSearchDays(searchDays);
 
-    setLoading(true);
-    setSearched(true);
-    setActiveSearchDays(resolvedSearchDays);
+    setAdminLoading(true);
+    setAdminSearched(true);
+    setAdminActiveSearchDays(resolvedSearchDays);
     setSearchDaysInput(String(resolvedSearchDays));
     setPage(1);
-    setStatusMessage('Searching...');
+    setAdminStatusMessage('Searching...');
     requestAnimationFrame(() => pinResultsIntoView());
 
     try {
-      const params = {
-        days: resolvedSearchDays,
-      };
-      if (isAdminPortalView(portalMode) && studentId) params.studentId = studentId;
+      const params = { days: resolvedSearchDays };
+      if (studentId) params.studentId = studentId;
 
       const streamUrl = buildApiUrl(
         getPortalEndpoint('searchStream', { portalMode, studentId }),
@@ -307,12 +335,12 @@ const JobListings = ({
           if (!parsed) continue;
 
           if (parsed.event === 'status') {
-            setStatusMessage(parsed.payload.message || 'Searching jobs...');
+            setAdminStatusMessage(parsed.payload.message || 'Searching jobs...');
             continue;
           }
 
           if (parsed.event === 'warning') {
-            setStatusMessage(parsed.payload.message || 'Continuing live search...');
+            setAdminStatusMessage(parsed.payload.message || 'Continuing live search...');
             continue;
           }
 
@@ -325,14 +353,14 @@ const JobListings = ({
                 requestAnimationFrame(() => pinResultsIntoView());
               }
               receivedKeys.add(nextKey);
-              setJobs((currentJobs) => mergeJobsByDate(currentJobs, nextJob));
+              setAdminJobs((current) => mergeJobsByDate(current, nextJob));
             }
             continue;
           }
 
           if (parsed.event === 'end') {
             streamEnded = true;
-            setStatusMessage(
+            setAdminStatusMessage(
               parsed.payload.count
                 ? `Live search complete. ${parsed.payload.count} jobs found.`
                 : 'No jobs found for this profile yet.'
@@ -346,18 +374,17 @@ const JobListings = ({
         }
       }
 
-      await loadPersistedJobs({ silent: true });
+      await loadAdminPersistedJobs({ silent: true });
 
       const newJobCount = Math.max(receivedKeys.size - existingJobCount, 0);
-
       if (newJobCount > 0) {
         try { sessionStorage.setItem(yourJobsRefreshKey, '1'); } catch { /* ignore */ }
       }
 
-      if (jobs.length === 0 && receivedKeys.size === 0) {
-        toast('No jobs found for this profile yet.', { icon: 'i' });
+      if (adminJobs.length === 0 && receivedKeys.size === 0) {
+        toast('No jobs found for this profile yet.', { icon: 'ℹ' });
       } else if (newJobCount === 0) {
-        toast('No new jobs found. Your saved list is already up to date.', { icon: 'i' });
+        toast('No new jobs found. Your saved list is already up to date.', { icon: 'ℹ' });
       } else {
         toast.success(`Added ${newJobCount} new jobs from the last ${formatSearchDays(resolvedSearchDays)}.`);
       }
@@ -365,16 +392,26 @@ const JobListings = ({
       if (error.name === 'AbortError') return;
 
       if (receivedKeys.size === existingJobCount) {
-        setStatusMessage('Could not append new jobs right now. Showing your saved list.');
+        setAdminStatusMessage('Could not append new jobs right now. Showing your saved list.');
       } else {
-        setStatusMessage('Live search stopped early. Showing jobs found so far.');
+        setAdminStatusMessage('Live search stopped early. Showing jobs found so far.');
       }
       toast.error(error.message || 'Failed to find jobs');
     } finally {
-      if (streamAbortRef.current === abortController) {
-        streamAbortRef.current = null;
+      if (adminStreamAbortRef.current === abortController) {
+        adminStreamAbortRef.current = null;
       }
-      setLoading(false);
+      setAdminLoading(false);
+    }
+  };
+
+  const runSearch = ({ searchDays }) => {
+    const resolvedSearchDays = normalizeSearchDays(searchDays);
+    setSearchDaysInput(String(resolvedSearchDays));
+    if (isStudentMode) {
+      runStudentSearch({ searchDays: resolvedSearchDays });
+    } else {
+      runAdminSearch({ searchDays: resolvedSearchDays });
     }
   };
 
@@ -383,6 +420,18 @@ const JobListings = ({
     setSearchDaysInput(String(resolvedSearchDays));
     runSearch({ searchDays: resolvedSearchDays });
   };
+
+  /** Patch a single job in the list (for mark-viewed / mark-applied). */
+  const patchJobByLink = useCallback((applyLinkKey, patchFn) => {
+    if (isStudentMode) {
+      const current = findJobsCtx.jobs.find((j) => (j.applyLink || j.id) === applyLinkKey);
+      if (current) findJobsCtx.updateJob({ ...current, ...patchFn(current) });
+    } else {
+      setAdminJobs((current) => current.map((j) =>
+        (j.applyLink || j.id) === applyLinkKey ? { ...j, ...patchFn(j) } : j
+      ));
+    }
+  }, [isStudentMode, findJobsCtx]);
 
   const openApplyLink = (applyLink) => {
     const openedWindow = window.open(applyLink, '_blank', 'noopener,noreferrer');
@@ -405,11 +454,7 @@ const JobListings = ({
     const wasViewed = Boolean(job.isViewed);
     openApplyLink(job.applyLink);
     setApplyingJobKey(jobKey);
-    setJobs((currentJobs) => currentJobs.map((currentJob) => (
-      currentJob.applyLink === job.applyLink
-        ? { ...currentJob, isViewed: true, viewedAt: optimisticViewedAt }
-        : currentJob
-    )));
+    patchJobByLink(jobKey, () => ({ isViewed: true, viewedAt: optimisticViewedAt }));
 
     try {
       const { data } = await api.post(
@@ -427,22 +472,17 @@ const JobListings = ({
 
       if (data?.job) {
         const persistedJob = normalizeClientJob(data.job);
-        setJobs((currentJobs) => currentJobs.map((currentJob) => (
-          currentJob.applyLink === persistedJob.applyLink
-            ? { ...currentJob, ...persistedJob }
-            : currentJob
-        )));
+        patchJobByLink(jobKey, () => persistedJob);
       }
 
       if (!wasViewed) {
         toast.success('Job marked as viewed.');
       }
     } catch (error) {
-      setJobs((currentJobs) => currentJobs.map((currentJob) => (
-        currentJob.applyLink === job.applyLink
-          ? { ...currentJob, isViewed: wasViewed, viewedAt: wasViewed ? optimisticViewedAt : null }
-          : currentJob
-      )));
+      patchJobByLink(jobKey, () => ({
+        isViewed: wasViewed,
+        viewedAt: wasViewed ? optimisticViewedAt : null,
+      }));
       toast.error(error.response?.data?.message || 'Failed to mark job as viewed');
     } finally {
       setApplyingJobKey(null);

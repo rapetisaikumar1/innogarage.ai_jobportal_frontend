@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { Eye, EyeOff, ArrowRight, CheckCircle2, Mail, Lock, User, Sparkles, Zap, Layers, Compass, TrendingUp, Rocket } from 'lucide-react';
 import Logo from '../../components/Logo';
 import AuthFooter from '../../components/AuthFooter';
+import { getGoogleClientId } from '../../utils/googleAuth';
 
 const SignupPage = () => {
   const { signup, googleLogin } = useAuth();
@@ -49,13 +50,13 @@ const SignupPage = () => {
     }
   };
 
-  const handleGoogleSignup = () => {
+  const handleGoogleSignup = async () => {
     if (!window.google?.accounts?.oauth2) {
       toast.error('Google sign-in is still loading. Please wait a moment and try again.');
       return;
     }
 
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const clientId = await getGoogleClientId();
     if (!clientId) {
       toast.error('Google sign-in is not configured.');
       return;

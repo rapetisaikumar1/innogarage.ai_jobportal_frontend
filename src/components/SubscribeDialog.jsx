@@ -84,7 +84,10 @@ const SubscribeDialog = ({ isOpen, onClose, userEmail }) => {
   const handleCheckout = async (planKey) => {
     try {
       setLoadingPlan(planKey);
-      const { data } = await api.post('/stripe/create-checkout', { plan: planKey });
+      const { data } = await api.post('/stripe/create-checkout', {
+        plan: planKey,
+        redirectOrigin: window.location.origin,
+      });
       if (data.url) {
         window.location.href = data.url;
       } else {

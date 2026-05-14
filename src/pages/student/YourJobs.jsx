@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   Briefcase,
@@ -24,6 +24,7 @@ import {
   getPortalStorageKey,
   isAdminPortalView,
 } from '../../utils/studentPortalView';
+import { YourJobsContext } from '../../contexts/YourJobsContext';
 
 const formatDate = (value) => {
   if (!value) return 'Not available';
@@ -97,7 +98,7 @@ const normalizeJob = (job) => {
       generated: Boolean(job.tailoredResume?.generated),
     },
     matchingScore: Number(job.matchingScore || job.matchScore || job.match_score || 0),
-    matchProvider: job.matchProvider || 'fallback',
+    matchProvider: job.matchProvider || 'gemini',
     matchModel: job.matchModel || null,
     matchSummary: job.matchSummary || null,
     matchWarning: job.matchWarning || null,
@@ -274,17 +275,21 @@ const YourJobs = ({
   studentId = null,
   embedded = false,
 }) => {
-  const [jobs, setJobs] = useState([]);
-  const [profile, setProfile] = useState(null);
-  const [scoringProvider, setScoringProvider] = useState('fallback');
-  const [totalSavedJobs, setTotalSavedJobs] = useState(0);
-  const [pendingSourceCount, setPendingSourceCount] = useState(0);
-  const [matchedCount, setMatchedCount] = useState(0);
-  const [processedCount, setProcessedCount] = useState(0);
-  const [statusMessage, setStatusMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [refreshNeeded, setRefreshNeeded] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  // Admin/portal view owns its own state; student mode reads from YourJobsContext.
+  const yourJobsCtx = useContext(YourJobsContext);
+  const isStudentMode = yourJobsCtx !== null && !isAdminPortalView(portalMode);
+
+  const [adminJobs, setAdminJobs] = useState([]);
+  const [adminProfile, setAdminProfile] = useState(null);
+  const [adminScoringProvider, setAdminScoringProvider] = useState('gemini');
+  const [adminTotalSavedJobs, setAdminTotalSavedJobs] = useState(0);
+  const [adminPendingSourceCount, setAdminPendingSourceCount] = useState(0);
+  const [adminMatchedCount, setAdminMatchedCount] = useState(0);
+  const [adminProcessedCount, setAdminProcessedCount] = useState(0);
+  const [adminStatusMessage, setAdminStatusMessage] = useState('');
+  const [adminLoading, setAdminLoading] = useState(true);
+  const [adminRefreshNeeded, setAdminRefreshNeeded] = useState(false);
+  const [adminSyncing, setAdminSyncing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState(YOUR_JOBS_FILTER_ALL);
   const [page, setPage] = useState(1);
@@ -294,6 +299,19 @@ const YourJobs = ({
   const [resumeModal, setResumeModal] = useState(null);
   const [expandedJobKeys, setExpandedJobKeys] = useState({});
   const streamAbortRef = useRef(null);
+
+  // Bridge: student mode reads from context; admin/portal uses local state.
+  const jobs = isStudentMode ? yourJobsCtx.jobs : adminJobs;
+  const profile = isStudentMode ? yourJobsCtx.profile : adminProfile;
+  const scoringProvider = isStudentMode ? yourJobsCtx.scoringProvider : adminScoringProvider;
+  const totalSavedJobs = isStudentMode ? yourJobsCtx.totalSavedJobs : adminTotalSavedJobs;
+  const pendingSourceCount = isStudentMode ? yourJobsCtx.pendingSourceCount : adminPendingSourceCount;
+  const matchedCount = isStudentMode ? yourJobsCtx.matchedCount : adminMatchedCount;
+  const processedCount = isStudentMode ? yourJobsCtx.processedCount : adminProcessedCount;
+  const statusMessage = isStudentMode ? yourJobsCtx.statusMessage : adminStatusMessage;
+  const loading = isStudentMode ? yourJobsCtx.loading : adminLoading;
+  const refreshNeeded = isStudentMode ? yourJobsCtx.refreshNeeded : adminRefreshNeeded;
+  const syncing = isStudentMode ? yourJobsCtx.syncing : adminSyncing;
   const pendingAppliedKey = useMemo(
     () => getPortalStorageKey('pendingApplied', { portalMode, studentId }),
     [portalMode, studentId]
@@ -312,7 +330,29 @@ const YourJobs = ({
   );
   const isAdminView = isAdminPortalView(portalMode);
 
+  // Effect 1: Student mode — delegate to YourJobsContext (idempotent, survives navigation).
   useEffect(() => {
+    if (!isStudentMode) return;
+    yourJobsCtx.initialize();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Effect 2: Admin/portal mode — self-managed stream, cleaned up on unmount.
+  useEffect(() => {
+    if (isStudentMode) return;
+
+    // Aliases so the effect body is unchanged from the original admin stream logic.
+    const setJobs = setAdminJobs;
+    const setProfile = setAdminProfile;
+    const setScoringProvider = setAdminScoringProvider;
+    const setTotalSavedJobs = setAdminTotalSavedJobs;
+    const setPendingSourceCount = setAdminPendingSourceCount;
+    const setMatchedCount = setAdminMatchedCount;
+    const setProcessedCount = setAdminProcessedCount;
+    const setStatusMessage = setAdminStatusMessage;
+    const setLoading = setAdminLoading;
+    const setRefreshNeeded = setAdminRefreshNeeded;
+    const setSyncing = setAdminSyncing;
+
     const abortController = new AbortController();
     let isActive = true;
     streamAbortRef.current = abortController;
@@ -326,7 +366,7 @@ const YourJobs = ({
 
       setJobs(normalizedJobs);
       setProfile(data.profile || null);
-      setScoringProvider(data.scoringProvider || 'fallback');
+      setScoringProvider(data.scoringProvider || 'gemini');
       setTotalSavedJobs(data.totalSavedJobs || 0);
       setPendingSourceCount(nextPendingSourceCount);
       setRefreshNeeded(nextRefreshNeeded);
@@ -393,7 +433,7 @@ const YourJobs = ({
 
             if (parsed.event === 'meta') {
               setProfile(parsed.payload.profile || null);
-              setScoringProvider(parsed.payload.scoringProvider || 'fallback');
+              setScoringProvider(parsed.payload.scoringProvider || 'gemini');
               setTotalSavedJobs(parsed.payload.sourceCount || 0);
               setPendingSourceCount(parsed.payload.pendingSourceCount || 0);
               setRefreshNeeded(Boolean(parsed.payload.refreshNeeded));
@@ -537,7 +577,19 @@ const YourJobs = ({
       }
       abortController.abort();
     };
-  }, [getPortalUrl, portalMode, requestConfig, yourJobsRefreshKey]);
+  }, [getPortalUrl, isStudentMode, portalMode, requestConfig, yourJobsRefreshKey]);
+
+  const patchJobByKey = useCallback((jobKey, patch) => {
+    if (isStudentMode) {
+      yourJobsCtx.updateJob(jobKey, patch);
+    } else {
+      setAdminJobs((c) =>
+        c.map((j) =>
+          (j.sourceListingId || j.applyLink || j.id) === jobKey ? { ...j, ...patch } : j
+        )
+      );
+    }
+  }, [isStudentMode, yourJobsCtx]);
 
   const filteredJobs = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -593,17 +645,12 @@ const YourJobs = ({
     openApplyLink(job.applyLink);
     upsertPendingAppliedJob(pendingAppliedKey, job, optimisticAppliedAt, optimisticStatus);
     setApplyingJobKey(jobKey);
-    setJobs((currentJobs) => currentJobs.map((currentJob) => (
-      (currentJob.applyLink || currentJob.id) === jobKey
-        ? {
-            ...currentJob,
-            isApplied: true,
-            appliedAt: optimisticAppliedAt,
-            applicationStatus: optimisticStatus,
-            requiresStudentAction: false,
-          }
-        : currentJob
-    )));
+    patchJobByKey(jobKey, {
+      isApplied: true,
+      appliedAt: optimisticAppliedAt,
+      applicationStatus: optimisticStatus,
+      requiresStudentAction: false,
+    });
 
     try {
       const { data } = await api.post(
@@ -626,27 +673,18 @@ const YourJobs = ({
         data?.application?.appliedById || data?.job?.appliedById
       );
       const persistedAppliedAt = data?.application?.appliedAt || data?.job?.appliedAt || optimisticAppliedAt;
-      setJobs((currentJobs) => currentJobs.map((currentJob) => (
-        (currentJob.applyLink || currentJob.id) === jobKey
-          ? {
-              ...currentJob,
-              isApplied: nextStatus !== APPLICATION_STATUS_STUDENT_ACTION_REQUIRED,
-              appliedAt: persistedAppliedAt,
-              appliedById: data?.application?.appliedById || data?.job?.appliedById || null,
-              applicationId: data?.application?.id || data?.job?.applicationId || currentJob.applicationId || null,
-              applicationStatus: nextStatus,
-              requiresStudentAction: nextStatus === APPLICATION_STATUS_STUDENT_ACTION_REQUIRED,
-            }
-          : currentJob
-      )));
+      patchJobByKey(jobKey, {
+        isApplied: nextStatus !== APPLICATION_STATUS_STUDENT_ACTION_REQUIRED,
+        appliedAt: persistedAppliedAt,
+        appliedById: data?.application?.appliedById || data?.job?.appliedById || null,
+        applicationId: data?.application?.id || data?.job?.applicationId || job.applicationId || null,
+        applicationStatus: nextStatus,
+        requiresStudentAction: nextStatus === APPLICATION_STATUS_STUDENT_ACTION_REQUIRED,
+      });
       toast.success('Job marked as applied.');
     } catch (error) {
       removePendingAppliedJob(pendingAppliedKey, job.applyLink);
-      setJobs((currentJobs) => currentJobs.map((currentJob) => (
-        (currentJob.applyLink || currentJob.id) === jobKey
-          ? { ...currentJob, isApplied: false, appliedAt: null }
-          : currentJob
-      )));
+      patchJobByKey(jobKey, { isApplied: false, appliedAt: null });
       toast.error(error.response?.data?.message || 'Failed to mark job as applied');
     } finally {
       setApplyingJobKey(null);
@@ -660,16 +698,11 @@ const YourJobs = ({
     const previousJob = job;
     const nextRequiresStudentAction = nextStatus === APPLICATION_STATUS_STUDENT_ACTION_REQUIRED;
     setUpdatingStatusKey(jobKey);
-    setJobs((currentJobs) => currentJobs.map((currentJob) => (
-      (currentJob.sourceListingId || currentJob.applyLink || currentJob.id) === jobKey
-        ? {
-            ...currentJob,
-            isApplied: !nextRequiresStudentAction,
-            applicationStatus: nextStatus,
-            requiresStudentAction: nextRequiresStudentAction,
-          }
-        : currentJob
-    )));
+    patchJobByKey(jobKey, {
+      isApplied: !nextRequiresStudentAction,
+      applicationStatus: nextStatus,
+      requiresStudentAction: nextRequiresStudentAction,
+    });
 
     try {
       const { data } = await api.patch(
@@ -680,25 +713,16 @@ const YourJobs = ({
       const updatedStatus = normalizeApplicationStatus(data?.application?.status, data?.application?.appliedById);
       const requiresStudentAction = updatedStatus === APPLICATION_STATUS_STUDENT_ACTION_REQUIRED;
 
-      setJobs((currentJobs) => currentJobs.map((currentJob) => (
-        (currentJob.sourceListingId || currentJob.applyLink || currentJob.id) === jobKey
-          ? {
-              ...currentJob,
-              isApplied: !requiresStudentAction,
-              appliedAt: data?.application?.appliedAt || currentJob.appliedAt,
-              appliedById: data?.application?.appliedById || currentJob.appliedById,
-              applicationStatus: updatedStatus,
-              requiresStudentAction,
-            }
-          : currentJob
-      )));
+      patchJobByKey(jobKey, {
+        isApplied: !requiresStudentAction,
+        appliedAt: data?.application?.appliedAt || job.appliedAt,
+        appliedById: data?.application?.appliedById || job.appliedById,
+        applicationStatus: updatedStatus,
+        requiresStudentAction,
+      });
       toast.success('Application status updated.');
     } catch (error) {
-      setJobs((currentJobs) => currentJobs.map((currentJob) => (
-        (currentJob.sourceListingId || currentJob.applyLink || currentJob.id) === jobKey
-          ? previousJob
-          : currentJob
-      )));
+      patchJobByKey(jobKey, previousJob);
       toast.error(error.response?.data?.message || 'Failed to update application status');
     } finally {
       setUpdatingStatusKey(null);
@@ -719,7 +743,7 @@ const YourJobs = ({
       const nextJob = data?.job ? normalizeJob(data.job) : job;
 
       if (data?.job) {
-        setJobs((currentJobs) => mergeJobsByScore(currentJobs, nextJob));
+        patchJobByKey(jobKey, nextJob);
       }
 
       if (!data?.resume?.resumeText) {
