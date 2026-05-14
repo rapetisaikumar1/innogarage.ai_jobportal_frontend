@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -36,6 +36,8 @@ const MentoringPage = () => {
     init();
   }, []);
 
+  const lastRefreshAtRef = useRef(0);
+
   const refreshData = async () => {
     try {
       const promises = [api.get('/mentoring/my-bookings')];
@@ -45,10 +47,27 @@ const MentoringPage = () => {
       const results = await Promise.all(promises);
       setBookings(results[0].data);
       if (results[1]) setSlots(results[1].data);
+      lastRefreshAtRef.current = Date.now();
     } catch (error) {
       console.error('Failed to refresh data:', error);
     }
   };
+
+  // Re-fetch when user returns to tab/window so admin booking changes appear
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastRefreshAtRef.current > 15000) refreshData();
+    };
+    const onFocus = () => {
+      if (Date.now() - lastRefreshAtRef.current > 15000) refreshData();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [mentor]);
 
   // Group available slots by date
   const slotsByDate = useMemo(() => {

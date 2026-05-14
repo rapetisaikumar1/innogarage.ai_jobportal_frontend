@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   Briefcase,
@@ -205,8 +205,10 @@ const MyApplications = ({
   const [generatingResumeKey, setGeneratingResumeKey] = useState(null);
   const [resumeModal, setResumeModal] = useState(null);
   const isAdminView = isAdminPortalView(portalMode);
+  const lastRefreshAtRef = useRef(0);
 
   const fetchApplications = useCallback(async () => {
+    lastRefreshAtRef.current = Date.now();
     setLoading(true);
     try {
       const { data } = await api.get(
@@ -226,6 +228,23 @@ const MyApplications = ({
 
   useEffect(() => {
     fetchApplications();
+  }, [fetchApplications]);
+
+  // Re-fetch when the user returns to the tab/window so admin status changes appear immediately
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastRefreshAtRef.current > 15000)
+        fetchApplications();
+    };
+    const onFocus = () => {
+      if (Date.now() - lastRefreshAtRef.current > 15000) fetchApplications();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [fetchApplications]);
 
   const filteredApplications = useMemo(() => {

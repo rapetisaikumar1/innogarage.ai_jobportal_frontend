@@ -63,6 +63,20 @@ const HelpSupportPage = () => {
     if (tab === 'my-queries') fetchQueries();
   }, [tab]);
 
+  // Re-fetch when user returns to the tab/window while already on my-queries
+  // so admin replies appear without needing a manual page refresh
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && tab === 'my-queries') fetchQueries();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [tab]);
+
   const fetchStaff = async () => {
     try {
       const { data } = await api.get('/queries/staff');

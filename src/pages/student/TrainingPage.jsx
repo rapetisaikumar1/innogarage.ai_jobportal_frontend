@@ -18,17 +18,32 @@ const TrainingPage = () => {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
 
+  const fetchMaterials = async () => {
+    try {
+      const { data } = await api.get('/training/materials');
+      setAllItems(data);
+    } catch {
+      // fetch failed silently
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await api.get('/training/materials');
-        setAllItems(data);
-      } catch {
-        // fetch failed silently
-      } finally {
-        setLoading(false);
-      }
-    })();
+    fetchMaterials();
+  }, []);
+
+  // Re-fetch when user returns to tab/window so newly assigned materials appear
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchMaterials();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
   }, []);
 
   const notes = useMemo(() => allItems.filter(m => m.type === 'NOTE'), [allItems]);

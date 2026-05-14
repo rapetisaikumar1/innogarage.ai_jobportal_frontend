@@ -65,6 +65,12 @@ const AdminRaiseRequests = () => {
     fetchData();
   }, []);
 
+  // Poll every 30s so super-admin accept/reject is visible without page reload
+  useEffect(() => {
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     if (!technologyDropdownOpen) return undefined;
 

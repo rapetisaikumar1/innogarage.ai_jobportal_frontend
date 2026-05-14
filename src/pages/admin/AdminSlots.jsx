@@ -18,9 +18,9 @@ const AdminSlots = () => {
 
   useEffect(() => { fetchSlots(); }, []);
 
-  // Refresh every 60s so expired slots update without page reload
+  // Refresh every 60s so expired/booked slots update without page reload
   useEffect(() => {
-    const interval = setInterval(() => setSlots(prev => [...prev]), 60000);
+    const interval = setInterval(fetchSlots, 60000);
     return () => clearInterval(interval);
   }, []);
 

@@ -350,6 +350,31 @@ export const YourJobsProvider = ({ children }) => {
     initialize();
   }, [findJobsCtx?.jobsFoundAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Silently reload persisted jobs when user returns to tab/window so admin status
+  // changes (applied, interview scheduled, etc.) appear without a full stream restart.
+  const lastSilentRefreshAtRef = useRef(0);
+  useEffect(() => {
+    const onVisible = async () => {
+      if (document.visibilityState !== 'visible') return;
+      if (streamAbortRef.current) return; // stream is running — skip
+      if (Date.now() - lastSilentRefreshAtRef.current < 15000) return;
+      lastSilentRefreshAtRef.current = Date.now();
+      try { await loadPersistedYourJobs(); } catch { /* ignore */ }
+    };
+    const onFocus = async () => {
+      if (streamAbortRef.current) return;
+      if (Date.now() - lastSilentRefreshAtRef.current < 15000) return;
+      lastSilentRefreshAtRef.current = Date.now();
+      try { await loadPersistedYourJobs(); } catch { /* ignore */ }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [loadPersistedYourJobs]);
+
   const value = {
     jobs,
     profile,
