@@ -357,11 +357,11 @@ const CompleteProfilePage = () => {
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 mb-1.5">
                   <FileText size={14} className="text-gray-400" />
-                  Resume <span className="text-gray-400 font-normal text-xs">(PDF, DOC, DOCX)</span> <span className="text-red-400">*</span>
+                  Resume <span className="text-gray-400 font-normal text-xs">(PDF only)</span> <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  accept=".pdf,application/pdf"
                   required
                   className="w-full px-3.5 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50/50 text-gray-600 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 transition-all cursor-pointer"
                   onChange={(e) => setResume(e.target.files[0])}

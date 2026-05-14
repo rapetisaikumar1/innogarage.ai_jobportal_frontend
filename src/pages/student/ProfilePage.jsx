@@ -31,7 +31,7 @@ const ExperienceDropdown = ({ value, onChange }) => {
   return (
     <div className="relative" ref={ref}>
       <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
-        <Briefcase size={11} className="text-gray-400" /> Years of Experience
+        <Briefcase size={11} className="text-gray-400" /> Years of Experience <span className="text-red-400">*</span>
       </label>
       <button
         type="button"
@@ -108,6 +108,14 @@ const ProfilePage = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!form.fullName.trim()) return toast.error('Full name is required');
+    if (!form.phone.trim()) return toast.error('Phone number is required');
+    if (!form.linkedinProfile.trim()) return toast.error('LinkedIn profile URL is required');
+    if (!form.education.trim()) return toast.error('Education is required');
+    if (!form.experience) return toast.error('Years of experience is required');
+    if (!form.jobRole.trim()) return toast.error('Job role is required');
+    if (!form.location) return toast.error('Preferred location is required');
+    if (!form.keySkills.trim()) return toast.error('Key skills are required');
     setSaving(true);
     try {
       const { data } = await api.put('/users/profile', form);
@@ -230,8 +238,8 @@ const ProfilePage = () => {
             {/* Basic Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Full Name</label>
-                <input type="text" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Full Name <span className="text-red-400">*</span></label>
+                <input type="text" required className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
               </div>
               <div>
                 <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">Email <Mail size={11} className="text-gray-400" /></label>
@@ -241,8 +249,8 @@ const ProfilePage = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Phone</label>
-                <input type="tel" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Phone <span className="text-red-400">*</span></label>
+                <input type="tel" required className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Role</label>
@@ -256,15 +264,15 @@ const ProfilePage = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
-                  <Linkedin size={11} className="text-gray-400" /> LinkedIn Profile
+                  <Linkedin size={11} className="text-gray-400" /> LinkedIn Profile <span className="text-red-400">*</span>
                 </label>
-                <input type="url" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all placeholder-gray-400" placeholder="https://linkedin.com/in/..." value={form.linkedinProfile} onChange={(e) => setForm({ ...form, linkedinProfile: e.target.value })} />
+                <input type="url" required className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all placeholder-gray-400" placeholder="https://linkedin.com/in/..." value={form.linkedinProfile} onChange={(e) => setForm({ ...form, linkedinProfile: e.target.value })} />
               </div>
               <div>
                 <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
-                  <GraduationCap size={11} className="text-gray-400" /> Education
+                  <GraduationCap size={11} className="text-gray-400" /> Education <span className="text-red-400">*</span>
                 </label>
-                <input type="text" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
+                <input type="text" required className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
               </div>
             </div>
 
@@ -279,15 +287,16 @@ const ProfilePage = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
-                    <Target size={11} className="text-gray-400" /> Job Role
+                    <Target size={11} className="text-gray-400" /> Job Role <span className="text-red-400">*</span>
                   </label>
-                  <input type="text" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all placeholder-gray-400" placeholder="e.g. Frontend Developer" value={form.jobRole} onChange={(e) => setForm({ ...form, jobRole: e.target.value })} />
+                  <input type="text" required className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all placeholder-gray-400" placeholder="e.g. Frontend Developer" value={form.jobRole} onChange={(e) => setForm({ ...form, jobRole: e.target.value })} />
                 </div>
                 <div>
                   <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
-                    <MapPin size={11} className="text-gray-400" /> Preferred Location
+                    <MapPin size={11} className="text-gray-400" /> Preferred Location <span className="text-red-400">*</span>
                   </label>
                   <select
+                    required
                     className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all cursor-pointer"
                     value={form.location}
                     onChange={(e) => setForm({ ...form, location: e.target.value })}
@@ -299,9 +308,9 @@ const ProfilePage = () => {
               </div>
               <div>
                 <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
-                  <Tag size={11} className="text-gray-400" /> Key Skills (comma separated)
+                  <Tag size={11} className="text-gray-400" /> Key Skills (comma separated) <span className="text-red-400">*</span>
                 </label>
-                <input type="text" className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all placeholder-gray-400" placeholder="e.g. React, Node.js, Python" value={form.keySkills} onChange={(e) => setForm({ ...form, keySkills: e.target.value })} />
+                <input type="text" required className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 transition-all placeholder-gray-400" placeholder="e.g. React, Node.js, Python" value={form.keySkills} onChange={(e) => setForm({ ...form, keySkills: e.target.value })} />
               </div>
               <div>
                 <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-1">
@@ -322,9 +331,9 @@ const ProfilePage = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-700 group-hover:text-blue-700 transition-colors">Click to upload resume</p>
-                    <p className="text-xs text-gray-400">PDF, Word (.doc, .docx, .rtf) &mdash; max 10MB</p>
+                    <p className="text-xs text-gray-400">PDF only &mdash; max 10MB</p>
                   </div>
-                  <input type="file" accept=".pdf,.doc,.docx,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleResumeUpload} />
+                  <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleResumeUpload} />
                 </label>
               </div>
             </div>
