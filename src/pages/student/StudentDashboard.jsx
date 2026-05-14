@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
@@ -221,10 +221,8 @@ const StudentDashboard = ({
   const [upcomingSessions, setUpcomingSessions] = useState([]);
   const [recentChats, setRecentChats] = useState([]);
   const [loading, setLoading] = useState(true);
-  const lastRefreshAtRef = useRef(0);
 
   const fetchData = useCallback(async () => {
-    lastRefreshAtRef.current = Date.now();
     try {
       if (isAdminView) {
         if (!studentId) {
@@ -329,16 +327,13 @@ const StudentDashboard = ({
   // where Apply is clicked then the user quickly navigates to Dashboard)
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === 'visible' && Date.now() - lastRefreshAtRef.current > 15000) fetchData();
-    };
-    const onFocus = () => {
-      if (Date.now() - lastRefreshAtRef.current > 15000) fetchData();
+      if (document.visibilityState === 'visible') fetchData();
     };
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', onFocus);
+    window.addEventListener('focus', onVisible);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('focus', onVisible);
     };
   }, [fetchData]);
 

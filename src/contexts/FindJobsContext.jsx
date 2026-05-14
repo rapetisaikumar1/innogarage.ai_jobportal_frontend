@@ -317,26 +317,17 @@ export const FindJobsProvider = ({ children }) => {
 
   // Silently reload persisted Find Jobs when user returns to tab/window so
   // isViewed/isApplied flags stay current (e.g. after admin action on student's behalf).
-  const lastSilentRefreshAtRef = useRef(0);
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
       if (streamAbortRef.current) return; // search in progress — skip
-      if (Date.now() - lastSilentRefreshAtRef.current < 15000) return;
-      lastSilentRefreshAtRef.current = Date.now();
-      loadPersistedJobs({ silent: true });
-    };
-    const onFocus = () => {
-      if (streamAbortRef.current) return;
-      if (Date.now() - lastSilentRefreshAtRef.current < 15000) return;
-      lastSilentRefreshAtRef.current = Date.now();
       loadPersistedJobs({ silent: true });
     };
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', onFocus);
+    window.addEventListener('focus', onVisible);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('focus', onVisible);
     };
   }, [loadPersistedJobs]);
 
