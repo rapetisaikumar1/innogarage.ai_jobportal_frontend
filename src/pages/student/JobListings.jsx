@@ -232,7 +232,7 @@ const JobListings = ({
     try {
       const { data } = await api.get(
         getPortalEndpoint('matchedJobs', { portalMode, studentId }),
-        requestConfig({ params: { limit: 80 } })
+        requestConfig()
       );
       const persistedJobs = sortJobsByDate((data.jobs || []).map(normalizeClientJob));
       setAdminJobs(persistedJobs);

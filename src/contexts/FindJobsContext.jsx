@@ -140,7 +140,7 @@ export const FindJobsProvider = ({ children }) => {
       try {
         const { data } = await api.get(
           getPortalEndpoint('matchedJobs', { portalMode: STUDENT_PORTAL_MODE.STUDENT }),
-          requestConfig({ params: { limit: 80 } })
+          requestConfig()
         );
         const persisted = sortJobsByDate((data.jobs || []).map(normalizeClientJob));
         setJobs(persisted);
