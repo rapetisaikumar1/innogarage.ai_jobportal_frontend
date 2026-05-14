@@ -125,6 +125,9 @@ export const FindJobsProvider = ({ children }) => {
   const [statusMessage, setStatusMessage] = useState('');
   const [searched, setSearched] = useState(false);
   const [activeSearchDays, setActiveSearchDays] = useState(1);
+  // Timestamp bumped whenever a search completes with new listings.
+  // YourJobsContext watches this to auto-trigger the scoring pipeline.
+  const [jobsFoundAt, setJobsFoundAt] = useState(null);
 
   // Stream abort controller — lives in context, NOT tied to any component lifecycle.
   const streamAbortRef = useRef(null);
@@ -260,6 +263,7 @@ export const FindJobsProvider = ({ children }) => {
 
         if (newJobCount > 0) {
           try { sessionStorage.setItem(YOUR_JOBS_REFRESH_KEY, '1'); } catch { /* ignore */ }
+          setJobsFoundAt(Date.now());
         }
 
         if (jobs.length === 0 && receivedKeys.size === 0) {
@@ -319,6 +323,7 @@ export const FindJobsProvider = ({ children }) => {
     statusMessage,
     searched,
     activeSearchDays,
+    jobsFoundAt,
     startSearch,
     cancelSearch,
     updateJob,

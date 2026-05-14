@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import api, { getTokenForRole } from '../services/api';
 import {
@@ -6,6 +6,7 @@ import {
   buildPortalRequestConfig,
   getPortalEndpoint,
 } from '../utils/studentPortalView';
+import { FindJobsContext } from './FindJobsContext';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -117,6 +118,9 @@ export const YourJobsProvider = ({ children }) => {
 
   // Stream AbortController lives in a ref — NOT tied to any component lifecycle.
   const streamAbortRef = useRef(null);
+
+  // Subscribe to FindJobsContext (available because YourJobsProvider is nested inside FindJobsProvider).
+  const findJobsCtx = useContext(FindJobsContext);
 
   const requestConfig = useCallback(
     (config = {}) => buildPortalRequestConfig(STUDENT_PORTAL_MODE.STUDENT, { ...config, dedupe: false }),
@@ -334,6 +338,17 @@ export const YourJobsProvider = ({ children }) => {
       )
     );
   }, []);
+
+  // Auto-start pipeline the moment the dashboard mounts — no need to visit the Your Jobs page.
+  useEffect(() => {
+    initialize();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-trigger whenever Find Jobs completes a search with new listings.
+  useEffect(() => {
+    if (!findJobsCtx?.jobsFoundAt) return;
+    initialize();
+  }, [findJobsCtx?.jobsFoundAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = {
     jobs,

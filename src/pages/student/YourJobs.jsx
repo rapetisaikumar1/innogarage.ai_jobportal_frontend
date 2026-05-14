@@ -330,13 +330,7 @@ const YourJobs = ({
   );
   const isAdminView = isAdminPortalView(portalMode);
 
-  // Effect 1: Student mode — delegate to YourJobsContext (idempotent, survives navigation).
-  useEffect(() => {
-    if (!isStudentMode) return;
-    yourJobsCtx.initialize();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Effect 2: Admin/portal mode — self-managed stream, cleaned up on unmount.
+  // Effect: Admin/portal mode — self-managed stream, cleaned up on unmount.
   useEffect(() => {
     if (isStudentMode) return;
 
