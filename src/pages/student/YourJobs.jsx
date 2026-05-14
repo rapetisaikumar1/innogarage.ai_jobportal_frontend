@@ -274,6 +274,7 @@ const YourJobs = ({
   portalMode = STUDENT_PORTAL_MODE.STUDENT,
   studentId = null,
   embedded = false,
+  adminJobsFoundAt = null,
 }) => {
   // Admin/portal view owns its own state; student mode reads from YourJobsContext.
   const yourJobsCtx = useContext(YourJobsContext);
@@ -571,7 +572,7 @@ const YourJobs = ({
       }
       abortController.abort();
     };
-  }, [getPortalUrl, isStudentMode, portalMode, requestConfig, yourJobsRefreshKey]);
+  }, [getPortalUrl, isStudentMode, portalMode, requestConfig, yourJobsRefreshKey, adminJobsFoundAt]);
 
   const patchJobByKey = useCallback((jobKey, patch) => {
     if (isStudentMode) {

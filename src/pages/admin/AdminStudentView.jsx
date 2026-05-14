@@ -30,6 +30,7 @@ const AdminStudentView = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [adminJobsFoundAt, setAdminJobsFoundAt] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -136,8 +137,12 @@ const AdminStudentView = () => {
 
       <div className="min-h-0 flex-1">
         {activeTab === 'dashboard' && <StudentDashboard {...sharedProps} />}
-        {activeTab === 'jobs' && <JobListings {...sharedProps} />}
-        {activeTab === 'your-jobs' && <YourJobs {...sharedProps} />}
+        <div className={activeTab !== 'jobs' ? 'hidden' : 'h-full'}>
+          <JobListings {...sharedProps} onSearchFound={() => setAdminJobsFoundAt(Date.now())} />
+        </div>
+        <div className={activeTab !== 'your-jobs' ? 'hidden' : 'h-full'}>
+          <YourJobs {...sharedProps} adminJobsFoundAt={adminJobsFoundAt} />
+        </div>
         {activeTab === 'applications' && <MyApplications {...sharedProps} />}
       </div>
     </div>

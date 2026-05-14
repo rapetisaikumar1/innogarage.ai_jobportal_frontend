@@ -180,6 +180,7 @@ const JobListings = ({
   portalMode = STUDENT_PORTAL_MODE.STUDENT,
   studentId = null,
   embedded = false,
+  onSearchFound = null,
 }) => {
   // ── Context (only available in student mode; null in admin mode) ─────────
   const findJobsCtx = useContext(FindJobsContext);
@@ -379,6 +380,7 @@ const JobListings = ({
       const newJobCount = Math.max(receivedKeys.size - existingJobCount, 0);
       if (newJobCount > 0) {
         try { sessionStorage.setItem(yourJobsRefreshKey, '1'); } catch { /* ignore */ }
+        onSearchFound?.();
       }
 
       if (adminJobs.length === 0 && receivedKeys.size === 0) {
