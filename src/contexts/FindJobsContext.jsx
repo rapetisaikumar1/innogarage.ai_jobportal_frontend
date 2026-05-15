@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import api, { getTokenForRole } from '../services/api';
 import {
@@ -331,20 +331,36 @@ export const FindJobsProvider = ({ children }) => {
     };
   }, [loadPersistedJobs]);
 
-  const value = {
-    jobs,
-    loadingSavedJobs,
-    isRunning,
-    isComplete,
-    statusMessage,
-    searched,
-    activeSearchDays,
-    jobsFoundAt,
-    startSearch,
-    cancelSearch,
-    updateJob,
-    loadPersistedJobs,
-  };
+  const value = useMemo(
+    () => ({
+      jobs,
+      loadingSavedJobs,
+      isRunning,
+      isComplete,
+      statusMessage,
+      searched,
+      activeSearchDays,
+      jobsFoundAt,
+      startSearch,
+      cancelSearch,
+      updateJob,
+      loadPersistedJobs,
+    }),
+    [
+      jobs,
+      loadingSavedJobs,
+      isRunning,
+      isComplete,
+      statusMessage,
+      searched,
+      activeSearchDays,
+      jobsFoundAt,
+      startSearch,
+      cancelSearch,
+      updateJob,
+      loadPersistedJobs,
+    ]
+  );
 
   return <FindJobsContext.Provider value={value}>{children}</FindJobsContext.Provider>;
 };

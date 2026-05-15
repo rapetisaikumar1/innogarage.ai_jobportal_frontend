@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
 import toast from 'react-hot-toast';
 import {
   Briefcase,
@@ -200,6 +201,7 @@ const MyApplications = ({
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 250);
   const [expandedKeys, setExpandedKeys] = useState({});
   const [updatingStatusKey, setUpdatingStatusKey] = useState(null);
   const [generatingResumeKey, setGeneratingResumeKey] = useState(null);
@@ -242,7 +244,7 @@ const MyApplications = ({
   }, [fetchApplications]);
 
   const filteredApplications = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = debouncedSearch.trim().toLowerCase();
     if (!query) return applications;
 
     return applications.filter((application) => [
@@ -254,7 +256,7 @@ const MyApplications = ({
       application.strongMatches?.join(' '),
       application.missingSkills?.join(' '),
     ].filter(Boolean).join(' ').toLowerCase().includes(query));
-  }, [applications, search]);
+  }, [applications, debouncedSearch]);
 
   const toggleApplicationDetails = (applicationKey) => {
     setExpandedKeys((current) => ({

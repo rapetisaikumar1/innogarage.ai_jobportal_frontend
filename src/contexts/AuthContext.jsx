@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { getTokenForRole, getUserForRole } from '../services/api';
@@ -173,8 +173,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem(`${role}_user`, JSON.stringify(updatedUser));
   };
 
+  const value = useMemo(
+    () => ({ user, loading, login, verifyLoginOtp, resendLoginOtp, signup, googleLogin, logout, updateUser }),
+    [user, loading]
+  );
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, verifyLoginOtp, resendLoginOtp, signup, googleLogin, logout, updateUser }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

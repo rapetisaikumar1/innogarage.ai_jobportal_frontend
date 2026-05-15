@@ -1,5 +1,4 @@
 import { useRef } from 'react';
-import html2pdf from 'html2pdf.js';
 import { Download, FileText, X } from 'lucide-react';
 import ResumeDocument from './ResumeDocument';
 import { downloadResumeAsDocx } from '../../utils/resumeDocx';
@@ -22,9 +21,9 @@ const TailoredResumeModal = ({ resumeModal, onClose }) => {
   const { job, resume } = resumeModal;
   const fileBaseName = makeResumeFileBaseName(resume, job);
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     if (!resumeRef.current) return;
-
+    const { default: html2pdf } = await import('html2pdf.js');
     html2pdf()
       .set({
         margin: [10, 10, 10, 10],

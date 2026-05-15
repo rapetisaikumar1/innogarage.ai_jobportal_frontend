@@ -37,7 +37,7 @@ const GroupChatPanel = ({ socket }) => {
 
     const handler = (msg) => {
       if (msg.groupId === activeGroup.id) {
-        setMessages((prev) => [...prev, msg]);
+        setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
       }
       fetchGroups();
     };

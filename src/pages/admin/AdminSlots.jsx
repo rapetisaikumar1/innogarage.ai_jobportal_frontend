@@ -18,9 +18,11 @@ const AdminSlots = () => {
 
   useEffect(() => { fetchSlots(); }, []);
 
-  // Refresh every 60s so expired/booked slots update without page reload
+  // Refresh every 60s so expired/booked slots update without page reload (paused when tab hidden)
   useEffect(() => {
-    const interval = setInterval(fetchSlots, 60000);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchSlots();
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 

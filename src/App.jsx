@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { FindJobsProvider } from './contexts/FindJobsContext';
@@ -30,27 +31,27 @@ import AchieversPage from './pages/student/AchieversPage';
 import ShoutboardPage from './pages/student/ShoutboardPage';
 import HelpSupportPage from './pages/student/HelpSupportPage';
 
-// Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminStudents from './pages/admin/AdminStudents';
-import AdminSlots from './pages/admin/AdminSlots';
-import AdminBookings from './pages/admin/AdminBookings';
-import AdminChat from './pages/admin/AdminChat';
-import AdminProfile from './pages/admin/AdminProfile';
-import AdminRaiseRequests from './pages/admin/AdminRaiseRequests';
-import AdminStudentView from './pages/admin/AdminStudentView';
-import AdminTraining from './pages/admin/AdminTraining';
-import AvailableTechnologiesPage from './pages/shared/AvailableTechnologiesPage';
+// Admin Pages (lazy)
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminStudents = lazy(() => import('./pages/admin/AdminStudents'));
+const AdminSlots = lazy(() => import('./pages/admin/AdminSlots'));
+const AdminBookings = lazy(() => import('./pages/admin/AdminBookings'));
+const AdminChat = lazy(() => import('./pages/admin/AdminChat'));
+const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'));
+const AdminRaiseRequests = lazy(() => import('./pages/admin/AdminRaiseRequests'));
+const AdminStudentView = lazy(() => import('./pages/admin/AdminStudentView'));
+const AdminTraining = lazy(() => import('./pages/admin/AdminTraining'));
+const AvailableTechnologiesPage = lazy(() => import('./pages/shared/AvailableTechnologiesPage'));
 
-// Super Admin Pages
-import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
-import ManageAdmins from './pages/superadmin/ManageAdmins';
-import ManageStudents from './pages/superadmin/ManageStudents';
-import SuperAdminRequests from './pages/superadmin/SuperAdminRequests';
-import ManageTraining from './pages/superadmin/ManageTraining';
-import SuperAdminProfile from './pages/superadmin/SuperAdminProfile';
-import QueriesPage from './pages/superadmin/QueriesPage';
-import SuperAdminChat from './pages/superadmin/SuperAdminChat';
+// Super Admin Pages (lazy)
+const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
+const ManageAdmins = lazy(() => import('./pages/superadmin/ManageAdmins'));
+const ManageStudents = lazy(() => import('./pages/superadmin/ManageStudents'));
+const SuperAdminRequests = lazy(() => import('./pages/superadmin/SuperAdminRequests'));
+const ManageTraining = lazy(() => import('./pages/superadmin/ManageTraining'));
+const SuperAdminProfile = lazy(() => import('./pages/superadmin/SuperAdminProfile'));
+const QueriesPage = lazy(() => import('./pages/superadmin/QueriesPage'));
+const SuperAdminChat = lazy(() => import('./pages/superadmin/SuperAdminChat'));
 
 // Loading spinner
 const LoadingScreen = () => (
@@ -89,7 +90,8 @@ const PublicRoute = ({ children }) => {
 
 function App() {
   return (
-    <Routes>
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
@@ -146,7 +148,8 @@ function App() {
       {/* Landing & Default */}
       <Route path="/" element={<LandingPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }
 
