@@ -79,11 +79,11 @@ const SuperAdminProfile = () => {
     setCreatingAdmin(true);
     try {
       await api.post('/admin/super-admins', adminForm);
-      toast.success('Super Admin created successfully!');
+      toast.success('Admin created successfully!');
       setAdminForm({ fullName: '', email: '', password: '' });
       setShowCreateAdmin(false);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create super admin');
+      toast.error(error.response?.data?.message || 'Failed to create admin');
     } finally {
       setCreatingAdmin(false);
     }
@@ -125,7 +125,7 @@ const SuperAdminProfile = () => {
                   <p className="text-xs text-gray-400">{profile?.email}</p>
                   <div className="flex items-center gap-1 mt-1">
                     <Shield size={11} className="text-indigo-500" />
-                    <span className="text-[11px] font-medium text-indigo-600">Super Admin</span>
+                    <span className="text-[11px] font-medium text-indigo-600">Admin</span>
                   </div>
                 </div>
               </div>
@@ -168,7 +168,7 @@ const SuperAdminProfile = () => {
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">Role</label>
                   <div className="flex items-center gap-2 px-3.5 py-2.5 border border-gray-200 rounded-lg bg-gray-50">
                     <Shield size={13} className="text-indigo-500" />
-                    <span className="text-[13px] font-medium text-gray-700">Super Admin</span>
+                    <span className="text-[13px] font-medium text-gray-700">Admin</span>
                   </div>
                 </div>
               </div>
@@ -252,7 +252,7 @@ const SuperAdminProfile = () => {
                 <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
                   <UserPlus size={14} className="text-gray-400" />
                 </div>
-                <span className="text-[13px] font-bold text-gray-400">Create New Super Admin</span>
+                <span className="text-[13px] font-bold text-gray-400">Create New Admin</span>
               </div>
               <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-400">
                 Disabled

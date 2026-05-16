@@ -213,10 +213,10 @@ const HelpSupportPage = () => {
                   value={form.assignedToId}
                   onChange={(e) => setForm({ ...form, assignedToId: e.target.value })}
                 >
-                  <option value="">-- Select Admin / Super Admin --</option>
+                  <option value="">-- Select Mentor / Admin --</option>
                   {staffList.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.fullName} ({s.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'})
+                      {s.fullName} ({s.role === 'SUPER_ADMIN' ? 'Admin' : 'Mentor'})
                     </option>
                   ))}
                 </select>
@@ -384,7 +384,7 @@ const HelpSupportPage = () => {
 
                         {query.adminReply && (
                           <div>
-                            <p className="text-xs font-bold text-violet-500 uppercase tracking-wider mb-1">Admin Response</p>
+                            <p className="text-xs font-bold text-violet-500 uppercase tracking-wider mb-1">Mentor Response</p>
                             <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap bg-violet-50 rounded-lg px-3 py-2.5 border border-violet-100">
                               {query.adminReply}
                             </p>
@@ -394,7 +394,7 @@ const HelpSupportPage = () => {
                         {!query.adminReply && query.status === 'OPEN' && (
                           <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
                             <Clock size={12} />
-                            <span>Awaiting admin response</span>
+                            <span>Awaiting mentor response</span>
                           </div>
                         )}
                       </div>

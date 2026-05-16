@@ -108,7 +108,7 @@ const AdminStudentView = () => {
               </div>
               <p className="truncate text-sm text-gray-600">{student.email}</p>
               <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                Managed by {adminUser?.fullName || 'Admin'}
+                Managed by {adminUser?.fullName || 'Mentor'}
               </p>
             </div>
           </div>

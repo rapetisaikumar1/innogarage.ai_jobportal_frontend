@@ -254,8 +254,8 @@ const ChatPage = () => {
   }, [messages, user.id]);
 
   const getRoleLabel = (role) => {
-    if (role === 'SUPER_ADMIN') return 'Super Admin';
-    if (role === 'ADMIN') return 'Admin';
+    if (role === 'SUPER_ADMIN') return 'Admin';
+    if (role === 'ADMIN') return 'Mentor';
     if (role === 'STUDENT') return 'Student';
     return role;
   };

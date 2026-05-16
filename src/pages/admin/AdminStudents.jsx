@@ -255,7 +255,7 @@ const AdminStudents = () => {
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-100 px-4 py-3">
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="flex items-center gap-2 text-[13px] font-semibold text-slate-900"><Users size={15} className="text-violet-600" />Assigned Admins</h3>
+                  <h3 className="flex items-center gap-2 text-[13px] font-semibold text-slate-900"><Users size={15} className="text-violet-600" />Assigned Mentors</h3>
                   <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">{assignedAdmins.length}</span>
                 </div>
               </div>
@@ -274,8 +274,8 @@ const AdminStudents = () => {
                   );
                 }) : (
                   <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/60 px-3 py-4 text-center">
-                    <p className="text-[13px] font-medium text-slate-500">No admins assigned yet</p>
-                    <p className="mt-1 text-[12px] text-slate-400">Assigned admins will appear here once linked to this student.</p>
+                    <p className="text-[13px] font-medium text-slate-500">No mentors assigned yet</p>
+                    <p className="mt-1 text-[12px] text-slate-400">Assigned mentors will appear here once linked to this student.</p>
                   </div>
                 )}
               </div>

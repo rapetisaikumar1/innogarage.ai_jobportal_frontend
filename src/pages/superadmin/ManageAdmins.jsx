@@ -35,7 +35,7 @@ const ManageAdmins = () => {
         setSelectedAdmin(res.data[0]);
       }
     } catch (error) {
-      toast.error('Failed to load admins');
+      toast.error('Failed to load mentors');
     } finally {
       setLoading(false);
     }
@@ -49,12 +49,12 @@ const ManageAdmins = () => {
     setCreating(true);
     try {
       await api.post('/admin/admins', form);
-      toast.success('Admin created successfully');
+      toast.success('Mentor created successfully');
       setShowForm(false);
       setForm({ fullName: '', email: '', password: '', phone: '' });
       fetchAdmins();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create admin');
+      toast.error(error.response?.data?.message || 'Failed to create mentor');
     } finally {
       setCreating(false);
     }
@@ -69,7 +69,7 @@ const ManageAdmins = () => {
         setSelectedAdmin(prev => prev ? { ...prev, isActive: !prev.isActive } : null);
       }
     } catch (error) {
-      toast.error('Failed to update admin status');
+      toast.error('Failed to update mentor status');
     }
   };
 
@@ -110,7 +110,7 @@ const ManageAdmins = () => {
       }
 
       const res = await api.patch(`/admin/admins/${editAdminId}`, payload);
-      toast.success('Admin updated successfully');
+      toast.success('Mentor updated successfully');
       setAdmins((prev) => prev.map((admin) => (admin.id === editAdminId ? { ...admin, ...res.data } : admin)));
       if (selectedAdmin?.id === editAdminId) {
         setSelectedAdmin((prev) => (prev ? { ...prev, ...res.data } : prev));
@@ -118,7 +118,7 @@ const ManageAdmins = () => {
       closeEditModal();
       fetchAdmins();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update admin');
+      toast.error(error.response?.data?.message || 'Failed to update mentor');
     } finally {
       setUpdating(false);
     }
@@ -142,13 +142,13 @@ const ManageAdmins = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-gray-800">Manage Admins</h1>
+          <h1 className="text-lg font-bold text-gray-800">Manage Mentors</h1>
           <p className="text-gray-500 text-xs mt-0.5">Create and manage mentor accounts</p>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-500 font-medium">{filtered.length} total</span>
           <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-2 text-sm">
-            <UserPlus size={14} /> New Admin
+            <UserPlus size={14} /> New Mentor
           </button>
         </div>
       </div>
@@ -156,7 +156,7 @@ const ManageAdmins = () => {
       {/* Create Form */}
       {showForm && (
         <form onSubmit={handleCreate} className="card space-y-3">
-          <h3 className="font-semibold text-gray-800 text-sm">Create Admin / Mentor</h3>
+          <h3 className="font-semibold text-gray-800 text-sm">Create Mentor</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
@@ -176,7 +176,7 @@ const ManageAdmins = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <button type="submit" disabled={creating} className="btn-primary text-sm">{creating ? 'Creating...' : 'Create Admin'}</button>
+            <button type="submit" disabled={creating} className="btn-primary text-sm">{creating ? 'Creating...' : 'Create Mentor'}</button>
             <button type="button" onClick={() => setShowForm(false)} className="btn-secondary text-sm">Cancel</button>
           </div>
         </form>
@@ -187,7 +187,7 @@ const ManageAdmins = () => {
           <form onSubmit={handleUpdate} className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden">
             <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
               <div>
-                <h3 className="text-sm font-bold text-gray-900">Edit Admin / Mentor</h3>
+                <h3 className="text-sm font-bold text-gray-900">Edit Mentor</h3>
                 <p className="text-xs text-gray-500 mt-0.5">Update mentor details and credentials</p>
               </div>
               <button type="button" onClick={closeEditModal} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
@@ -236,7 +236,7 @@ const ManageAdmins = () => {
           {/* Table */}
           {filtered.length === 0 ? (
             <div className="flex-1 flex items-center justify-center bg-white rounded-xl border border-gray-100">
-              <p className="text-gray-400 text-sm">No admins found</p>
+              <p className="text-gray-400 text-sm">No mentors found</p>
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden flex-1">
@@ -308,7 +308,7 @@ const ManageAdmins = () => {
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white">
               <div>
                 <h3 className="text-sm font-bold text-gray-800">{selectedAdmin.fullName}</h3>
-                <span className="text-[11px] text-gray-400">Admin / Mentor</span>
+                <span className="text-[11px] text-gray-400">Mentor</span>
               </div>
               <button onClick={() => setSelectedAdmin(null)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
                 <X size={16} />
@@ -384,7 +384,7 @@ const ManageAdmins = () => {
                   onClick={() => openEditModal(selectedAdmin)}
                   className="w-full mb-2 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
                 >
-                  <PencilLine size={13} /> Edit Admin
+                  <PencilLine size={13} /> Edit Mentor
                 </button>
                 <button
                   onClick={() => toggleStatus(selectedAdmin.id)}
@@ -394,7 +394,7 @@ const ManageAdmins = () => {
                       : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
                   }`}
                 >
-                  {selectedAdmin.isActive ? <><ShieldOff size={13} /> Deactivate Admin</> : <><Shield size={13} /> Activate Admin</>}
+                  {selectedAdmin.isActive ? <><ShieldOff size={13} /> Deactivate Mentor</> : <><Shield size={13} /> Activate Mentor</>}
                 </button>
               </div>
             </div>

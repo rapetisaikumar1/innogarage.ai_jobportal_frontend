@@ -168,7 +168,7 @@ const SuperAdminDashboard = () => {
       <div className="bg-white rounded-xl border border-gray-200 px-5 py-3 flex items-center justify-between shadow-sm">
         <div>
           <h1 className="text-lg font-bold text-gray-900">
-            {greeting}, <span className="text-indigo-600">{user?.fullName || 'Super Admin'}</span>
+            {greeting}, <span className="text-indigo-600">{user?.fullName || 'Admin'}</span>
           </h1>
           <p className="text-gray-500 text-xs mt-0.5">Here's your platform overview. Track students, mentors, requests, and support activity from here.</p>
         </div>
@@ -202,7 +202,7 @@ const SuperAdminDashboard = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-gray-900">{request.studentFullName}</p>
-                      <p className="mt-0.5 truncate text-xs font-medium text-gray-500">{request.admin?.fullName || 'Admin'} · {request.technology || request.registrationNumber || 'Assignment request'}</p>
+                      <p className="mt-0.5 truncate text-xs font-medium text-gray-500">{request.admin?.fullName || 'Mentor'} · {request.technology || request.registrationNumber || 'Assignment request'}</p>
                     </div>
                     <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${statusBadgeClass(request.status)}`}>{formatStatus(request.status)}</span>
                   </div>

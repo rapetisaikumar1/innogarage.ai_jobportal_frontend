@@ -71,7 +71,7 @@ const AssignMentor = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Assign Mentors</h1>
-        <p className="text-gray-500 mt-1">Assign students to admin mentors</p>
+        <p className="text-gray-500 mt-1">Assign students to mentors</p>
       </div>
 
       {/* Assignment Panel */}
@@ -83,7 +83,7 @@ const AssignMentor = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">Select Mentor</label>
             <div className="space-y-2">
               {admins.length === 0 ? (
-                <p className="text-sm text-gray-500">No active admins available</p>
+                <p className="text-sm text-gray-500">No active mentors available</p>
               ) : (
                 admins.map((admin) => (
                   <label key={admin.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${selectedMentor === admin.id ? 'border-primary-600 bg-primary-50' : 'hover:bg-gray-50'}`}>
@@ -145,7 +145,7 @@ const AssignMentor = () => {
       <div className="card">
         <h2 className="font-semibold text-gray-800 mb-4">Current Assignments</h2>
         {admins.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">No admins available</p>
+          <p className="text-gray-500 text-center py-4">No mentors available</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {admins.map((admin) => {

@@ -176,7 +176,7 @@ const AdminRaiseRequests = () => {
       });
 
       setRequests((prev) => [res.data, ...prev]);
-      toast.success('Request sent to super admin');
+      toast.success('Request sent to admin');
       closeModal();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to send request');
@@ -198,7 +198,7 @@ const AdminRaiseRequests = () => {
       <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-900">Raise Requests</h1>
-          <p className="mt-1 text-xs text-gray-500">Track requests sent to the super admin and their latest status.</p>
+          <p className="mt-1 text-xs text-gray-500">Track requests sent to the admin and their latest status.</p>
         </div>
 
         <button
@@ -206,7 +206,7 @@ const AdminRaiseRequests = () => {
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
         >
           <Plus size={15} />
-          Raise Request To Super Admin
+          Raise Request To Admin
         </button>
       </div>
 
@@ -233,7 +233,7 @@ const AdminRaiseRequests = () => {
             <ClipboardList size={22} />
           </div>
           <h2 className="mt-4 text-base font-semibold text-gray-900">No requests raised yet</h2>
-          <p className="mt-1 text-sm text-gray-500">Send a request to super admin when you need an assignment review.</p>
+          <p className="mt-1 text-sm text-gray-500">Send a request to admin when you need an assignment review.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -302,7 +302,7 @@ const AdminRaiseRequests = () => {
             <div className="flex items-start justify-between border-b border-gray-100 px-5 py-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.32em] text-gray-400">Raise Request</p>
-                <h2 className="mt-1 text-lg font-bold text-gray-900">Raise Request To Super Admin</h2>
+                <h2 className="mt-1 text-lg font-bold text-gray-900">Raise Request To Admin</h2>
               </div>
               <button type="button" onClick={closeModal} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
                 <X size={16} />

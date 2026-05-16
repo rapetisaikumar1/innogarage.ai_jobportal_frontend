@@ -266,7 +266,7 @@ const QueriesPage = () => {
                       <option value="">Unassigned</option>
                       {staffList.map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.fullName} ({s.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'})
+                          {s.fullName} ({s.role === 'SUPER_ADMIN' ? 'Admin' : 'Mentor'})
                         </option>
                       ))}
                     </select>

@@ -168,7 +168,7 @@ const DashboardLayout = () => {
   const isAdmin = user?.role === 'ADMIN';
   const isStudent = user?.role === 'STUDENT';
   const useHorizontalNav = false;
-  const roleLabel = isSuperAdmin ? 'Super Admin' : isAdmin ? 'Mentor' : 'Student';
+  const roleLabel = isSuperAdmin ? 'Admin' : isAdmin ? 'Mentor' : 'Student';
   const isAdminStudentPortalView = /^\/admin\/students\/[^/]+\/view$/.test(location.pathname);
 
   return (

@@ -185,8 +185,8 @@ const SuperAdminChat = () => {
   const totalUnread = useMemo(() => contacts.reduce((sum, c) => sum + (c.unreadCount || 0), 0), [contacts]);
 
   const getRoleLabel = (role) => {
-    if (role === 'SUPER_ADMIN') return 'Super Admin';
-    if (role === 'ADMIN') return 'Admin';
+    if (role === 'SUPER_ADMIN') return 'Admin';
+    if (role === 'ADMIN') return 'Mentor';
     if (role === 'STUDENT') return 'Student';
     return role;
   };

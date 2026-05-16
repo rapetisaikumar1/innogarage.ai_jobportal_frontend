@@ -212,21 +212,21 @@ const ManageStudents = () => {
       });
       const r = res.data?.results?.[0];
       if (r?.status === 'already_assigned') toast('Already assigned', { icon: '⚠️' });
-      else if (r?.status === 'limit_reached') toast.error(r.message || 'Only one admin can be assigned per student');
-      else toast.success('Admin assigned');
+      else if (r?.status === 'limit_reached') toast.error(r.message || 'Only one mentor can be assigned per student');
+      else toast.success('Mentor assigned');
       fetchStudents();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to assign admin');
+      toast.error(error.response?.data?.message || 'Failed to assign mentor');
     }
   };
 
   const removeAdmin = async (studentId, adminId) => {
     try {
       await api.post('/admin/unassign-admin', { studentId, adminId });
-      toast.success('Admin removed');
+      toast.success('Mentor removed');
       fetchStudents();
     } catch (error) {
-      toast.error('Failed to remove admin');
+      toast.error('Failed to remove mentor');
     }
   };
 
@@ -444,7 +444,7 @@ const ManageStudents = () => {
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-100 px-4 py-3">
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="flex items-center gap-2 text-[13px] font-semibold text-slate-900"><Users size={15} className="text-violet-600" />Assigned Admins</h3>
+                  <h3 className="flex items-center gap-2 text-[13px] font-semibold text-slate-900"><Users size={15} className="text-violet-600" />Assigned Mentors</h3>
                   <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">{assignedAdmins.length}</span>
                 </div>
               </div>
@@ -461,8 +461,8 @@ const ManageStudents = () => {
                   </div>
                 )) : (
                   <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/60 px-3 py-4 text-center">
-                    <p className="text-[13px] font-medium text-slate-500">No admins assigned yet</p>
-                    <p className="mt-1 text-[12px] text-slate-400">Assigned admins will appear here once linked to this student.</p>
+                    <p className="text-[13px] font-medium text-slate-500">No mentors assigned yet</p>
+                    <p className="mt-1 text-[12px] text-slate-400">Assigned mentors will appear here once linked to this student.</p>
                   </div>
                 )}
               </div>
@@ -564,7 +564,7 @@ const ManageStudents = () => {
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Plan</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Technology</th>
-                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Admins</th>
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Mentors</th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Joined</th>
                   <th className="px-5 py-3.5 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -708,7 +708,7 @@ const ManageStudents = () => {
                               });
 
                               return available.length === 0 ? (
-                                <p className="px-3.5 py-2 text-[12px] text-gray-400">No available admins</p>
+                                <p className="px-3.5 py-2 text-[12px] text-gray-400">No available mentors</p>
                               ) : (
                                 available.map(m => (
                                   <button key={m.id} onClick={() => { addAdmin(student.id, m.id); setOpenMentorDropdown(null); }}

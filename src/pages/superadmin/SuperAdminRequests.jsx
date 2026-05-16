@@ -107,7 +107,7 @@ const SuperAdminRequests = () => {
     <div className="space-y-4">
       <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
         <h1 className="text-lg font-bold text-gray-900">Requests</h1>
-        <p className="mt-1 text-xs text-gray-500">Review requests sent by admins and decide whether to accept or reject them.</p>
+        <p className="mt-1 text-xs text-gray-500">Review requests sent by mentors and decide whether to accept or reject them.</p>
       </div>
 
       <div className="grid w-full grid-cols-2 gap-2 md:grid-cols-4 xl:max-w-[920px]">
@@ -133,7 +133,7 @@ const SuperAdminRequests = () => {
             <ClipboardList size={22} />
           </div>
           <h2 className="mt-4 text-base font-semibold text-gray-900">No requests available</h2>
-          <p className="mt-1 text-sm text-gray-500">Admin requests will appear here once they are raised.</p>
+          <p className="mt-1 text-sm text-gray-500">Mentor requests will appear here once they are raised.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -189,10 +189,10 @@ const SuperAdminRequests = () => {
                       </div>
 
                       <div className="rounded-xl border border-gray-100 bg-gray-50/70 px-4 py-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Admin</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Mentor</p>
                         <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-gray-900">
                           <Contact size={14} className="text-gray-400" />
-                          {request.admin?.fullName || 'Unknown Admin'}
+                          {request.admin?.fullName || 'Unknown Mentor'}
                         </p>
                       </div>
                     </div>
